@@ -6,3 +6,4 @@ backend/remote-work/mysite/__pycache__/
 frontend/remote/node_modules/
 frontend/remote/.next/
 frontend/remote/.env
+backend/venv
