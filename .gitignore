@@ -1,0 +1,8 @@
+backend/remote-work/db.sqlite3
+backend/remote-work/__pycache__/
+backend/remote-work/api/__pycache__/
+backend/remote-work/api/migrations/__pycache__/
+backend/remote-work/mysite/__pycache__/
+frontend/remote/node_modules/
+frontend/remote/.next/
+frontend/remote/.env
