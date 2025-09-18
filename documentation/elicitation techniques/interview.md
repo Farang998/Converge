@@ -87,13 +87,13 @@
 <p align="justify"><b>Response:</b> Individual contributions, productivity measurement and analysis, workloads and bottlenecks.</p>  
 
 <p align="justify"><b>7. If a project leader assigns a task to a subset of team members (for example, 3 out of 10), how useful would it be if the system automatically created a dedicated communication group for those members? What are your thoughts on the value and possible improvements of such a feature?</b></p>  
-<p align="justify"><b>Response:</b> </p>  
+<p align="justify"><b>Response:</b> That will be helpful to make things simpler and direct, but with good amount of consistency</p>  
 
 <p align="justify"><b>8. If you are working as a solo worker, which features would you find most useful to manage your work better?</b></p>  
-<p align="justify"><b>Response:</b> That will be helpful to make things simpler and direct, but with good amount of consistency.</p>  
+<p align="justify"><b>Response:</b> To-do tasks, recurring tasks, due dates, file organization</p>  
 
 <p align="justify"><b>9. Do you require any integration with external tools (like Google Drive)? If yes, then what are those?</b></p>  
-<p align="justify"><b>Response:</b> To-do tasks, recurring tasks, due dates, file organization.</p>  
+<p align="justify"><b>Response:</b> No.</p>  
 
 <p align="justify"><b>10. What additional features would you like to see in this remote work collaboration tool?</b></p>  
-<p align="justify"><b>Response:</b> No.</p>
+<p align="justify"><b>Response:</b> Focus & wellbeing enhancement tools, personal dashboard, summaries, adaptable UI.</p>
