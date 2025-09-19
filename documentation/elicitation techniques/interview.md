@@ -1,6 +1,73 @@
 # Interview Responses
 
-## 1) Chirag Katkoriya
+## 1) Professor Sujay Kadam
+
+<p align="justify"><b>1. What key features do you believe are essential in a remote work collaboration tool and why?</b></p>  
+<p align="justify"><b>Response:</b> Seamless integration (chat, tasks, docs in one place), version control, and low-friction file sharing. Without these, things get messy fast.</p>  
+
+<p align="justify"><b>2. In a team chat interface, which features are most crucial for keeping conversations organized?</b></p>  
+<p align="justify"><b>Response:</b> Threads, pinned messages, and good search. Otherwise, it’s just noise.</p>  
+
+<p align="justify"><b>3. What is the most important information you need to see immediately when you are assigned a new task?</b></p>  
+<p align="justify"><b>Response:</b> Deadline, deliverable format, and dependencies. If those are unclear, the rest is guesswork.</p>  
+
+<p align="justify"><b>4. In platforms like GitHub, project repositories allow centralized file storage, version tracking and visibility of modifications. How important do you think such features are in a remote work collaboration tool and what additional capabilities would you expect to improve team productivity?</b></p>  
+<p align="justify"><b>Response:</b> Smarter dashboards—linking commits, issues, and tasks automatically. Also, lightweight reporting so you don’t need to export to Excel just to update progress</p>  
+
+<p align="justify"><b>5. How do you prefer to be notified about project updates (like task completion, new file uploads, deadline reminders)? What notification style or frequency could help you stay informed without being overwhelmed?</b></p>  
+<p align="justify"><b>Response:</b>  Critical updates: push notifications. Routine stuff: daily digest email, that too opt-in. I don’t want a flood of pings for minor edits.</p>  
+
+<p align="justify"><b>6. In collaborative work, who is working on what is crucial. What kind of dashboards, progress reports would you find most useful for tracking overall team productivity?</b></p>  
+<p align="justify"><b>Response:</b>  Essential for transparency. But it only works if people update honestly and regularly—otherwise it becomes a dead board.</p>  
+
+<p align="justify"><b>7. If a project leader assigns a task to a subset of team members (for example, 3 out of 10), how useful would it be if the system automatically created a dedicated communication group for those members? What are your thoughts on the value and possible improvements of such a feature?</b></p>  
+<p align="justify"><b>Response:</b>  Useful for focus, but should be temporary. Groups pile up otherwise. Auto-expiry or merge-back into the main channel would keep it clean.</p>  
+
+<p align="justify"><b>8. If you are working as a solo worker, which features would you find most useful to manage your work better?</b></p>  
+<p align="justify"><b>Response:</b> A simple progress visualization helps more than gimmicky gamification. Focus timers are personal—I’d rather keep that choice separate.</p>  
+
+<p align="justify"><b>9. Do you require any integration with external tools (like Google Drive)? If yes, then what are those?</b></p>  
+<p align="justify"><b>Response:</b> Google Drive, GitHub, and iCloud integrations. Saves a ton of copy-paste effort.</p>  
+
+<p align="justify"><b>10. What additional features would you like to see in this remote work collaboration tool?</b></p>  
+<p align="justify"><b>Response:</b> Context-aware summaries (AI-driven), so after a day away you don’t scroll through 200 messages. Also, offline sync for when internet isn’t reliable.</p>  
+
+#
+## 2) Harsh Patel
+
+<p align="justify"><b>1. What key features do you believe are essential in a remote work collaboration tool and why?</b></p>  
+<p align="justify"><b>Response:</b> Message Passing,online meet recording,Analyze and summarize meet,converte it to text format like PDF,maximum people can work a particular project,previous changes should be reported in project,authentication and all files should be protected and secure, all files format should be supported, whole project should be stored in local device as well.</p>  
+
+<p align="justify"><b>2. In a team chat interface, which features are most crucial for keeping conversations organized?</b></p>  
+<p align="justify"><b>Response:</b> person name with role in chat should be display, give me the summary of (task name) from the previous messages which I have not read with message provider,voice message,special mention should be available,allow personal chat.</p>  
+
+<p align="justify"><b>3. What is the most important information you need to see immediately when you are assigned a new task?</b></p>  
+<p align="justify"><b>Response:</b> Task description,other member wich are working with me in this task, task member profession, task deadline.</p>  
+
+<p align="justify"><b>4. In platforms like GitHub, project repositories allow centralized file storage, version tracking and visibility of modifications. How important do you think such features are in a remote work collaboration tool and what additional capabilities would you expect to improve team productivity?</b></p>  
+<p align="justify"><b>Response:</b> Important and add collaborator features, branching, ask team leader before merging to main project, security (my files should not be visible to other before, except team leader), save the project locally.</p>  
+
+<p align="justify"><b>5. How do you prefer to be notified about project updates (like task completion, new file uploads, deadline reminders)? What notification style or frequency could help you stay informed without being overwhelmed?</b></p>  
+<p align="justify"><b>Response:</b> notification frequency should be customizable by user at any point of time and if not customize then at least before at least one day before deadline. In notification style 1) project name, 2) task name, then task details.
+</p>  
+
+<p align="justify"><b>6. In collaborative work, who is working on what is crucial. What kind of dashboards, progress reports would you find most useful for tracking overall team productivity?</b></p>  
+<p align="justify"><b>Response:</b> All task progress should be displayed in dashboard, task details with member details, contribution of member in a particular task.</p>  
+
+<p align="justify"><b>7. If a project leader assigns a task to a subset of team members (for example, 3 out of 10), how useful would it be if the system automatically created a dedicated communication group for those members? What are your thoughts on the value and possible improvements of such a feature?</b></p>  
+<p align="justify"><b>Response:</b> Yes, it is important and leader decide a leader among that created group and that secondary leader should communicate all information of task with main leader for progress.</p>  
+
+<p align="justify"><b>8. If you are working as a solo worker, which features would you find most useful to manage your work better?</b></p>  
+<p align="justify"><b>Response:</b> Important suggestion in project and detect useless files, visualize amount of time dedicated to project.</p>  
+
+<p align="justify"><b>9. Do you require any integration with external tools (like Google Drive)? If yes, then what are those?</b></p>  
+<p align="justify"><b>Response:</b> Yes, calender integration, google drive, microsoft excel, PDF reader, External editor.</p>  
+
+<p align="justify"><b>10. What additional features would you like to see in this remote work collaboration tool?</b></p>  
+<p align="justify"><b>Response:</b> project manager can remove or drop whole project, project and task summary requires.</p>  
+
+
+## 3) Chirag Katkoriya
 
 <p align="justify"><b>1. What key features do you believe are essential in a remote work collaboration tool and why?</b></p>  
 <p align="justify"><b>Response:</b> Tracking our own and other's work. Setting deadlines. Able to track our own progress.</p>  
@@ -33,7 +100,7 @@
 <p align="justify"><b>Response:</b> This much will be good.</p>  
 
 ##
-## 2) Vivek Dodiya
+## 4) Vivek Dodiya
 
 <p align="justify"><b>1. What key features do you believe are essential in a remote work collaboration tool and why?</b></p>  
 <p align="justify"><b>Response:</b> Easy work integration and live status checking of current situation.</p>  
@@ -66,7 +133,7 @@
 <p align="justify"><b>Response:</b> List of task completed and remaining and it's analysis on how much approx time it will take,live collaboration , Work done , remaining and time left and if progress is fine , slow or ahead of required , Notification along with time details,Easy work integration and live status checking of current situation.</p> 
 
 ##
-## 3) Ayush Dhamecha
+## 5) Ayush Dhamecha
 
 <p align="justify"><b>1. What key features do you believe are essential in a remote work collaboration tool and why?</b></p>  
 <p align="justify"><b>Response:</b> Management across different tasks, easy and simple to adapt.</p>  
@@ -100,7 +167,7 @@
 
 
 ##
-## 4) Param Savjani 
+## 6) Param Savjani 
 
 <p align="justify"><b>1. What key features do you believe are essential in a remote work collaboration tool and why?</b></p>  
 <p align="justify"><b>Response: Video call</b> </p>  
@@ -133,7 +200,7 @@
 <p align="justify"><b>Response:</b> None </p>  
 
 ##
-## 5) Yesha
+## 7) Yesha
 
 <p align="justify"><b>1. What key features do you believe are essential in a remote work collaboration tool and why?</b></p>  
 <p align="justify"><b>Response:</b> Real time communication </p>  
@@ -166,7 +233,7 @@
 <p align="justify"><b>Response:</b> Nothing</p>  
 
 ##
-## 6) Patel Om 
+## 8) Patel Om 
 
 <p align="justify"><b>1. What key features do you believe are essential in a remote work collaboration tool and why?</b></p>  
 <p align="justify"><b>Response:</b> Smooth communication (chat and video calls), Easy file sharing, Clear task management in one place, Real-time collaboration and scheduling, Security</p>  
@@ -199,7 +266,7 @@
 <p align="justify"><b>Response:</b> You can add AI based suggestions or reminders like there is a task pending for too long,it will get reminder. You can try it if possible.</p>
 
 ##
-## 7) Hardik
+## 9) Hardik
 <p align="justify"><b>1. What key features do you believe are essential in a remote work collaboration tool and why?</b></p>  
 <p align="justify"><b>Response:</b> Real-time messaging, file sharing, task tracking — so all work is visible and coordinated.</p>  
 
@@ -231,7 +298,7 @@
 <p align="justify"><b>Response:</b> Time tracking, built-in video/voice calls, templates, offline mode.</p>  
 
 ##
-## 8) Abhishek
+## 10) Abhishek
 
 <p align="justify"><b>1. What key features do you believe are essential in a remote work collaboration tool and why?</b></p>  
 <p align="justify"><b>Response:</b> Real-time communication (chat, video, voice), for quick alignment and human connection, Asynchronous collaboration (threads, recordings, docs), supports different time zones, File sharing & integration, Task & project management : keeps goals, deadlines, and responsibilities clear.</p>  
@@ -265,7 +332,7 @@
 
 # 
 
-## 9) Jayansh Gaadhe
+## 11) Jayansh Gaadhe
 
 <p align="justify"><b>1. What key features do you believe are essential in a remote work collaboration tool and why?</b></p>  
 <p align="justify"><b>Response:</b> in-platform chat and a signifier to show where another person is currently on screen.</p>  
@@ -298,7 +365,7 @@
 <p align="justify"><b>Response:</b> online meeting integration.</p>  
 
 ##
-## 10) Dhruvilsinh Mahida
+## 12) Dhruvilsinh Mahida
 
 <p align="justify"><b>1. What key features do you believe are essential in a remote work collaboration tool and why?</b></p>  
 <p align="justify"><b>Response:</b> Easy file sharing, daily tasks viewer and deadlines remainder, some sort of monitoring system which monitors employee, two or more persons can edit same file if possible.</p>  
@@ -331,7 +398,7 @@
 <p align="justify"><b>Response:</b> Analysis for hours I was active and based on that, deductions and rewards for the same.</p>
 
 ##
-## 11) Om Chavda
+## 13) Om Chavda
 
 <p align="justify"><b>1. What key features do you believe are essential in a remote work collaboration tool and why?</b></p>  
 <p align="justify"><b>Response:</b> File Sharing and Collaborative Editing.</p>  
@@ -364,7 +431,7 @@
 <p align="justify"><b>Response:</b> No.</p>
 
 ##
-## 12) Utsav
+## 14) Utsav
 
 <p align="justify"><b>1. What key features do you believe are essential in a remote work collaboration tool and why?</b></p>  
 <p align="justify"><b>Response:</b> Easy communication because it is the most essential thing in work, tracking task given to employee for monitoring work assigned, deadline Reminder because it is needed, priority of task  because it is needed</p>  
@@ -400,7 +467,7 @@ and tree like work structure that this work's sub work completed.</p>
 <p align="justify"><b>Response:</b> My holiday tracking in the work.</p>
 
 #
-## 13) Patel Apurv Ashokbhai 
+## 15) Patel Apurv Ashokbhai 
 
 <p align="justify"><b>1. What key features do you believe are essential in a remote work collaboration tool and why?</b></p>  
 <p align="justify"><b>Response:</b> Easily To Push and pull from Cloud, version history,chat box in built with ai and without for humans.</p>  
@@ -433,7 +500,7 @@ and tree like work structure that this work's sub work completed.</p>
 <p align="justify"><b>Response:</b> Not Feature but NFR with great upload/Download speed because it matters a lot in this types of collaboration tools.</p>
 
 
-## 14) Nilesh Mori
+## 16) Nilesh Mori
 
 <p align="justify"><b>1. What key features do you believe are essential in a remote work collaboration tool and why?</b></p>  
 <p align="justify"><b>Response:</b> No</p>  
@@ -466,7 +533,7 @@ and tree like work structure that this work's sub work completed.</p>
 <p align="justify"><b>Response:</b> my project scheduling,friend reques and many more.</p>  
 
 ##
-## 15) Gaurav Patel
+## 17) Gaurav Patel
 
 <p align="justify"><b>1. What key features do you believe are essential in a remote work collaboration tool and why?</b></p>  
 <p align="justify"><b>Response:</b> Real-Time Communication.</p>  
@@ -499,7 +566,7 @@ and tree like work structure that this work's sub work completed.</p>
 <p align="justify"><b>Response:</b> Metting time schedule, deadline reminder.</p>
 
 ##
-## 16) Macwan Jenish Denish
+## 18) Macwan Jenish Denish
 
 <p align="justify"><b>1. What key features do you believe are essential in a remote work collaboration tool and why?</b></p>  
 <p align="justify"><b>Response:</b> Real time response and easy UI.</p>  
@@ -532,7 +599,7 @@ and tree like work structure that this work's sub work completed.</p>
 <p align="justify"><b>Response:</b> Give rating to users according to their performance or badges for doing some task.</p>
 
 ##
-## 17) Vidur Dudhat 
+## 19) Vidur Dudhat 
 
 <p align="justify"><b>1. What key features do you believe are essential in a remote work collaboration tool and why?</b></p>  
 <p align="justify"><b>Response:</b> Real time chat ,Integrated task management like (assign tasks, track status), File sharing with version control, Calendar / schedule syncing (so deadlines & meetings are clear), Notifications & reminders (so nothing slips through cracks) ,Cross-platform support (mobile / desktop)</p>  
@@ -563,73 +630,6 @@ and tree like work structure that this work's sub work completed.</p>
 
 <p align="justify"><b>10. What additional features would you like to see in this remote work collaboration tool?</b></p>  
 <p align="justify"><b>Response:</b> Dark mode (if working at night), Templates for recurring tasks / project setups</p>
-
-#
-## 18) Professor Sujay Kadam Sir
-
-<p align="justify"><b>1. What key features do you believe are essential in a remote work collaboration tool and why?</b></p>  
-<p align="justify"><b>Response:</b> Seamless integration (chat, tasks, docs in one place), version control, and low-friction file sharing. Without these, things get messy fast.</p>  
-
-<p align="justify"><b>2. In a team chat interface, which features are most crucial for keeping conversations organized?</b></p>  
-<p align="justify"><b>Response:</b> Threads, pinned messages, and good search. Otherwise, it’s just noise.</p>  
-
-<p align="justify"><b>3. What is the most important information you need to see immediately when you are assigned a new task?</b></p>  
-<p align="justify"><b>Response:</b> Deadline, deliverable format, and dependencies. If those are unclear, the rest is guesswork.</p>  
-
-<p align="justify"><b>4. In platforms like GitHub, project repositories allow centralized file storage, version tracking and visibility of modifications. How important do you think such features are in a remote work collaboration tool and what additional capabilities would you expect to improve team productivity?</b></p>  
-<p align="justify"><b>Response:</b> Smarter dashboards—linking commits, issues, and tasks automatically. Also, lightweight reporting so you don’t need to export to Excel just to update progress</p>  
-
-<p align="justify"><b>5. How do you prefer to be notified about project updates (like task completion, new file uploads, deadline reminders)? What notification style or frequency could help you stay informed without being overwhelmed?</b></p>  
-<p align="justify"><b>Response:</b>  Critical updates: push notifications. Routine stuff: daily digest email, that too opt-in. I don’t want a flood of pings for minor edits.</p>  
-
-<p align="justify"><b>6. In collaborative work, who is working on what is crucial. What kind of dashboards, progress reports would you find most useful for tracking overall team productivity?</b></p>  
-<p align="justify"><b>Response:</b>  Essential for transparency. But it only works if people update honestly and regularly—otherwise it becomes a dead board.</p>  
-
-<p align="justify"><b>7. If a project leader assigns a task to a subset of team members (for example, 3 out of 10), how useful would it be if the system automatically created a dedicated communication group for those members? What are your thoughts on the value and possible improvements of such a feature?</b></p>  
-<p align="justify"><b>Response:</b>  Useful for focus, but should be temporary. Groups pile up otherwise. Auto-expiry or merge-back into the main channel would keep it clean.</p>  
-
-<p align="justify"><b>8. If you are working as a solo worker, which features would you find most useful to manage your work better?</b></p>  
-<p align="justify"><b>Response:</b> A simple progress visualization helps more than gimmicky gamification. Focus timers are personal—I’d rather keep that choice separate.</p>  
-
-<p align="justify"><b>9. Do you require any integration with external tools (like Google Drive)? If yes, then what are those?</b></p>  
-<p align="justify"><b>Response:</b> Google Drive, GitHub, and iCloud integrations. Saves a ton of copy-paste effort.</p>  
-
-<p align="justify"><b>10. What additional features would you like to see in this remote work collaboration tool?</b></p>  
-<p align="justify"><b>Response:</b> Context-aware summaries (AI-driven), so after a day away you don’t scroll through 200 messages. Also, offline sync for when internet isn’t reliable.</p>  
-
-#
-## 19) Harsh Patel
-
-<p align="justify"><b>1. What key features do you believe are essential in a remote work collaboration tool and why?</b></p>  
-<p align="justify"><b>Response:</b> Message Passing,online meet recording,Analyze and summarize meet,converte it to text format like PDF,maximum people can work a particular project,previous changes should be reported in project,authentication and all files should be protected and secure, all files format should be supported, whole project should be stored in local device as well.</p>  
-
-<p align="justify"><b>2. In a team chat interface, which features are most crucial for keeping conversations organized?</b></p>  
-<p align="justify"><b>Response:</b> person name with role in chat should be display, give me the summary of (task name) from the previous messages which I have not read with message provider,voice message,special mention should be available,allow personal chat.</p>  
-
-<p align="justify"><b>3. What is the most important information you need to see immediately when you are assigned a new task?</b></p>  
-<p align="justify"><b>Response:</b> Task description,other member wich are working with me in this task, task member profession, task deadline.</p>  
-
-<p align="justify"><b>4. In platforms like GitHub, project repositories allow centralized file storage, version tracking and visibility of modifications. How important do you think such features are in a remote work collaboration tool and what additional capabilities would you expect to improve team productivity?</b></p>  
-<p align="justify"><b>Response:</b> Important and add collaborator features, branching, ask team leader before merging to main project, security (my files should not be visible to other before, except team leader), save the project locally.</p>  
-
-<p align="justify"><b>5. How do you prefer to be notified about project updates (like task completion, new file uploads, deadline reminders)? What notification style or frequency could help you stay informed without being overwhelmed?</b></p>  
-<p align="justify"><b>Response:</b> notification frequency should be customizable by user at any point of time and if not customize then at least before at least one day before deadline. In notification style 1) project name, 2) task name, then task details.
-</p>  
-
-<p align="justify"><b>6. In collaborative work, who is working on what is crucial. What kind of dashboards, progress reports would you find most useful for tracking overall team productivity?</b></p>  
-<p align="justify"><b>Response:</b> All task progress should be displayed in dashboard, task details with member details, contribution of member in a particular task.</p>  
-
-<p align="justify"><b>7. If a project leader assigns a task to a subset of team members (for example, 3 out of 10), how useful would it be if the system automatically created a dedicated communication group for those members? What are your thoughts on the value and possible improvements of such a feature?</b></p>  
-<p align="justify"><b>Response:</b> Yes, it is important and leader decide a leader among that created group and that secondary leader should communicate all information of task with main leader for progress.</p>  
-
-<p align="justify"><b>8. If you are working as a solo worker, which features would you find most useful to manage your work better?</b></p>  
-<p align="justify"><b>Response:</b> Important suggestion in project and detect useless files, visualize amount of time dedicated to project.</p>  
-
-<p align="justify"><b>9. Do you require any integration with external tools (like Google Drive)? If yes, then what are those?</b></p>  
-<p align="justify"><b>Response:</b> Yes, calender integration, google drive, microsoft excel, PDF reader, External editor.</p>  
-
-<p align="justify"><b>10. What additional features would you like to see in this remote work collaboration tool?</b></p>  
-<p align="justify"><b>Response:</b> project manager can remove or drop whole project, project and task summary requires.</p>  
 
 #
 ## 20) Avish Jain
