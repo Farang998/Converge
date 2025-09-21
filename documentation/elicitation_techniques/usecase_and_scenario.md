@@ -18,15 +18,17 @@ Team Member, Team Leader, Freelancer
 * The system grants access based on the user's role (Team Leader, Team Member, or Freelancer).
 
 **Main Flow:**
-1.  The user navigates to the login/register page.
-2.  The user selects either **Login** or **Register**.
+1. The user navigates to the login/register page.
+2. The user selects either **Login** or **Register**.
 
-    **Login**<br>
+    **Login**
+    
       **3a.** The user enters their email/username and password.<br>
       **4a.** The system validates the credentials.<br>
       **5a.** If the credentials are correct, the system logs the user in.
 
-    **Register**<br>
+    **Register**
+    
       **3b.** The user completes the registration form with their name, email, password, and role.<br>
       **4b.** The system checks the details for validity.<br>
       **5b.** If the details are valid, the system creates the new user account.
