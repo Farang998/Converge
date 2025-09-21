@@ -144,5 +144,35 @@ Individual User (Team Member, Team Leader, Freelancer)
 * **System Error:** If the chatbot cannot fetch data due to a system or server issue, it displays an error and asks the user to try again later.
 * **Limited Permissions:** If the user requests an action outside of their role's permissions (e.g., a team member asking to remove a member), the chatbot explains that the action is not allowed.
   
+---
 
+**5. Use Case: Join Project Workspace**  
 
+**Goal:**  
+Team member wants to join the project workspace to start collaboration.  
+
+**Actors:**  
+Team Member  
+
+**Preconditions:**  
+* Team member is logged into the system.  
+* Team leader has already created a project and sent an invitation link.  
+
+**Postconditions:**  
+* Team member has access to the project workspace, including tasks, files, and chat.  
+* Team leader can see that the team member successfully joined the workspace.  
+
+**Main Flow:**  
+1. Team Leader creates a new project workspace and sends an invitation link to the Team Member.  
+2. Team Member receives the link via email or internal message.  
+3. Team Member clicks the invitation link.  
+4. Team Member logs into the platform (if not already logged in).  
+5. System authenticates the user and validates the invitation link.  
+6. Team Member is added to the project workspace.  
+7. The workspace dashboard opens, showing tasks, files, and chat.  
+
+**Exception Flows:**  
+* **Invalid/Expired Invitation Link:** If the invitation link is invalid or expired, the system shows an error message and suggests requesting a new link.  
+* **User Not Authenticated:** If the team member is not logged in, the system redirects them to the login page before proceeding.  
+* **Already Joined:** If the team member has already joined the workspace, the system notifies them and directly opens the workspace.  
+* **System/Network Error:** If the system fails to add the member due to a server/network issue, an error message appears, and the user is asked to try again later.
