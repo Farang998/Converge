@@ -338,4 +338,116 @@ Team Member, Team Leader
 **Exception Flows:**  
 * **7a) No Previous Versions:** If a file has no previous versions, the system informs the user.
 * **System/Network Error:** If there is a system or network issue preventing the saving, viewing, or restoring of file versions, an error message appears, and the user is asked to try again later.
-* **Conflicting Changes (Manual Resolution):** If the user attempts to save a file with the existing name and type, then the system will ask the user to either cancel upload or overwrite. 
+* **Conflicting Changes (Manual Resolution):** If the user attempts to save a file with the existing name and type, then the system will ask the user to either cancel upload or overwrite.
+
+* # Use Cases & Scenarios
+
+## Use Case 10: Comment on Task
+
+```
+Actors: Team Member, Team Leader / Manager, Freelancer, Reviewer
+Goal: Allow team members and managers to post and reply to comments on tasks so discussions stay
+contextual and clear.
+Preconditions:
+```
+- User is authenticated and is a member of the project workspace.
+- The task exists and is visible to the user.
+Postconditions:
+- The comment is associated with the task and visible to authorized users.
+Main Flow:
+1. Open the project workspace and navigate to the task detail page.
+2. Type a comment in the comment input area (supports basic formatting and small attachments).
+3. Click 'Post Comment'.
+4. The comment appears in the task's conversation thread with the user's name and timestamp.
+5. Other team members can reply to or react to the comment.
+Exception Flows:
+- Network/Server Error: If saving the comment fails, show a temporary error and allow retry; preserve a
+draft if possible.
+- Unauthorized User: If the user lacks permission for this task, block posting and explain required
+permissions.
+
+## Use Case 11: Assign Role
+
+```
+Actors: Workspace Owner, Project Manager
+Goal: Assign or change a user's role within a workspace or project to control access and
+responsibilities.
+Preconditions:
+```
+- The actor is authenticated and has permission to manage roles.
+- The target user is a member of the workspace or has been invited.
+Postconditions:
+- The target user's role and permissions are updated.
+- UI controls and access reflect the new permissions immediately.
+- An audit log records who made the change and when.
+Main Flow:
+1. Open workspace or project settings and navigate to 'Members' or 'Roles'.
+
+
+2. Select the target user from the member list.
+3. Choose a predefined role (e.g., Viewer, Contributor, Manager) or customize specific permissions.
+4. Click 'Save' or 'Assign Role'.
+5. System updates permissions and notifies the user of the change.
+Exception Flows:
+- Insufficient Privileges: If the actor lacks rights to assign roles, show an authorization error.
+- Role Conflict: If the chosen role conflicts with existing policies, warn and prevent the change.
+- System Error: If updating fails, roll back and show a meaningful error message.
+
+## Use Case 12: File Sharing — Add, Remove, Update
+
+```
+Actors: Team Member, Freelancer, Team Leader
+Goal: Provide a reliable file sharing system where team members can upload, replace, and remove files
+associated with projects and tasks.
+Preconditions:
+```
+- User is authenticated and has permission to perform file actions for the project or task.
+Main Flow (Add File):
+1. Go to the project or task file section and click 'Upload' or 'Add File'.
+2. Select the file, optionally add a description or tags, and confirm upload.
+3. System validates file type and size and stores the file linked to the project or task.
+Main Flow (Update File):
+1. Select an existing file and choose 'Upload New Version' or 'Replace'.
+2. Upload the replacement file and add notes about the change if desired.
+3. System preserves prior versions (if versioning is enabled) and marks the uploaded file as the latest.
+Main Flow (Remove File):
+1. Select the file and click 'Delete' or 'Remove'.
+2. Confirm deletion when prompted to prevent accidental loss.
+Postconditions:
+- Files are stored securely and linked to the task or project.
+- Version history is available where supported.
+Exception Flows:
+- File Type/Size Rejected: Block uploads with unsupported types or sizes and inform the user.
+- Permission Denied: Prevent file actions if the user lacks rights.
+
+## Use Case 4: Communication (Channels, Direct Messages, Mentions)
+
+```
+Actors: All Project Users — Team Members, Managers, Freelancers, Clients (with restricted views)
+```
+
+Goal: Provide real-time communication across team channels and DMs with controls for mentions and
+notifications.
+Preconditions:
+
+- User is authenticated and part of at least one workspace.
+- Real-time messaging service is available and configured.
+Main Flow:
+1. Open the Chat/Communication tab and select a channel or direct message thread.
+2. Type a message, attach files or snippets if needed, and optionally @mention a user or reference a
+task/file.
+3. Send the message.
+4. System delivers the message in real time to online users and queues delivery for offline users.
+5. Mentions trigger a notification for the mentioned user.
+6. Users can react to messages, edit within a short window, and pin or bookmark important messages.
+Postconditions:
+- Messages are delivered and stored according to retention rules.
+- Mentions raise a notification to the mentioned user.
+Exception Flows:
+- Message Delivery Failure: If real-time delivery fails, queue and retry and show delivery status to the
+sender.
+- Spam or Abuse: Provide reporting and moderation for content that violates rules.
+- Attachment Failure: If attaching a file fails, show an error and allow retry.
+
+
+
