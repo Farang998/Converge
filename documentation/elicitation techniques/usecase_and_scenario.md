@@ -22,9 +22,9 @@ Team Member, Team Leader, Freelancer
 2.  The user selects either **Login** or **Register**.
 
     **Login**<br>
-    * **3a.** The user enters their email/username and password.<br>
-    * **4a.** The system validates the credentials.<br>
-    * **5a.** If the credentials are correct, the system logs the user in.
+      **3a.** The user enters their email/username and password.<br>
+      **4a.** The system validates the credentials.<br>
+      **5a.** If the credentials are correct, the system logs the user in.
 
     **Register**<br>
     * **3b.** The user completes the registration form with their name, email, password, and role.<br>
@@ -144,3 +144,4 @@ Individual User (Team Member, Team Leader, Freelancer)
 * **System Error:** If the chatbot cannot fetch data due to a system or server issue, it displays an error and asks the user to try again later.
 * **Limited Permissions:** If the user requests an action outside of their role's permissions (e.g., a team member asking to remove a member), the chatbot explains that the action is not allowed.
   
+
