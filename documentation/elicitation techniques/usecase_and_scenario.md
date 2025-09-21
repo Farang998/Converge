@@ -241,3 +241,35 @@ Team member
 * **File Upload Error:** If the file format or size is invalid, the system shows an error message.  
 * **Network/Server Error:** If the system cannot save the file, the user is asked to retry later.  
 * **Unauthorized Submission:** If the team member is not the assigned user, submission is blocked.
+
+---
+
+**4. Use Case: Track Task Progress**  
+
+**Goal:**  
+Team member wants to update task status and track their progress.  
+
+**Actors:**  
+Team Member  
+
+**Preconditions:**  
+* Team member is logged into the system.  
+* Task has been assigned to them.  
+
+**Postconditions:**  
+* Task status is updated (e.g., **In Progress**, **Completed**).  
+* Team leader can view the updated progress.  
+
+**Main Flow:**  
+1. Team Member logs into the platform.  
+2. Opens the assigned project workspace.  
+3. Navigates to the **My Tasks** section.  
+4. Opens an active task to view details.  
+5. Clicks the status dropdown and selects **In Progress.**  
+6. After completing the task, updates the status to **Completed.**  
+7. Team Leader gets notified of the status change.  
+
+**Exception Flows:**  
+* **Unauthorized Update:** If the user tries to update a task not assigned to them, the system blocks the action.  
+* **Invalid Status Change:** If the transition is not allowed (e.g., skipping from *Not Started* to *Completed*), an error is shown.  
+* **System Error:** If the update fails, the system notifies the user to retry.
