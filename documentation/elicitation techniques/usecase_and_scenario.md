@@ -244,7 +244,7 @@ Team member
 
 ---
 
-**4. Use Case: Track Task Progress**  
+**8. Use Case: Track Task Progress**  
 
 **Goal:**  
 Team member wants to update task status and track their progress.  
