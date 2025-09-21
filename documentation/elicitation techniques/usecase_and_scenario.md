@@ -27,9 +27,9 @@ Team Member, Team Leader, Freelancer
       **5a.** If the credentials are correct, the system logs the user in.
 
     **Register**<br>
-    * **3b.** The user completes the registration form with their name, email, password, and role.<br>
-    * **4b.** The system checks the details for validity.<br>
-    * **5b.** If the details are valid, the system creates the new user account.
+      **3b.** The user completes the registration form with their name, email, password, and role.<br>
+      **4b.** The system checks the details for validity.<br>
+      **5b.** If the details are valid, the system creates the new user account.
 
 3.  After successful login or registration, the user is redirected to their personalized dashboard.
 
@@ -144,4 +144,5 @@ Individual User (Team Member, Team Leader, Freelancer)
 * **System Error:** If the chatbot cannot fetch data due to a system or server issue, it displays an error and asks the user to try again later.
 * **Limited Permissions:** If the user requests an action outside of their role's permissions (e.g., a team member asking to remove a member), the chatbot explains that the action is not allowed.
   
+
 
