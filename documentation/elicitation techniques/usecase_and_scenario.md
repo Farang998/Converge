@@ -209,3 +209,35 @@ Team Leader
 * **Team Member Not Found:** If the selected member is not part of the project, the system shows an error message.  
 * **Missing Details:** If task details (name, deadline) are not filled, the system prompts the user to complete all fields.  
 * **System Error:** If the task cannot be created due to a backend error, the system displays an error message.
+
+---
+
+**7. Use Case: Submit Work**  
+
+**Goal:**  
+Team member wants to submit completed work for review and approval.  
+
+**Actors:**  
+Team member 
+
+**Preconditions:**  
+* Team member is logged into the system.  
+* Task has been accepted and marked as **In Progress.**  
+
+**Postconditions:**  
+* File is uploaded and submitted file is visible to the team leader.  
+* Status of task changes to **Submitted** or **Under Review.**  
+
+**Main Flow:**  
+1. Team member logs into the platform.  
+2. Opens the assigned task from the **Tasks** tab.  
+3. Completes the work outside or within the platform tools.  
+4. Returns to the task and clicks **Upload file here.**  
+5. Selects the relevant file and adds a comment like *"Please review."*  
+6. Clicks **Submit.**  
+7. System updates the task status to **Submitted** and notifies the Team Leader.  
+
+**Exception Flows:**  
+* **File Upload Error:** If the file format or size is invalid, the system shows an error message.  
+* **Network/Server Error:** If the system cannot save the file, the user is asked to retry later.  
+* **Unauthorized Submission:** If the team member is not the assigned user, submission is blocked.
