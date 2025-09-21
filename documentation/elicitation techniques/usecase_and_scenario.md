@@ -176,3 +176,36 @@ Team Member
 * **User Not Authenticated:** If the team member is not logged in, the system redirects them to the login page before proceeding.  
 * **Already Joined:** If the team member has already joined the workspace, the system notifies them and directly opens the workspace.  
 * **System/Network Error:** If the system fails to add the member due to a server/network issue, an error message appears, and the user is asked to try again later.
+
+---
+
+**6. Use Case: Assign Task to Team Member**  
+
+**Goal:**  
+Team leader wants to assign a task to a specific team member to track project progress.  
+
+**Actors:**  
+Team Leader  
+
+**Preconditions:**  
+* Team leader is logged into the system.  
+* A project workspace is already created.  
+* Team member has joined the project.  
+
+**Postconditions:**  
+* Task is assigned and appears in the team member's task dashboard.  
+* Notification is sent to the assigned team member.  
+
+**Main Flow:**  
+1. Team Leader logs into the system and opens the project workspace.  
+2. Navigates to the 'Tasks' tab.  
+3. Clicks **Create Task** and fills in task name, description, deadline, and assignee.  
+4. Selects a specific Team Member from the dropdown.  
+5. Clicks **Assign.**  
+6. Team Member receives a notification that a new task has been assigned.  
+7. Task appears in the Team Member’s dashboard.  
+
+**Exception Flows:**  
+* **Team Member Not Found:** If the selected member is not part of the project, the system shows an error message.  
+* **Missing Details:** If task details (name, deadline) are not filled, the system prompts the user to complete all fields.  
+* **System Error:** If the task cannot be created due to a backend error, the system displays an error message.
