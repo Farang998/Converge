@@ -389,7 +389,7 @@ the task, and notifies all members of the subgroup.
 
 ---
 
-# CUser
+# User
 
 ## US-31: Calendar Integration
 **Story:**  
