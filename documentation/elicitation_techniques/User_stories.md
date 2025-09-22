@@ -401,3 +401,141 @@ Outlook so I can manage all my events in a single place.
 
 **Failure:**  
 - Syncing fails or is delayed, causing missing events or outdated information.
+
+---
+
+# Project Manager
+
+## US-32: Visual Progress Dashboards
+**Story:**  
+As a project manager, I want to see project progress in visual dashboards, so I can quickly assess the status across teams.
+
+**Success:**  
+- The dashboard shows real-time project completion, remaining milestones, and individual contributions—clear and easy to interpret, with exportable charts and graphs.
+
+**Failure:**  
+- Progress is unclear, requires manual updates, or aggregates are missing; data is out of date, leaving me unaware of issues until it’s too late.
+
+---
+
+## US-33: Role-Based Permissions and Control
+**Story:**  
+As a project manager, I want to assign roles (admin, team member, viewer) with customizable permissions, so information access and tool functions are properly controlled.
+
+**Success:**  
+- I can grant and revoke roles instantly; access and actions are always in line with user roles; changes are audit-trailed.
+
+**Failure:**  
+- Everyone has the same permissions, or the system offers only limited roles, leading to accidental data leaks or restricted collaboration.
+
+---
+
+## US-34: All-in-One Platform
+**Story:**  
+As a project manager, I would like tasks, files, chat, and calendar integrated into a single platform, so I don’t have to switch between multiple tools to analyze the project workflow.
+
+**Success:**  
+- All project functions are accessible in one place, data flows between features (e.g., chat-to-task conversion), and onboarding takes minutes.
+
+**Failure:**  
+- Still have to jump between several apps, duplicating work, and missing information due to fragmented workflow.
+
+---
+
+## US-35: Automated Notifications for Project Updates
+**Story:**  
+As a project manager, I need to receive automated notifications when there are changes, delays, or milestones achieved, so I can react proactively.
+
+**Success:**  
+- I get prompt, actionable notifications for important events, and can configure which updates I receive.
+
+**Failure:**  
+- I miss critical updates because notifications are late, missing, or buried among irrelevant alerts.
+
+---
+
+## US-36: Easily Configurable Analytics and Reporting
+**Story:**  
+As a project manager, I want flexible analytics and reporting options for both project-wide and individual metrics, so I can monitor performance and justify decisions.
+
+**Success:**  
+- I can generate custom reports (progress, time, task completion, cost) on demand, with both overall and detailed views.
+
+**Failure:**  
+- Reporting is unavailable, outdated, or requires exporting and processing data elsewhere.
+
+---
+
+## US-37: Integration with Google Calendar
+**Story:**  
+As a project manager, I need integration with Google Calendar, so my project schedules and deadlines are automatically reflected in my calendar without extra steps.
+
+**Success:**  
+- Tasks, meetings, and milestones sync seamlessly with Google Calendar, ensuring my schedule is always up to date and visible in one place.
+
+**Failure:**  
+- I have to enter or update project events in Google Calendar manually, leading to missed appointments and wasted time.
+
+---
+
+## US-38: Budget and Cost Tracking
+**Story:**  
+As a project manager, I want to monitor project budgets and costs within the platform, so I can keep spending under control.
+
+**Success:**  
+- Budget metrics and spending are displayed alongside project progress, with alerts for overruns.
+
+**Failure:**  
+- Budgets are managed separately, leading to overspending or delays in financial reporting.
+
+---
+
+## US-39: Online Meetings Integration
+**Story:**  
+As a project manager, I want the platform to include or integrate video/online meetings, so collaboration is seamless without external links.
+
+**Success:**  
+- I can schedule, join, and archive meetings directly from the project workspace.
+
+**Failure:**  
+- Switching to other apps for meetings disrupts flow and tracking, and meeting documentation is not tied to the project.
+
+---
+
+# Client
+
+## US-40: Live Project Transparency
+**Story:**  
+As a client, I want to view live progress and milestones of my outsourced projects at any time, so I always know how the work is advancing.
+
+**Success:**  
+- I can open a dashboard anytime and see the latest updates, completed and pending milestones, and responsible people for each task.
+
+**Failure:**  
+- I have to wait for scheduled reports or ask for updates manually, resulting in confusion and delayed reactions to delays.
+
+---
+
+## US-41: Financial Tracking and Budget Monitoring
+**Story:**  
+As a client, I want to know how much of my project budget has been used so far, compared to overall progress, so I can ensure the project stays within my expectations.
+
+**Success:**  
+- I can have an idea of budget consumption and alerts for approaching or overstepping limits, mapped to actual project progress.
+
+**Failure:**  
+- Budget information is hidden or delayed, leading to cost overruns or surprises at the end of the project.
+
+---
+
+## US-42: Secure Document and Data Access
+**Story:**  
+As a client, I need strong encryption and secure storage for all project documents and data, so my sensitive information is always protected and compliant with relevant laws.
+
+**Success:**  
+- All files are stored with strong encryption, access is logged and controlled, and compliance options (e.g., GDPR, HIPAA, ISO) are available as needed.
+
+**Failure:**  
+- Information is vulnerable to unauthorized access, or the tool does not support legal compliance requirements.
+
+---
