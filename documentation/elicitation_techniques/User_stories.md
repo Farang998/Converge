@@ -539,3 +539,44 @@ As a client, I need strong encryption and secure storage for all project documen
 - Information is vulnerable to unauthorized access, or the tool does not support legal compliance requirements.
 
 ---
+
+## US-43: Security
+**Story:**  
+As a business owner, I want all data in the collaboration tool to be secure so that the confidential information is protected from unauthorized users.
+
+**Success:**  
+- All files, messages, and tasks must be encrypted.
+- Implement secure authentication.
+- Apply role-based access to restrict data visibility.
+
+**Failure:**  
+- Data is transmitted or stored without encryption.
+
+---
+
+## US-44: Usability & Adoption
+**Story:**  
+As a business owner, I want the tool to be simple so that my employees can adopt it quickly.
+
+**Success:**  
+- UI must be clean and consistent across the web.
+- Provide contextual help, tips, and a quick start guide.
+
+**Failure:**  
+- UI is inconsistent across different platforms.
+
+---
+
+## US-45: Performance & Responsiveness
+**Story:**  
+As a business owner, I want the collaboration tool to load and respond quickly so that work is not slowed down during projects.
+
+**Success:**  
+- Pages should load within a few seconds under normal network conditions.
+- Must support enough concurrent users without lag.
+- Task updates and notifications must reflect in real time.
+
+**Failure:**  
+- The system crashes when multiple users are online.
+
+---
