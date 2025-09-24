@@ -87,7 +87,7 @@ DATABASES = {
 # MongoDB configuration
 # Support a full MongoDB URI via `MONGO_URI` env var (e.g.
 # mongodb://localhost:27017/). If not provided, fall back to host/port.
-MONGO_URI = 'mongodb://localhost:27017/'
+MONGO_URI = 'mongodb+srv://convergework23_db_user:DRPxZfsnHQRCHQ58@cluster0.s0y3bgk.mongodb.net/'
 if MONGO_URI:
     # If a full connection URI is provided, use it.
     connect(db='converge_db', host=MONGO_URI)
