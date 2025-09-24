@@ -30,7 +30,7 @@ class User(Document):
     meta = {'collection': 'users'}
 
     @classmethod
-    def create_user(cls, username, email, password, firstName=None, lastName=None):
+    def create_user(cls, username, email, password, firstName, lastName):
         user = cls(username=username, email=email)
         if firstName:
             user.firstName = firstName
