@@ -307,7 +307,7 @@ Team Member
 
 ---
 
-**9. Use Case: Version Control for the Project**  
+**10. Use Case: Version Control for the Project**  
 
 **Goal:**  
 Users can manage and track different versions of project, ensuring changes are recorded, and previous versions can be restored.
@@ -340,8 +340,9 @@ Team Member, Team Leader
 * **System/Network Error:** If there is a system or network issue preventing the saving, viewing, or restoring of file versions, an error message appears, and the user is asked to try again later.
 * **Conflicting Changes (Manual Resolution):** If the user attempts to save a file with the existing name and type, then the system will ask the user to either cancel upload or overwrite.
 
+---
 
-## Use Case 10: Comment on Task
+**11. Use Case: Comment on Task**
 
 **Actors:**  
 Team Member, Team Leader / Manager, Freelancer, Reviewer
@@ -370,7 +371,9 @@ draft if possible.
 - Unauthorized User: If the user lacks permission for this task, block posting and explain required
 permissions.
 
-## Use Case 11: Assign Role
+---
+
+**12. Use Case: Assign Role**
 
 **Actors:**  
 Workspace Owner, Project Manager
@@ -402,7 +405,7 @@ responsibilities.
 - System Error: If updating fails, roll back and show a meaningful error message.
 
 
-## Use Case 12: File Sharing — Add, Remove, Update
+**13. Use Case: File Sharing — Add, Remove, Update**
 
 **Actors:**  
 Team Member, Freelancer, Team Leader
@@ -437,7 +440,9 @@ associated with projects and tasks.
 - File Type/Size Rejected: Block uploads with unsupported types or sizes and inform the user.
 - Permission Denied: Prevent file actions if the user lacks rights.
 
-## Use Case 13: Communication (Channels, Direct Messages, Mentions)
+---
+
+**14. Use Case: Communication (Channels, Direct Messages, Mentions)**
 
 **Actors:**  
 All Project Users — Team Members, Managers, Freelancers, Clients (with restricted views)
