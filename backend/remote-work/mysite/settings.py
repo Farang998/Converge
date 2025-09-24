@@ -11,6 +11,8 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
 from pathlib import Path
+import os
+from mongoengine import connect
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -25,7 +27,7 @@ SECRET_KEY = 'django-insecure-g_&8@lud^j0yhf^ifr7ny#4jkzk0wae(#mnmo+jezlnfaq*zo&
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['localhost', '127.0.0.1']
 
 
 # Application definition
@@ -38,11 +40,12 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'api',
-    'rest_framework',
+    'mongoengine',
     'corsheaders',
 ]
 
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -77,10 +80,29 @@ WSGI_APPLICATION = 'mysite.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.dummy',
     }
 }
+
+# MongoDB configuration
+# Support a full MongoDB URI via `MONGO_URI` env var (e.g.
+# mongodb://localhost:27017/). If not provided, fall back to host/port.
+MONGO_URI = 'mongodb://localhost:27017/'
+if MONGO_URI:
+    # If a full connection URI is provided, use it.
+    connect(db='converge_db', host=MONGO_URI)
+else:
+    # Allow overriding the MongoDB host/port via environment variables.
+    # Default to 0.0.0.0 so the server is reachable from the host network
+    # when running inside Docker or when binding to all interfaces.
+    MONGO_HOST = os.environ.get('MONGO_HOST', '0.0.0.0')
+    MONGO_PORT = int(os.environ.get('MONGO_PORT', '27017'))
+    connect('converge_db', host=MONGO_HOST, port=MONGO_PORT)
+
+# Use custom authentication backend that talks to MongoDB via mongoengine
+AUTHENTICATION_BACKENDS = [
+    'api.auth_backend.MongoEngineBackend',
+]
 
 
 # Password validation
@@ -107,12 +129,24 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = "Asia/Kolkata"
 
 USE_I18N = True
 
 USE_TZ = True
 
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = 'vasanidevarsh@gmail.com'
+EMAIL_HOST_PASSWORD = 'acmq yqnc ufmx azzl'
+
+# Development: print emails to console to avoid SMTP errors locally.
+if DEBUG:
+    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+else:
+    EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
@@ -123,3 +157,26 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# Use signed cookie session engine so Django doesn't attempt to use the
+# default database-backed sessions (the default DB is disabled here).
+SESSION_ENGINE = 'django.contrib.sessions.backends.signed_cookies'
+
+# During local development allow cross-origin requests from any origin so the
+# frontend served on different host/port can reach the API. Do NOT use this
+# setting in production.
+CORS_ALLOWED_ORIGINS = [
+    'http://localhost:3000',  # Frontend URL
+    'http://127.0.0.1:3000',  # Add this if using 127.0.0.1
+    'http://localhost:5173'  # Add this for Vite development server
+]
+# Allow cookies/credentials to be sent cross-site (for session auth if used)
+CORS_ALLOW_CREDENTIALS = True
+
+# Trusted origins for CSRF when making POST requests from the frontend development servers
+CSRF_TRUSTED_ORIGINS = [
+    'http://localhost:3000',
+    'http://127.0.0.1:3000',
+    'http://localhost:5173',
+    'http://127.0.0.1:5173',
+]

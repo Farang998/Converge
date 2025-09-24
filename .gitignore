@@ -1,9 +1,65 @@
-backend/remote-work/db.sqlite3
-backend/remote-work/__pycache__/
-backend/remote-work/api/__pycache__/
-backend/remote-work/api/migrations/__pycache__/
-backend/remote-work/mysite/__pycache__/
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Django stuff:
+*.log
+local_settings.py
+db.sqlite3
+media
+
+# Environments
+.env
+.venv/
+venv/
+env/
+.venv
+
+# VSCode
+.vscode/
+
+# IDEs
+.idea/
+*.sublime-workspace
+*.sublime-project
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Node
+node_modules/
+frontend/node_modules/
 frontend/remote/node_modules/
-frontend/remote/.next/
-frontend/remote/.env
-backend/venv
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Build outputs
+frontend/dist/
+frontend/.vite/
+frontend/.next/
+
+# Python packaging
+*.egg-info/
+*.egg
+
+# Misc
+Thumbs.db
+ehthumbs.db
+
+# Database files
+*.sqlite3
+
+# Private envs
+*.env.local
+.env.*.local
+
+# Logs
+*.log
+
+# Generated OTP storage (if any local temp)
+backend/remote-work/api/email_otps.json

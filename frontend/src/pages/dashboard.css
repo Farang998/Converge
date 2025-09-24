@@ -1,0 +1,128 @@
+
+.dashboard-container *{
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: Arial, sans-serif;
+}
+
+.dashboard-container body{
+  background: #f5f7fb;
+}
+
+.dashboard-container .container{
+  display: flex;
+  min-height: 100vh;
+}
+
+.dashboard-container .sidebar{
+  width: 230px;
+  background: #fff;
+  padding: 20px;
+  border-right: 1px solid #ddd;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.dashboard-container .logo{
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 18px;
+  font-weight: bold;
+  margin-bottom: 30px;
+}
+
+.dashboard-container .logo img{
+  width: 35px;
+  height: 35px;
+}
+
+.dashboard-container .menu{
+  list-style: none;
+}
+
+.dashboard-container .menu li{
+  margin: 15px 0;
+  cursor: pointer;
+}
+
+.dashboard-container .menu li:hover{
+  color: #007bff;
+}
+
+.dashboard-container .sidebar-bottom{
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.dashboard-container .user-info{
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.dashboard-container .avatar{
+  width: 35px;
+  height: 35px;
+  background: #007bff;
+  color: #fff;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+}
+
+.dashboard-container .username{
+  font-size: 14px;
+  font-weight: bold;
+}
+
+.dashboard-container .role{
+  font-size: 12px;
+  color: gray;
+}
+
+.dashboard-container .logout-btn{
+  padding: 10px;
+  width: 100%;
+  background: #63c622;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.dashboard-container .logout-btn:hover{
+  background: #1a76df;
+}
+
+.dashboard-container .main{
+  flex: 1;
+  padding: 20px;
+}
+
+.dashboard-container .cards{
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+.dashboard-container .card{
+  background: #fff;
+  padding: 15px;
+  border-radius: 10px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+}
+
+.dashboard-container .content{
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
