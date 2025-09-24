@@ -28,7 +28,6 @@ export default function Register() {
     setSuccess('');
 
     if (!otpSent) {
-      // Step 1: Send OTP
       try {
         const response = await fetch('http://localhost:8000/api/send-otp/', {
           method: 'POST',
@@ -39,7 +38,6 @@ export default function Register() {
         if (response.ok && data.success) {
           setOtpSent(true);
           setSuccess('OTP sent to your email. Please enter it below.');
-          if (data.otp) setOtp(String(data.otp)); // helpful in DEBUG mode
         } else {
           setError(data.message || 'Failed to send OTP.');
         }
@@ -49,7 +47,6 @@ export default function Register() {
       return;
     }
 
-    // Step 2: Validate OTP
     if (otpSent) {
       if (!otp || otp.trim() === '') {
         setError('Please enter the OTP sent to your email.');
@@ -72,7 +69,6 @@ export default function Register() {
       }
     }
 
-    // Step 3: Register user
     if (form.password !== form.confirmPassword) {
       setError('Passwords do not match');
       return;

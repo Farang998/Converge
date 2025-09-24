@@ -104,9 +104,9 @@ class LogoutUserView(APIView):
 @csrf_exempt
 def send_otp(request):
     if request.method == 'POST':
-        # Support JSON body (fetch sends JSON) or form data
         try:
-            data = json.loads(request.body.decode('utf-8')) if request.body else {}
+            if request.body:
+                data = json.loads(request.body.decode('utf-8'))
         except Exception:
             data = request.POST
         email = data.get('email') or request.POST.get('email')
@@ -122,7 +122,8 @@ def send_otp(request):
 def validate_otp(request):
     if request.method == 'POST':
         try:
-            data = json.loads(request.body.decode('utf-8')) if request.body else {}
+            if request.body:
+                data = json.loads(request.body.decode('utf-8'))
         except Exception:
             data = request.POST
         email = data.get('email') or request.POST.get('email')
