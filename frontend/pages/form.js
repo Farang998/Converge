@@ -44,11 +44,11 @@ registerForm.onsubmit = function(event){
     password: pass,
   };
 
-  // localStorage me save karna
+  // save in local Storage
   localStorage.setItem("user", JSON.stringify(user));
 
   alert("Registration successful! Please login now.");
-  loginTab.onclick(); // Register ke baad login page open ho jayega
+  loginTab.onclick(); // login tab will get open after successful registration
 };
 
 //Login Form
@@ -68,4 +68,5 @@ loginForm.onsubmit = function(event){
     alert("Wrong username/email or password!");
   }
 };
+
 
