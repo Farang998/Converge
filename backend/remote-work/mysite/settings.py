@@ -42,6 +42,7 @@ INSTALLED_APPS = [
     'api',
     'mongoengine',
     'corsheaders',
+    'Chat',
 ]
 
 MIDDLEWARE = [
@@ -79,9 +80,18 @@ WSGI_APPLICATION = 'mysite.wsgi.application'
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
 DATABASES = {
+    
     'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'postgres',
+        'USER': 'postgres',
+        'PASSWORD': 'converge.23$S',
+        'HOST': 'convergechat.cfwsyokua33d.eu-north-1.rds.amazonaws.com', 
+        'PORT': '5432',
+    },
+    'mongodb':{
         'ENGINE': 'django.db.backends.dummy',
-    }
+    },
 }
 
 # MongoDB configuration
