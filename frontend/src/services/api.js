@@ -50,4 +50,8 @@ export function setAuthToken(newToken) {
   }
 }
 
+export function logout() {
+  setAuthToken(null);
+}
+
 export default api;

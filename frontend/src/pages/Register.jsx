@@ -28,6 +28,24 @@ export default function Register() {
     setSuccess('');
 
     if (!otpSent) {
+      // Step 1: Validate username and email
+      try {
+        const validationResponse = await fetch('http://localhost:8000/api/validate-user/', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username: form.username, email: form.email })
+        });
+        const validationData = await validationResponse.json();
+        if (!validationResponse.ok || !validationData.success) {
+          setError(validationData.message || 'Username or email already exists.');
+          return;
+        }
+      } catch (err) {
+        setError('Network error while validating username and email.');
+        return;
+      }
+
+      // Step 2: Send OTP
       try {
         const response = await fetch('http://localhost:8000/api/send-otp/', {
           method: 'POST',

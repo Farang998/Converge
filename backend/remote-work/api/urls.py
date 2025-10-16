@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import hello_world, RegisterUserView, LoginUserView, LogoutUserView, send_otp, validate_otp
+from .views import hello_world, RegisterUserView, LoginUserView, LogoutUserView, send_otp, validate_otp, validate_user
 
 urlpatterns = [
     path('hello/', hello_world),
@@ -8,4 +8,5 @@ urlpatterns = [
     path('logout/', LogoutUserView.as_view(), name='logout'),
     path('send-otp/', send_otp, name='send_otp'),
     path('validate-otp/', validate_otp, name='validate_otp'),
+    path('validate-user/', validate_user, name='validate_user'),
 ]

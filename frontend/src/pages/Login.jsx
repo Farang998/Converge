@@ -33,8 +33,14 @@ export default function Login() {
         body: JSON.stringify(payload)
       });
       if (response.ok) {
-        toast.success('Login successful! Redirecting...');
-        setTimeout(() => navigate('/dashboard'), 1500);
+        const data = await response.json();
+        if (data.token) {
+          localStorage.setItem('authToken', data.token);
+          toast.success('Login successful! Redirecting...');
+          setTimeout(() => navigate('/dashboard'), 1500);
+        } else {
+          setError(data.error || data.message || 'Login failed');
+        }
       } else {
         const data = await response.json();
         setError(data.error || data.message || 'Login failed');

@@ -3,6 +3,7 @@ from mongoengine import Document, StringField, EmailField, DateTimeField
 from django.contrib.auth.hashers import make_password, check_password
 from django.utils import timezone
 import secrets
+from django.core.cache import cache
 
 # Create your models here.
 class EmailOTP(Document):
@@ -41,14 +42,30 @@ class User(Document):
         return user
 
     @classmethod
+    def generate_token(cls, user_id):
+        token = secrets.token_hex(16)
+        cache.set(token, user_id, timeout=None)  # Token does not expire
+        return token
+
+    @classmethod
+    def validate_token(cls, token):
+        user_id = cache.get(token)
+        if user_id:
+            return cls.objects.get(id=user_id)
+        return None
+
+    @classmethod
+    def logout(cls, token):
+        cache.delete(token)  # Remove token from cache
+
+    @classmethod
     def authenticate(cls, username, password, is_email):
         try:
             if is_email:
                 user = cls.objects.get(email=username)
             else:
                 user = cls.objects.get(username=username)
-            f = check_password(password, user.password)
-            if f:
+            if check_password(password, user.password):
                 return user
         except cls.DoesNotExist:
             pass

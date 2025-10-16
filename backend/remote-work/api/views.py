@@ -14,6 +14,7 @@ from .utils import send_otp_email
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 import json
+from django.core.cache import cache
 
 @api_view(['GET'])
 def hello_world(request):
@@ -80,25 +81,25 @@ class LoginUserView(APIView):
 
         if not username or not password:
             return Response({'error': 'Username and password are required'}, status=status.HTTP_400_BAD_REQUEST)
-        
-        
-        user = User.authenticate(username=username, password=password, is_email=False)
 
+        user = User.authenticate(username=username, password=password, is_email=False)
         if user is None:
             user = User.authenticate(username, password, is_email=True)
 
         if user is not None:
-            try:
-                pass
-            except Exception:
-                pass
-            print("login successful")
-            return Response({'message': 'Login successful'}, status=status.HTTP_200_OK)
-        print("invalid credentials")
+            token = User.generate_token(user.id)
+            return Response({'message': 'Login successful', 'token': token}, status=status.HTTP_200_OK)
+
         return Response({'error': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
 
 class LogoutUserView(APIView):
-    pass
+    def post(self, request):
+        token = request.data.get('token')
+        if not token:
+            return Response({'error': 'Token is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        User.logout(token)
+        return Response({'message': 'Logout successful'}, status=status.HTTP_200_OK)
 
 
 @csrf_exempt
@@ -145,3 +146,19 @@ def validate_otp(request):
             return JsonResponse({'success': False, 'message': 'Invalid OTP.'})
 
     return JsonResponse({'success': False, 'message': 'Invalid request method.'})
+
+@api_view(['POST'])
+def validate_user(request):
+    username = request.data.get('username')
+    email = request.data.get('email')
+
+    if not username or not email:
+        return Response({'success': False, 'message': 'Username and email are required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    if User.objects(username=username).first():
+        return Response({'success': False, 'message': 'Username already exists.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    if User.objects(email=email).first():
+        return Response({'success': False, 'message': 'Email already exists.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    return Response({'success': True, 'message': 'Username and email are available.'}, status=status.HTTP_200_OK)
