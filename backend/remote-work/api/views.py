@@ -4,6 +4,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework import status
 from .models import User, EmailOTP
+from django.contrib.auth.hashers import make_password
 from django.contrib.auth import authenticate, login
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.authentication import SessionAuthentication
@@ -22,12 +23,10 @@ def hello_world(request):
 
 
 def contain_all_numbers(s):
-    f = True
     for i in s:
         if not i.isdigit():
-            f = False
-            break
-    return f
+            return False
+    return True
 
 class RegisterUserView(APIView):
     def post(self, request):
@@ -40,7 +39,6 @@ class RegisterUserView(APIView):
         if not username or not password or not email:
             return Response({'error': 'All fields are required'}, status=status.HTTP_400_BAD_REQUEST)
         
-        # Fix type checking
         if not isinstance(username, str) or not isinstance(password, str) or not isinstance(email, str):
             return Response({'error': 'Invalid data types'}, status=status.HTTP_400_BAD_REQUEST)
         
@@ -48,7 +46,6 @@ class RegisterUserView(APIView):
             return Response({'error': 'Fields cannot be empty'}, status=status.HTTP_400_BAD_REQUEST)
         
         if username[0].isdigit() or contain_all_numbers(username):
-            print (username[0].isdigit())
             return Response({'error': 'Username cannot start with a number or contain all numbers'}, status=status.HTTP_400_BAD_REQUEST)
         
         if User.objects(username=username).first():
@@ -60,7 +57,6 @@ class RegisterUserView(APIView):
         if len(password) < 8:
             return Response({'error': 'Password must be at least 8 characters long'}, status=status.HTTP_400_BAD_REQUEST)
         
-        # Validate email
         try:
             validate_email(email)
         except DjangoValidationError:
@@ -134,14 +130,13 @@ def validate_otp(request):
         if not email or not otp or not purpose:
             return JsonResponse({'success': False, 'message': 'Email, OTP, and purpose are required.'})
 
-        otp_record = EmailOTP.objects(user=email, purpose=purpose).first()
+        otp_record = EmailOTP.objects(user=email, purpose=purpose, is_used=False).first()
 
         if not otp_record:
             return JsonResponse({'success': False, 'message': 'No OTP found for this email and purpose. Please request a new one.'})
 
         if otp_record.otp == str(otp):
-            otp_record.delete()
-            return JsonResponse({'success': True, 'message': 'OTP validated successfully.'})
+            otp_record.is_used = True
         else:
             return JsonResponse({'success': False, 'message': 'Invalid OTP.'})
 
@@ -162,3 +157,68 @@ def validate_user(request):
         return Response({'success': False, 'message': 'Email already exists.'}, status=status.HTTP_400_BAD_REQUEST)
 
     return Response({'success': True, 'message': 'Username and email are available.'}, status=status.HTTP_200_OK)
+
+
+class ForgotPasswordRequestView(APIView):
+    def post(self, request):
+        email = request.data.get('email')
+        if not email:
+            return Response({'error': 'Email is required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        user = User.objects(email=email).first()
+        if not user:
+            return Response({'error': 'No account found with this email.'}, status=status.HTTP_404_NOT_FOUND)
+
+        try:
+            send_otp_email(email, purpose='password_reset')
+            return Response({'message': 'OTP sent to email if account exists.'}, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({'error': 'Failed to send OTP.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class ResetPasswordView(APIView):
+    def post(self, request):
+        email = request.data.get('email')
+        otp = request.data.get('otp')
+        new_password = request.data.get('new_password')
+
+        if not email or not otp or not new_password:
+            return Response({'error': 'Email, OTP and new password are required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        otp_record = EmailOTP.objects(user=email, purpose='password_reset', is_used=True).first()
+
+        if not otp_record:
+            all_otps = EmailOTP.objects(user=email, purpose='password_reset')
+            return Response({'error': 'No OTP found or OTP expired.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if otp_record.otp != str(otp):
+            return Response({'error': 'Invalid OTP.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        user = User.objects(email=email).first()
+        if not user:
+            return Response({'error': 'No user found for this email.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            user.password = make_password(new_password)
+            user.save()
+            otp_record.is_used = True  # Mark OTP as used after successful password reset
+            otp_record.save()
+            return Response({'message': 'Password reset successful.'}, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({'error': 'Server error: ' + str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+class IdentifyUserView(APIView):
+    def get(self, request):
+        token = request.headers.get('Authorization')
+        if not token:
+            return Response({'error': 'Authorization token is required'}, status=status.HTTP_401_UNAUTHORIZED)
+
+        user = User.validate_token(token)
+        if not user:
+            return Response({'error': 'Invalid or expired token'}, status=status.HTTP_401_UNAUTHORIZED)
+
+        return Response({'message': 'User identified successfully', 'user': {
+            'id': user.id,
+            'username': user.username,
+            'email': user.email
+        }}, status=status.HTTP_200_OK)

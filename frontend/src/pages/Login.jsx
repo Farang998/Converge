@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import './Login.css';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import api, { setAuthToken } from './api'; // Adjust the import based on your file structure
 
 export default function Login() {
   const navigate = useNavigate();
@@ -21,32 +22,23 @@ export default function Login() {
     e.preventDefault();
     setError('');
     setSuccess('');
-    // Map frontend fields to backend expected fields
+
     const payload = {
       username: form.loginIdentifier,
       password: form.loginPassword
     };
+
     try {
-      const response = await fetch('http://localhost:8000/api/login/', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-      if (response.ok) {
-        const data = await response.json();
-        if (data.token) {
-          localStorage.setItem('authToken', data.token);
-          toast.success('Login successful! Redirecting...');
-          setTimeout(() => navigate('/dashboard'), 1500);
-        } else {
-          setError(data.error || data.message || 'Login failed');
-        }
+      const response = await api.post('login/', payload);
+      if (response.data.token) {
+        setAuthToken(response.data.token);
+        toast.success('Login successful! Redirecting...');
+        setTimeout(() => navigate('/dashboard'), 1500);
       } else {
-        const data = await response.json();
-        setError(data.error || data.message || 'Login failed');
+        setError('Login failed. Please try again.');
       }
     } catch (err) {
-      setError('Network error');
+      setError(err.response?.data?.error || 'Network error. Please try again.');
     }
   }
 
@@ -89,6 +81,14 @@ export default function Login() {
         {error && <div style={{ color: 'red', marginTop: '1rem' }}>{error}</div>}
         {success && <div style={{ color: 'green', marginTop: '1rem' }}>{success}</div>}
       </form>
+      <button
+        type="button"
+        className="tab"
+        style={{ marginTop: '1rem' }}
+        onClick={() => navigate('/forgot-password')}
+      >
+        Forgot password?
+      </button>
       <button
         type="button"
         className="tab"

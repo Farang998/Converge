@@ -1,5 +1,5 @@
 from django.db import models
-from mongoengine import Document, StringField, EmailField, DateTimeField
+from mongoengine import Document, StringField, EmailField, DateTimeField, BooleanField
 from django.contrib.auth.hashers import make_password, check_password
 from django.utils import timezone
 import secrets
@@ -11,11 +11,12 @@ class EmailOTP(Document):
     otp = StringField(required=True)
     purpose = StringField(required=True, choices=['register', 'password_reset'])
     created_at = DateTimeField(default=timezone.now)
+    is_used = BooleanField(default=False)  # New field to track OTP usage
 
     meta = {
         'collection': 'email_otps',
         'indexes': [
-            {'fields': ['created_at'], 'expireAfterSeconds': 120}
+            {'fields': ['created_at'], 'expireAfterSeconds': 300}  # Expiry time remains 5 minutes
         ]
     }
 

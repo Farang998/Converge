@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 
 from pathlib import Path
 import os
+import ssl
 from mongoengine import connect
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -90,7 +91,7 @@ DATABASES = {
 MONGO_URI = 'mongodb+srv://convergework23_db_user:DRPxZfsnHQRCHQ58@cluster0.s0y3bgk.mongodb.net/'
 if MONGO_URI:
     # If a full connection URI is provided, use it.
-    connect(db='converge_db', host=MONGO_URI)
+    connect(db='converge_db', host=MONGO_URI, ssl=True, tlsAllowInvalidCertificates=True)
 else:
     # Allow overriding the MongoDB host/port via environment variables.
     # Default to 0.0.0.0 so the server is reachable from the host network
