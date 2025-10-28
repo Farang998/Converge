@@ -169,7 +169,8 @@ SESSION_ENGINE = 'django.contrib.sessions.backends.signed_cookies'
 CORS_ALLOWED_ORIGINS = [
     'http://localhost:3000',  # Frontend URL
     'http://127.0.0.1:3000',  # Add this if using 127.0.0.1
-    'http://localhost:5173'  # Add this for Vite development server
+    'http://localhost:5173',  # Add this for Vite development server
+    'http://localhost:5174'  # Add this for Vite development server (alternative port)
 ]
 # Allow cookies/credentials to be sent cross-site (for session auth if used)
 CORS_ALLOW_CREDENTIALS = True
@@ -180,4 +181,6 @@ CSRF_TRUSTED_ORIGINS = [
     'http://127.0.0.1:3000',
     'http://localhost:5173',
     'http://127.0.0.1:5173',
+    'http://localhost:5174',
+    'http://127.0.0.1:5174',
 ]

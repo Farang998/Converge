@@ -3,8 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import './Login.css';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import api, { setAuthToken } from './api'; // Adjust the import based on your file structure
-
+import api, { setAuthToken } from '../services/api';
 export default function Login() {
   const navigate = useNavigate();
   const [form, setForm] = useState({

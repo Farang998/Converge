@@ -201,7 +201,7 @@ class ResetPasswordView(APIView):
         try:
             user.password = make_password(new_password)
             user.save()
-            otp_record.is_used = True  # Mark OTP as used after successful password reset
+            otp_record.is_used = True  
             otp_record.save()
             return Response({'message': 'Password reset successful.'}, status=status.HTTP_200_OK)
         except Exception as e:
@@ -209,16 +209,23 @@ class ResetPasswordView(APIView):
 
 class IdentifyUserView(APIView):
     def get(self, request):
-        token = request.headers.get('Authorization')
-        if not token:
+        auth_header = request.headers.get('Authorization')
+        if not auth_header:
             return Response({'error': 'Authorization token is required'}, status=status.HTTP_401_UNAUTHORIZED)
+
+        try:
+            token_type, token = auth_header.split(' ')
+            if token_type.lower() != 'bearer':
+                return Response({'error': 'Invalid token type'}, status=status.HTTP_401_UNAUTHORIZED)
+        except ValueError:
+            return Response({'error': 'Invalid authorization'}, status=status.HTTP_401_UNAUTHORIZED)
 
         user = User.validate_token(token)
         if not user:
             return Response({'error': 'Invalid or expired token'}, status=status.HTTP_401_UNAUTHORIZED)
 
         return Response({'message': 'User identified successfully', 'user': {
-            'id': user.id,
+            'id': str(user.id),
             'username': user.username,
             'email': user.email
         }}, status=status.HTTP_200_OK)
