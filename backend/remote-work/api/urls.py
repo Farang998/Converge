@@ -1,17 +1,7 @@
-from django.urls import path
-from .views import hello_world, RegisterUserView, LoginUserView, LogoutUserView, send_otp, validate_otp, validate_user, ForgotPasswordRequestView, ResetPasswordView, IdentifyUserView
-
-
+from django.urls import path, include
+from .views import hello_world
 
 urlpatterns = [
     path('hello/', hello_world),
-    path('register/', RegisterUserView.as_view(), name='register'),
-    path('login/', LoginUserView.as_view(), name='login'),
-    path('logout/', LogoutUserView.as_view(), name='logout'),
-    path('send-otp/', send_otp, name='send_otp'),
-    path('validate-otp/', validate_otp, name='validate_otp'),
-    path('validate-user/', validate_user, name='validate_user'),
-    path('forgot-password/request/', ForgotPasswordRequestView.as_view(), name='forgot_password_request'),
-    path('reset-password/', ResetPasswordView.as_view(), name='reset_password'),
-    path('identify-user/', IdentifyUserView.as_view(), name='identify_user'),
+    path('auth/', include('api.auth.urls')),
 ]

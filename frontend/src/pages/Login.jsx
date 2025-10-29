@@ -28,7 +28,7 @@ export default function Login() {
     };
 
     try {
-      const response = await api.post('login/', payload);
+      const response = await api.post('auth/login/', payload);
       if (response.data.token) {
         setAuthToken(response.data.token);
         toast.success('Login successful! Redirecting...');

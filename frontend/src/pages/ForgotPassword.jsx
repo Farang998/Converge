@@ -28,7 +28,7 @@ export default function ForgotPassword() {
     setError('');
     setSuccess('');
     try {
-      const resp = await api.post('forgot-password/request/', { email });
+      const resp = await api.post('auth/forgot-password/request/', { email });
       setSuccess(resp.data.message || 'OTP sent');
       setStep('otp');
     } catch (err) {
@@ -41,7 +41,7 @@ export default function ForgotPassword() {
     setError('');
     setSuccess('');
     try {
-      const resp = await api.post('validate-otp/', { email, otp, purpose: 'password_reset' });
+      const resp = await api.post('auth/validate-otp/', { email, otp, purpose: 'password_reset' });
       if (resp.data.success) {
         setStep('reset');
         setSuccess('OTP validated. You may set a new password.');
@@ -58,7 +58,7 @@ export default function ForgotPassword() {
     setError('');
     setSuccess('');
     try {
-      const resp = await api.post('reset-password/', { email, otp, new_password: newPassword });
+      const resp = await api.post('auth/reset-password/', { email, otp, new_password: newPassword });
       setSuccess(resp.data.message || 'Password reset successful');
       setTimeout(() => navigate('/login'), 1200);
     } catch (err) {

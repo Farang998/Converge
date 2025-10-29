@@ -30,7 +30,7 @@ export default function Register() {
     if (!otpSent) {
       // Step 1: Validate username and email
       try {
-        const validationResponse = await fetch('http://localhost:8000/api/validate-user/', {
+        const validationResponse = await fetch('http://localhost:8000/api/auth/validate-user/', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ username: form.username, email: form.email })
@@ -47,7 +47,7 @@ export default function Register() {
 
       // Step 2: Send OTP
       try {
-        const response = await fetch('http://localhost:8000/api/send-otp/', {
+        const response = await fetch('http://localhost:8000/api/auth/send-otp/', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email: form.email, purpose: 'register' })
@@ -71,7 +71,7 @@ export default function Register() {
         return;
       }
       try {
-        const response = await fetch('http://localhost:8000/api/validate-otp/', {
+        const response = await fetch('http://localhost:8000/api/auth/validate-otp/', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email: form.email, otp: otp.trim(), purpose: 'register' })
@@ -99,7 +99,7 @@ export default function Register() {
       password: form.password
     };
     try {
-      const response = await fetch('http://localhost:8000/api/register/', {
+      const response = await fetch('http://localhost:8000/api/auth/register/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
