@@ -80,6 +80,7 @@ TEMPLATES = [
 WSGI_APPLICATION = 'mysite.wsgi.application'
 ASGI_APPLICATION = 'mysite.asgi.application'
 
+
 CHANNEL_LAYERS = {
     'default' : {
         'BACKEND' : 'channels_redis.core.RedisChannelLayer',
@@ -88,6 +89,7 @@ CHANNEL_LAYERS = {
         },
     },
 }
+
 
 REST_FRAMEWORK = {
     'DEFULT_AUTHENTICATION_CLASSES' : (
