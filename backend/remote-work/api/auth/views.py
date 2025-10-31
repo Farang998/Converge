@@ -133,6 +133,8 @@ def validate_otp(request):
 
         if otp_record.otp == str(otp):
             otp_record.is_used = True
+            otp_record.save()
+            return JsonResponse({'success': True, 'message': 'OTP validated successfully.'})
         else:
             return JsonResponse({'success': False, 'message': 'Invalid OTP.'})
 

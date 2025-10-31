@@ -3,7 +3,6 @@ from mongoengine import Document, StringField, EmailField, DateTimeField, Boolea
 from django.contrib.auth.hashers import make_password, check_password
 from django.utils import timezone
 import secrets
-from django.core.cache import cache
 
 class EmailOTP(Document):
     user = StringField(required=True)
@@ -18,6 +17,13 @@ class EmailOTP(Document):
             {'fields': ['created_at'], 'expireAfterSeconds': 300}  
         ]
     }
+
+class Token(Document):
+    user = StringField(required=True)
+    token = StringField(required=True, unique=True)
+    created_at = DateTimeField(default=timezone.now)
+
+    meta = {'collection': 'tokens'}
 
 class User(Document):
     username = StringField(required=True, unique=True, max_length=150)
@@ -44,19 +50,20 @@ class User(Document):
     @classmethod
     def generate_token(cls, user_id):
         token = secrets.token_hex(16)
-        cache.set(token, user_id, timeout=None) 
+        Token(user=str(user_id), token=token).save()
         return token
 
     @classmethod
     def validate_token(cls, token):
-        user_id = cache.get(token)
-        if user_id:
-            return cls.objects.get(id=user_id)
-        return None
+        try:
+            token_obj = Token.objects.get(token=token)
+            return cls.objects.get(id=token_obj.user)
+        except (Token.DoesNotExist, cls.DoesNotExist):
+            return None
 
     @classmethod
     def logout(cls, token):
-        cache.delete(token) 
+        Token.objects(token=token).delete() 
 
     @classmethod
     def authenticate(cls, username, password, is_email):

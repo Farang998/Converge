@@ -28,7 +28,18 @@ export default function Register() {
     setSuccess('');
 
     if (!otpSent) {
-      // Step 1: Validate username and email
+      if (!form.password || form.password.trim() === '') {
+        setError('Password is required.');
+        return;
+      }
+      if (form.password.length < 8) {
+        setError('Password must be at least 8 characters long.');
+        return;
+      }
+      if (form.password !== form.confirmPassword) {
+        setError('Passwords do not match.');
+        return;
+      }
       try {
         const validationResponse = await fetch('http://localhost:8000/api/auth/validate-user/', {
           method: 'POST',
@@ -87,10 +98,6 @@ export default function Register() {
       }
     }
 
-    if (form.password !== form.confirmPassword) {
-      setError('Passwords do not match');
-      return;
-    }
     const payload = {
       firstName: form.firstName,
       lastName: form.lastName,
