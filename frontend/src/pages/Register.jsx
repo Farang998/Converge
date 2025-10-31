@@ -28,8 +28,37 @@ export default function Register() {
     setSuccess('');
 
     if (!otpSent) {
+      if (!form.password || form.password.trim() === '') {
+        setError('Password is required.');
+        return;
+      }
+      if (form.password.length < 8) {
+        setError('Password must be at least 8 characters long.');
+        return;
+      }
+      if (form.password !== form.confirmPassword) {
+        setError('Passwords do not match.');
+        return;
+      }
       try {
-        const response = await fetch('http://localhost:8000/api/send-otp/', {
+        const validationResponse = await fetch('http://localhost:8000/api/auth/validate-user/', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username: form.username, email: form.email })
+        });
+        const validationData = await validationResponse.json();
+        if (!validationResponse.ok || !validationData.success) {
+          setError(validationData.message || 'Username or email already exists.');
+          return;
+        }
+      } catch (err) {
+        setError('Network error while validating username and email.');
+        return;
+      }
+
+      // Step 2: Send OTP
+      try {
+        const response = await fetch('http://localhost:8000/api/auth/send-otp/', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email: form.email, purpose: 'register' })
@@ -53,7 +82,7 @@ export default function Register() {
         return;
       }
       try {
-        const response = await fetch('http://localhost:8000/api/validate-otp/', {
+        const response = await fetch('http://localhost:8000/api/auth/validate-otp/', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email: form.email, otp: otp.trim(), purpose: 'register' })
@@ -69,10 +98,6 @@ export default function Register() {
       }
     }
 
-    if (form.password !== form.confirmPassword) {
-      setError('Passwords do not match');
-      return;
-    }
     const payload = {
       firstName: form.firstName,
       lastName: form.lastName,
@@ -81,7 +106,7 @@ export default function Register() {
       password: form.password
     };
     try {
-      const response = await fetch('http://localhost:8000/api/register/', {
+      const response = await fetch('http://localhost:8000/api/auth/register/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)

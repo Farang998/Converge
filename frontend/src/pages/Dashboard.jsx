@@ -1,8 +1,15 @@
 import React from 'react';
 import './dashboard.css';
+import { logout } from '../services/api';
 
 export default function Dashboard() {
   const username = typeof window !== 'undefined' ? (localStorage.getItem('username') || 'User') : 'User';
+
+  function handleLogout() {
+    logout();
+    localStorage.removeItem('authToken');
+    window.location.href = '/login';
+  }
 
   return (
     <div className="dashboard-container">
@@ -30,7 +37,7 @@ export default function Dashboard() {
             </div>
           </div>
 
-          <button className="logout-btn">Logout</button>
+          <button className="logout-btn" onClick={handleLogout}>Logout</button>
         </div>
       </div>
 

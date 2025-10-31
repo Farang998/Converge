@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 
 from pathlib import Path
 import os
+import ssl
 from mongoengine import connect
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -90,7 +91,7 @@ DATABASES = {
 MONGO_URI = 'mongodb+srv://convergework23_db_user:DRPxZfsnHQRCHQ58@cluster0.s0y3bgk.mongodb.net/'
 if MONGO_URI:
     # If a full connection URI is provided, use it.
-    connect(db='converge_db', host=MONGO_URI)
+    connect(db='converge_db', host=MONGO_URI, ssl=True, tlsAllowInvalidCertificates=True)
 else:
     # Allow overriding the MongoDB host/port via environment variables.
     # Default to 0.0.0.0 so the server is reachable from the host network
@@ -104,7 +105,13 @@ AUTHENTICATION_BACKENDS = [
     'api.auth_backend.MongoEngineBackend',
 ]
 
-
+APP_PASSWORD = "mknw oivj issu ecpb"
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = "vasanidevarsh@gmail.com"
+EMAIL_HOST_PASSWORD = APP_PASSWORD
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
 
@@ -135,18 +142,11 @@ USE_I18N = True
 
 USE_TZ = True
 
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = 'smtp.gmail.com'
-EMAIL_PORT = 587
-EMAIL_USE_TLS = True
-EMAIL_HOST_USER = 'vasanidevarsh@gmail.com'
-EMAIL_HOST_PASSWORD = 'acmq yqnc ufmx azzl'
-
 # Development: print emails to console to avoid SMTP errors locally.
-if DEBUG:
-    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
-else:
-    EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+# if DEBUG:
+#     EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+# else:
+#     EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
@@ -168,7 +168,8 @@ SESSION_ENGINE = 'django.contrib.sessions.backends.signed_cookies'
 CORS_ALLOWED_ORIGINS = [
     'http://localhost:3000',  # Frontend URL
     'http://127.0.0.1:3000',  # Add this if using 127.0.0.1
-    'http://localhost:5173'  # Add this for Vite development server
+    'http://localhost:5173',  # Add this for Vite development server
+    'http://localhost:5174'  # Add this for Vite development server (alternative port)
 ]
 # Allow cookies/credentials to be sent cross-site (for session auth if used)
 CORS_ALLOW_CREDENTIALS = True
@@ -179,4 +180,6 @@ CSRF_TRUSTED_ORIGINS = [
     'http://127.0.0.1:3000',
     'http://localhost:5173',
     'http://127.0.0.1:5173',
+    'http://localhost:5174',
+    'http://127.0.0.1:5174',
 ]

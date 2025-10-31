@@ -11,7 +11,7 @@ const api = axios.create({
 // Initialize auth header from localStorage if present
 const token = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null;
 if (token) {
-  api.defaults.headers.common['Authorization'] = `Token ${token}`;
+  api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
 }
 
 // Simple request logger and ensure base is used
@@ -48,6 +48,10 @@ export function setAuthToken(newToken) {
     localStorage.removeItem('authToken');
     delete api.defaults.headers.common['Authorization'];
   }
+}
+
+export function logout() {
+  setAuthToken(null);
 }
 
 export default api;
