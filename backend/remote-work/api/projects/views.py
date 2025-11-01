@@ -350,7 +350,6 @@ class AcceptInvitation(APIView):
        
         # 4. Find and update the user in the team_members list
         user_id_str = str(user.id)
-        member_found = False
         for member in project.team_members:
             if member['user'] == user_id_str:
                 if member['accepted']:
@@ -358,8 +357,31 @@ class AcceptInvitation(APIView):
                 
                 member['accepted'] = True
                 project.save()
-                member_found = True
                 return Response({'message': 'Invitation accepted successfully'}, status=status.HTTP_200_OK)
         
-        if not member_found:
-            return Response({'error': 'You are not invited to this project'}, status=status.HTTP_403_FORBIDDEN)
+        return Response({'error': 'You are not invited to this project'}, status=status.HTTP_403_FORBIDDEN)
+    
+    class searchuser(APIView):
+        def post(self, request):
+            auth_header = request.headers.get('Authorization')
+            if not auth_header:
+                return Response({'error': 'Authorization header missing'}, status=status.HTTP_401_UNAUTHORIZED)
+            
+            try:
+                token = auth_header.split(' ')[1]
+            except IndexError:
+                return Response({'error': 'Invalid authorization header format'}, status=status.HTTP_401_UNAUTHORIZED)
+            
+            user = User.validate_token(token)
+            if not user:
+                return Response({'error': 'Invalid or expired token'}, status=status.HTTP_401_UNAUTHORIZED)
+            
+            query = request.data.get('query', '')
+            if not query:
+                return Response({'':''}, status=status.HTTP_200_OK)
+            
+            matched_users = User.objects.filter(username__icontains=query)[:10]
+            result = {}
+            for user in matched_users:
+                result[str(user.id)] = user.username
+            return Response({'results': result}, status=status.HTTP_200_OK)
