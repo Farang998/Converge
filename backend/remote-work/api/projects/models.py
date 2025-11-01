@@ -10,3 +10,14 @@ class Project(Document):
     created_at = DateTimeField(default=timezone.now)
 
     meta = {'collection': 'projects'}
+
+class Task(Document):
+    name = StringField(required=True)
+    description = StringField()
+    project_id = StringField(required=True)
+    assigned_to = StringField()
+    status = StringField(default='pending')  # pending, in_progress, completed
+    due_date = DateTimeField()
+    created_at = DateTimeField(default=timezone.now)
+
+    meta = {'collection': 'tasks'}
