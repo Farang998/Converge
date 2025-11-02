@@ -1,7 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import Login from './pages/Login'
 import Register from './pages/Register'
-import Dashboard from './pages/Dashboard'
+import Dashboard from './pages/Dashboard/dashboard'
 import ForgotPassword from './pages/ForgotPassword'
 import AcceptInvitation from './pages/AcceptInvitation'
 
@@ -21,3 +21,5 @@ function App() {
 }
 
 export default App
+
+
