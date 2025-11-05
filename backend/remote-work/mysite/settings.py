@@ -145,7 +145,7 @@ USE_TZ = True
 
 # Development: print emails to console to avoid SMTP errors locally.
 # if DEBUG:
-#     EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 # else:
 #     EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 

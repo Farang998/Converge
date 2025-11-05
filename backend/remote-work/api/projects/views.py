@@ -19,6 +19,7 @@ from django.core.mail import send_mail
 from .models import Project, Task
 import threading
 from django.conf import settings
+from ..notifications.models import Notification
 
 ERROR_AUTH_HEADER_MISSING = 'Authorization header missing'
 ERROR_INVALID_AUTH_HEADER = 'Invalid authorization header format'
@@ -76,6 +77,27 @@ class ProjectCreate(APIView):
 
         project_obj = Project(name=name, description=description, team_leader=team_leader, project_type=project_type, team_members=team_members)
         project_obj.save()
+
+        project_id = str(project_obj.id)
+        
+        try:
+            for member_id in team_members_invited:
+                try:
+                    # Find the User object for the invited member
+                    invited_user = User.objects.get(id=member_id)
+                    
+                    # Create the notification
+                    Notification(
+                        user=invited_user,
+                        message=f"You have been invited to join the project '{name}'.",
+                        link_url=f"/projects/{project_id}" # A link the frontend can use
+                    ).save()
+                
+                except User.DoesNotExist:
+                    print(f"Warning: Could not create notification for non-existent user ID {member_id}")
+        except Exception as e:
+            # Don't fail the whole request, just log that notification failed
+            print(f"Error creating notifications: {e}")
 
         threading.Thread(target=send_invitations_background, args=(team_members_invited, name, str(project_obj.id))).start()
 
