@@ -20,6 +20,10 @@ from .models import Project, Task
 import threading
 from django.conf import settings
 
+ERROR_AUTH_HEADER_MISSING = 'Authorization header missing'
+ERROR_INVALID_AUTH_HEADER = 'Invalid authorization header format'
+ERROR_INVALID_TOKEN = 'Invalid or expired token'
+
 # Project Details
 def send_invitation_email(email, project_name, project_id):
     subject = f"Invitation to join project {project_name}"
@@ -43,16 +47,16 @@ class ProjectCreate(APIView):
 
         auth_header = request.headers.get('Authorization')
         if not auth_header:
-            return Response({'error': 'Authorization header missing'}, status=status.HTTP_401_UNAUTHORIZED)
+            return Response({'error': ERROR_AUTH_HEADER_MISSING}, status=status.HTTP_401_UNAUTHORIZED)
         
         try:
             token = auth_header.split(' ')[1]
         except IndexError:
-            return Response({'error': 'Invalid authorization header format'}, status=status.HTTP_401_UNAUTHORIZED)
+            return Response({'error': ERROR_INVALID_AUTH_HEADER}, status=status.HTTP_401_UNAUTHORIZED)
         
         user = User.validate_token(token)
         if not user:
-            return Response({'error': 'Invalid or expired token'}, status=status.HTTP_401_UNAUTHORIZED)
+            return Response({'error': ERROR_INVALID_TOKEN}, status=status.HTTP_401_UNAUTHORIZED)
         
         team_leader = str(user.id)
 
@@ -81,16 +85,16 @@ class AcceptInvitation(APIView):
     def get(self, request, project_id):
         auth_header = request.headers.get('Authorization')
         if not auth_header:
-            return Response({'error': 'Authorization header missing'}, status=status.HTTP_401_UNAUTHORIZED)
+            return Response({'error': ERROR_AUTH_HEADER_MISSING}, status=status.HTTP_401_UNAUTHORIZED)
         
         try:
             token = auth_header.split(' ')[1]
         except IndexError:
-            return Response({'error': 'Invalid authorization header format'}, status=status.HTTP_401_UNAUTHORIZED)
+            return Response({'error': ERROR_INVALID_AUTH_HEADER}, status=status.HTTP_401_UNAUTHORIZED)
         
         user = User.validate_token(token)
         if not user:
-            return Response({'error': 'Invalid or expired token'}, status=status.HTTP_401_UNAUTHORIZED)
+            return Response({'error': ERROR_INVALID_TOKEN}, status=status.HTTP_401_UNAUTHORIZED)
         
         try:
             project = Project.objects.get(id=project_id)
@@ -113,16 +117,16 @@ class CreateTask(APIView):
         # 1. Authenticate the user
         auth_header = request.headers.get('Authorization')
         if not auth_header:
-            return Response({'error': 'Authorization header missing'}, status=status.HTTP_401_UNAUTHORIZED)
+            return Response({'error': ERROR_AUTH_HEADER_MISSING}, status=status.HTTP_401_UNAUTHORIZED)
         
         try:
             token = auth_header.split(' ')[1]
         except IndexError:
-            return Response({'error': 'Invalid authorization header format'}, status=status.HTTP_401_UNAUTHORIZED)
+            return Response({'error': ERROR_INVALID_AUTH_HEADER}, status=status.HTTP_401_UNAUTHORIZED)
         
         user = User.validate_token(token)
         if not user:
-            return Response({'error': 'Invalid or expired token'}, status=status.HTTP_401_UNAUTHORIZED)
+            return Response({'error': ERROR_INVALID_TOKEN}, status=status.HTTP_401_UNAUTHORIZED)
         
         # 2. Get data from request body
         data = request.data
@@ -147,16 +151,11 @@ class CreateTask(APIView):
         is_member = False
         if project.team_leader == user_id:
             is_member = True
-        # else:
-        #     for member in project.team_members:
-        #         if member['user'] == user_id and member['accepted']:
-        #             is_member = True
-        #             break
         
         if not is_member:
             return Response({'error': 'You are not authorized to add tasks to this project'}, status=status.HTTP_403_FORBIDDEN)
 
-        # 6. (Optional) Validate if the assigned user is also on the project
+        # 6. Validate if the assigned user is also on the project
         if assigned_to_id:
             is_assignee_member = False
             if project.team_leader == assigned_to_id:
