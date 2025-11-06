@@ -9,24 +9,46 @@ class ConversationManager(models.Manager):
             Prefetch('participants', queryset=User.objects.only('id', 'username'))
         )
 
-
-class Conversation(models.Model):
-    participants = models.ManyToManyField(User, related_name='conversations')
+class Chat(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        abstract = True 
+
+class IndividualChat(Chat):
+    participants = models.ManyToManyField(User, related_name='individual_chats')
     objects = ConversationManager()
 
+    def __str__(self):
+        participant_names = ", ".join([user.username for user in self.participants.all()])
+        return f'Conversation with {participant_names}'
+
+class GroupChat(Chat):
+    name = models.CharField(max_length=100)
+    admin = models.ForeignKey(User, on_delete=models.CASCADE, related_name='admin_groups')
+    participants = models.ManyToManyField(User, related_name='group_chats')
+    objects = ConversationManager()
 
     def __str__(self):
         participant_names = " ,".join([user.username for user in self.participants.all()])
-        return f'Conversation with {participant_names}'
-
+        return f"GroupChat: {self.name}"
 
 class Message(models.Model):
-    conversation = models.ForeignKey(Conversation, on_delete=models.CASCADE, related_name='messages')
     sender = models.ForeignKey(User, on_delete=models.CASCADE)
     content = models.TextField()
     timestamp = models.DateTimeField(auto_now_add=True)
 
+    class Meta:
+        abstract = True
+
+class IndividualMessage(Message):
+    chat = models.ForeignKey('IndividualChat', on_delete=models.CASCADE, related_name='messages')
 
     def __str__(self):
-        return f'Message from {self.sender.username} in {self.content[:20]}'
+        return f"{self.sender.username}: {self.content[:20]}"
+    
+class GroupMessage(Message):
+    chat = models.ForeignKey('GroupChat', on_delete=models.CASCADE, related_name='messages')
+
+    def __str__(self):
+        return f"[{self.chat.name}] {self.sender.username}: {self.content[:20]}"
