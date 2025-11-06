@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     'api',
     'mongoengine',
     'corsheaders',
+    'rest_framework',
 ]
 
 MIDDLEWARE = [

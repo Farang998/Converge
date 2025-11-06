@@ -1,14 +1,17 @@
 import React from 'react';
 import './dashboard.css';
-import { logout } from '../services/api';
+import { useAuth } from '../contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
 
 export default function Dashboard() {
-  const username = typeof window !== 'undefined' ? (localStorage.getItem('username') || 'User') : 'User';
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+
+  const username = user?.username || 'User';
 
   function handleLogout() {
     logout();
-    localStorage.removeItem('authToken');
-    window.location.href = '/login';
+    navigate('/login');
   }
 
   return (

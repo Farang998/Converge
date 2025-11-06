@@ -43,7 +43,8 @@ api.interceptors.response.use((response) => {
 export function setAuthToken(newToken) {
   if (newToken) {
     localStorage.setItem('authToken', newToken);
-    api.defaults.headers.common['Authorization'] = `Token ${newToken}`;
+    // backend expects 'Bearer <token>' in Authorization header
+    api.defaults.headers.common['Authorization'] = `Bearer ${newToken}`;
   } else {
     localStorage.removeItem('authToken');
     delete api.defaults.headers.common['Authorization'];
