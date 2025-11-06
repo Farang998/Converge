@@ -20,6 +20,7 @@ from .models import Project, Task
 import threading
 from django.conf import settings
 from ..notifications.models import Notification
+from datetime import datetime
 
 ERROR_AUTH_HEADER_MISSING = 'Authorization header missing'
 ERROR_INVALID_AUTH_HEADER = 'Invalid authorization header format'
@@ -190,15 +191,23 @@ class CreateTask(APIView):
             
             if not is_assignee_member:
                 return Response({'error': 'Assigned user is not an accepted member of this project'}, status=status.HTTP_400_BAD_REQUEST)
-
-        # 7. Create and save the new task
+        # 7. Parse the due_date string into a datetime object
+        due_date_obj = None # Default to None
+        if due_date:
+            try:
+                # Replace 'Z' with '+00:00' for reliable parsing
+                due_date_obj = datetime.fromisoformat(due_date.replace('Z', '+00:00'))
+            except (ValueError, TypeError):
+                return Response({'error': 'Invalid due_date format. Please use ISO 8601 format (e.g., YYYY-MM-DDTHH:MM:SSZ).'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # 8. Create and save the new task
         try:
             new_task = Task(
                 name=name,
                 project_id=project_id,
                 description=description,
                 assigned_to=assigned_to_id,
-                due_date=due_date 
+                due_date=due_date_obj
             )
             new_task.save()
         except MongoValidationError as e:
