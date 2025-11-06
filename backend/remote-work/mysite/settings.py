@@ -50,6 +50,7 @@ INSTALLED_APPS = [
     'channels',
     'rest_framework',
     'rest_framework_simplejwt'
+
 ]
 
 MIDDLEWARE = [

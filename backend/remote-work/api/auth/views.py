@@ -17,6 +17,9 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 import json
 from django.core.cache import cache
+import secrets
+import firebase_admin
+from firebase_admin import auth as firebase_auth
 
 
 def _get_authenticated_user(request):
@@ -245,8 +248,7 @@ class IdentifyUserView(APIView):
                 'date_joined': date_joined.isoformat() if date_joined else None,
             }
         }, status=status.HTTP_200_OK)
-
-
+    
 class UserListView(APIView):
     def get(self, request):
         user, error_response = _get_authenticated_user(request)
@@ -282,42 +284,73 @@ class UserListView(APIView):
 
         return Response({'users': data}, status=status.HTTP_200_OK)
 
+class GoogleAuthView(APIView):
+    """Authenticate a user via Google/Firebase ID token."""
+    
+    def post(self, request):
+        id_token = request.data.get('id_token')
+        if not id_token:
+            return Response({'error': 'id_token is required'}, status=status.HTTP_400_BAD_REQUEST)
 
-class UpdateProfileView(APIView):
-    def patch(self, request):
-        user, error_response = _get_authenticated_user(request)
-        if error_response:
-            return error_response
+        try:
+            # Initialize Firebase app once (idempotent)
+            if not firebase_admin._apps:
+                firebase_admin.initialize_app()
+            
+            # Verify the Firebase ID token
+            decoded = firebase_auth.verify_id_token(id_token)
+            print(f"[GoogleAuth] Token verified successfully for email: {decoded.get('email')}")
+        except firebase_auth.InvalidIdTokenError as e:
+            print(f"[GoogleAuth] Invalid token error: {str(e)}")
+            return Response({'error': 'Invalid ID token', 'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        except firebase_auth.ExpiredIdTokenError as e:
+            print(f"[GoogleAuth] Expired token error: {str(e)}")
+            return Response({'error': 'Expired ID token', 'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            print(f"[GoogleAuth] Token verification failed: {str(e)}")
+            return Response({'error': 'Token verification failed', 'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
-        first_name = request.data.get('first_name')
-        last_name = request.data.get('last_name')
+        email = decoded.get('email')
+        if not email:
+            return Response({'error': 'Email claim not present in token'}, status=status.HTTP_400_BAD_REQUEST)
 
-        updated = False
+        name = decoded.get('name') or ''
+        parts = name.split(' ')
+        given_name = parts[0] if len(parts) > 0 and parts[0] else 'Google'
+        family_name = parts[1] if len(parts) > 1 else 'User'
 
-        if first_name is not None:
-            if not isinstance(first_name, str):
-                return Response({'error': 'First name must be a string.'}, status=status.HTTP_400_BAD_REQUEST)
-            user.firstName = first_name.strip()
-            updated = True
+        # Find or create user
+        user = User.objects(email=email).first()
+        if not user:
+            base_username = email.split('@')[0]
+            candidate = base_username
+            suffix = 1
+            while User.objects(username=candidate).first():
+                candidate = f"{base_username}{suffix}"
+                suffix += 1
 
-        if last_name is not None:
-            if not isinstance(last_name, str):
-                return Response({'error': 'Last name must be a string.'}, status=status.HTTP_400_BAD_REQUEST)
-            user.lastName = last_name.strip()
-            updated = True
+            random_password = secrets.token_urlsafe(16)
+            try:
+                user = User.create_user(username=candidate, email=email, password=random_password,
+                                        firstName=given_name, lastName=family_name)
+                print(f"[GoogleAuth] Created new user: {candidate} ({email})")
+            except Exception as e:
+                print(f"[GoogleAuth] Failed to create user: {str(e)}")
+                return Response({'error': 'Failed creating user', 'detail': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        else:
+            print(f"[GoogleAuth] Existing user found: {user.username} ({email})")
 
-        if not updated:
-            return Response({'message': 'No changes provided.'}, status=status.HTTP_200_OK)
-
-        user.save()
+        # Generate internal token
+        internal_token = User.generate_token(user.id)
 
         return Response({
-            'message': 'Profile updated successfully.',
+            'message': 'Google authentication successful',
+            'token': internal_token,
             'user': {
                 'id': str(user.id),
                 'username': user.username,
                 'email': user.email,
-                'first_name': getattr(user, 'firstName', ''),
-                'last_name': getattr(user, 'lastName', '')
+                'firstName': getattr(user, 'firstName', ''),
+                'lastName': getattr(user, 'lastName', '')
             }
         }, status=status.HTTP_200_OK)
