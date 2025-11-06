@@ -1,26 +1,29 @@
+from django.contrib.auth.hashers import make_password
+from django.contrib.auth import authenticate, login
+from django.core.validators import validate_email
+from django.core.exceptions import ValidationError as DjangoValidationError
+from django.core.cache import cache
+from django.core.mail import send_mail
+from mongoengine.errors import ValidationError as MongoValidationError
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.conf import settings
 from django.shortcuts import render
+
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.authentication import SessionAuthentication
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework import status
-from ..auth.models import User
-from django.contrib.auth.hashers import make_password
-from django.contrib.auth import authenticate, login
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.authentication import SessionAuthentication
-from django.core.validators import validate_email
-from django.core.exceptions import ValidationError as DjangoValidationError
-from mongoengine.errors import ValidationError as MongoValidationError
-from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
-import json
-from django.core.cache import cache
-from django.core.mail import send_mail
-from .models import Project, Task
-import threading
-from django.conf import settings
-from ..notifications.models import Notification
+
 from datetime import datetime
+import json
+import threading
+
+from .models import Project, Task
+from ..auth.models import User
+from ..notifications.models import Notification
 
 ERROR_AUTH_HEADER_MISSING = 'Authorization header missing'
 ERROR_INVALID_AUTH_HEADER = 'Invalid authorization header format'
@@ -84,7 +87,6 @@ class ProjectCreate(APIView):
         try:
             for member_id in team_members_invited:
                 try:
-                    # Find the User object for the invited member
                     invited_user = User.objects.get(id=member_id)
                     
                     # Create the notification
@@ -191,6 +193,7 @@ class CreateTask(APIView):
             
             if not is_assignee_member:
                 return Response({'error': 'Assigned user is not an accepted member of this project'}, status=status.HTTP_400_BAD_REQUEST)
+        
         # 7. Parse the due_date string into a datetime object
         due_date_obj = None # Default to None
         if due_date:

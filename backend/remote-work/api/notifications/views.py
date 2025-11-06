@@ -1,10 +1,11 @@
-# api/notifications/views.py
 
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
+
 from ..auth.models import User
 from .models import Notification
+
 from mongoengine.errors import DoesNotExist, ValidationError
 
 # Re-using the same error constants for consistency

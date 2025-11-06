@@ -1,5 +1,3 @@
-# api/notifications/models.py
-
 from mongoengine import Document, StringField, BooleanField, DateTimeField, ReferenceField
 from django.utils import timezone
 from ..auth.models import User  # Import the User model
