@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 
 from pathlib import Path
 import os
+from datetime import timedelta
 from mongoengine import connect
 from datetime import timedelta
 
@@ -107,6 +108,15 @@ CORS_ALLOWED_ORIGINS = [
 ]
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
+
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(days=1),         
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=30),
+}
+
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:5173",
+]
 
 DATABASES = {
     
