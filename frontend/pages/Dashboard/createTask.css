@@ -1,0 +1,115 @@
+.create-task-container {
+  max-width: 800px;
+  margin: 2rem auto;
+  padding: 2rem;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.create-task-header {
+  margin-bottom: 2rem;
+}
+
+.create-task-header h1 {
+  color: #2c3e50;
+  font-size: 1.8rem;
+  margin: 1rem 0;
+}
+
+.back-button {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: none;
+  border: none;
+  color: #666;
+  cursor: pointer;
+  padding: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.back-button:hover {
+  color: #333;
+}
+
+.create-task-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+label {
+  font-weight: 500;
+  color: #2c3e50;
+}
+
+input, select, textarea {
+  padding: 0.75rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 0.9rem;
+}
+
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: #3498db;
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.cancel-btn, .create-btn {
+  padding: 0.75rem 1.5rem;
+  border-radius: 4px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.cancel-btn {
+  background: #f8f9fa;
+  border: 1px solid #ddd;
+  color: #666;
+}
+
+.create-btn {
+  background: #3498db;
+  border: none;
+  color: white;
+}
+
+.cancel-btn:hover {
+  background: #e9ecef;
+}
+
+.create-btn:hover {
+  background: #2980b9;
+}
+
+@media (max-width: 768px) {
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+  
+  .create-task-container {
+    margin: 1rem;
+    padding: 1rem;
+  }
+}
