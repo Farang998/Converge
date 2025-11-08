@@ -119,19 +119,6 @@ export default function Login() {
               }
             } catch (gErr) {
               console.error('[Google Login] Error:', gErr);
-              
-              // Better error messages
-              if (gErr.code === 'auth/popup-blocked') {
-                setError('Popup was blocked. Please allow popups for this site and try again.');
-              } else if (gErr.code === 'auth/popup-closed-by-user') {
-                setError('Sign-in popup was closed. Please try again.');
-              } else if (gErr.code === 'auth/cancelled-popup-request') {
-                setError('Another sign-in popup is already open.');
-              } else if (gErr.response?.data?.error) {
-                setError(gErr.response.data.error + (gErr.response.data.detail ? ': ' + gErr.response.data.detail : ''));
-              } else {
-                setError(gErr.message || 'Google sign-in failed. Please try again.');
-              }
             }
           }}
         >
