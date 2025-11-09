@@ -28,9 +28,37 @@ export default function Register() {
     setSuccess('');
 
     if (!otpSent) {
-      // Step 1: Send OTP
+      if (!form.password || form.password.trim() === '') {
+        setError('Password is required.');
+        return;
+      }
+      if (form.password.length < 8) {
+        setError('Password must be at least 8 characters long.');
+        return;
+      }
+      if (form.password !== form.confirmPassword) {
+        setError('Passwords do not match.');
+        return;
+      }
       try {
-        const response = await fetch('http://localhost:8000/api/send-otp/', {
+        const validationResponse = await fetch('http://localhost:8000/api/auth/validate-user/', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username: form.username, email: form.email })
+        });
+        const validationData = await validationResponse.json();
+        if (!validationResponse.ok || !validationData.success) {
+          setError(validationData.message || 'Username or email already exists.');
+          return;
+        }
+      } catch (err) {
+        setError('Network error while validating username and email.');
+        return;
+      }
+
+      // Step 2: Send OTP
+      try {
+        const response = await fetch('http://localhost:8000/api/auth/send-otp/', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email: form.email, purpose: 'register' })
@@ -39,7 +67,6 @@ export default function Register() {
         if (response.ok && data.success) {
           setOtpSent(true);
           setSuccess('OTP sent to your email. Please enter it below.');
-          if (data.otp) setOtp(String(data.otp)); // helpful in DEBUG mode
         } else {
           setError(data.message || 'Failed to send OTP.');
         }
@@ -49,14 +76,13 @@ export default function Register() {
       return;
     }
 
-    // Step 2: Validate OTP
     if (otpSent) {
       if (!otp || otp.trim() === '') {
         setError('Please enter the OTP sent to your email.');
         return;
       }
       try {
-        const response = await fetch('http://localhost:8000/api/validate-otp/', {
+        const response = await fetch('http://localhost:8000/api/auth/validate-otp/', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email: form.email, otp: otp.trim(), purpose: 'register' })
@@ -72,11 +98,6 @@ export default function Register() {
       }
     }
 
-    // Step 3: Register user
-    if (form.password !== form.confirmPassword) {
-      setError('Passwords do not match');
-      return;
-    }
     const payload = {
       firstName: form.firstName,
       lastName: form.lastName,
@@ -85,7 +106,7 @@ export default function Register() {
       password: form.password
     };
     try {
-      const response = await fetch('http://localhost:8000/api/register/', {
+      const response = await fetch('http://localhost:8000/api/auth/register/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)

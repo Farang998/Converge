@@ -15,11 +15,15 @@ def send_otp_email(email, purpose):
     subject = 'Your OTP Code'
     message = f'Your OTP code is {otp}. Please use this to complete your verification.'
 
-
     # Save OTP to MongoDB with purpose
-    EmailOTP.objects(user=email, purpose=purpose).delete()  # Remove any existing OTPs for the user and purpose
-    otp_record = EmailOTP(user=email, otp=str(otp), purpose=purpose, created_at=timezone.now())
-    otp_record.save()
+    try:
+        EmailOTP.objects(user=email, purpose=purpose).delete()  # Remove any existing OTPs for the user and purpose
+        otp_record = EmailOTP(user=email, otp=str(otp), purpose=purpose, created_at=timezone.now())
+        otp_record.save()
+        print(f"Saved OTP: {otp_record}")
+    except Exception as e:
+        print(f"Error saving OTP: {e}")
+        raise
 
     try:
         print("Sending OTP email...")
