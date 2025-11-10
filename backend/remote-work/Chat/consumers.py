@@ -1,101 +1,78 @@
-from channels.generic.websocket import WebsocketConsumer
-from asgiref.sync import async_to_sync
-from django.shortcuts import get_object_or_404
+# Chat/consumers.py
 import json
-from .models import GroupChat, GroupMessage
-from django.contrib.auth.models import User
+from channels.generic.websocket import AsyncWebsocketConsumer
+from datetime import datetime
+from api.auth.models import User   # MongoEngine User
+from .models import GroupChat, GroupMessage  # use your Mongo MongoEngine models
 
-class ChatroomConsumer(WebsocketConsumer):
-    def connect(self):
-        self.user = self.scope['user']
-        self.chatroom_name = self.scope['url_route']['kwargs']['chatroom_name']
-        self.chatroom = get_object_or_404(GroupChat, name=self.chatroom_name)
+class ChatConsumer(AsyncWebsocketConsumer):
+    async def connect(self):
+        # room name from URL route
+        self.room = self.scope["url_route"]["kwargs"]["room"]
+        self.group_name = f"chat_{self.room}"
 
-        async_to_sync(self.channel_layer.group_add)(
-            self.chatroom_name, self.channel_name
-        )
+        # join channel group
+        await self.channel_layer.group_add(self.group_name, self.channel_name)
+        await self.accept()
 
-        # Add online user
-        if self.user not in self.chatroom.participants.all():
-            self.chatroom.participants.add(self.user)
+    async def disconnect(self, close_code):
+        # leave group
+        await self.channel_layer.group_discard(self.group_name, self.channel_name)
 
-        self.accept()
-
-        # Optional: send message to user confirming connection
-        self.send(text_data=json.dumps({
-            "type": "connection_established",
-            "message": f"Connected to chatroom {self.chatroom_name}"
-        }))
-
-    def disconnect(self, close_code):
-        async_to_sync(self.channel_layer.group_discard)(
-            self.chatroom_name, self.channel_name
-        )
-
-    def receive(self, text_data):
+    async def receive(self, text_data):
+        """
+        Called when WebSocket receives a message.
+        Expected JSON from frontend:
+        {
+            "token": "<jwt token>",
+            "text": "Hello world"
+        }
+        """
         data = json.loads(text_data)
-        message_text = data.get('message', '')
+        token = data.get("token")
+        message_text = data.get("text")
 
-        # Save message
-        message = GroupMessage.objects.create(
-            sender=self.user,
+        if not token or not message_text:
+            return
+
+        # Validate user
+        user = User.validate_token(token)
+        if not user:
+            return
+
+        sender_id = str(user.id)
+
+        # Find the chatroom
+        chat = GroupChat.objects(name=self.room).first()
+        if not chat:
+            return
+
+        # Save message to MongoDB
+        msg = GroupMessage(
+            chat=chat,
+            sender=sender_id,
             content=message_text,
-            chat=self.chatroom
+            timestamp=datetime.utcnow()
         )
+        msg.save()
 
-        event = {
-            'type': 'message_handler',
-            'message': {
-                'id': message.id,
-                'sender': self.user.username,
-                'content': message.content,
-                'timestamp': str(message.timestamp)
+        # Broadcast to group
+        await self.channel_layer.group_send(
+            self.group_name,
+            {
+                "type": "chat_message",    # will trigger chat_message()
+                "sender": user.username,
+                "content": message_text,
+                "timestamp": msg.timestamp.isoformat()
             }
-        }
-
-        async_to_sync(self.channel_layer.group_send)(
-            self.chatroom_name, event
         )
 
-    def message_handler(self, event):
-        message = event['message']
-
-        self.send(text_data=json.dumps({
-            'type': 'chat_message',
-            'message': message
-        }))
-class OnlineStatusConsumer(WebsocketConsumer):
-    def connect(self):
-        self.user = self.scope['user']
-        self.group_name = 'online-status'
-        async_to_sync(self.channel_layer.group_add)(
-            self.group_name, self.channel_name
-        )
-        self.accept()
-
-        self.user.is_online = True
-        self.online_status()
-
-    def disconnect(self, close_code):
-        self.user.is_online = False
-        async_to_sync(self.channel_layer.group_discard)(
-            self.group_name, self.channel_name
-        )
-        self.online_status()
-
-    def online_status(self):
-        event = {
-            'type': 'online_status_handler',
-        }
-        async_to_sync(self.channel_layer.group_send)(
-            self.group_name, event
-        )
-
-    def online_status_handler(self, event):
-        # passing only two fields from user module to frontend : id, username
-        online_users = list(User.objects.filter(is_active=True).values('id', 'username'))
-
-        self.send(text_data=json.dumps({
-            'type': 'online_status',
-            'users': online_users
+    async def chat_message(self, event):
+        """
+        Receives broadcast and sends to WebSocket client.
+        """
+        await self.send(text_data=json.dumps({
+            "sender": event["sender"],
+            "content": event["content"],
+            "timestamp": event["timestamp"]
         }))
