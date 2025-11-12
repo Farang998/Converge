@@ -1,0 +1,206 @@
+/* Updated to match CreateProject theme / professional look */
+
+.create-wrapper {
+  max-width: 920px;
+  margin: 2.25rem auto;
+  padding: 0 1rem;
+}
+
+.create-card {
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 12px 30px rgba(18, 24, 40, 0.08);
+  padding: 28px;
+  position: relative;
+}
+
+.create-card.wide {
+  width: 100%;
+}
+
+.close-btn {
+  position: absolute;
+  right: 18px;
+  top: 18px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: #6b6f76;
+}
+
+.back-button.small {
+  background: transparent;
+  border: none;
+  color: #5f6b85;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+  cursor: pointer;
+}
+
+h2#create-title {
+  text-align: center;
+  margin: 0 0 18px;
+  color: #1e2340;
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.error-popup {
+  background: #fdecea;
+  color: #a62100;
+  padding: 10px 14px;
+  border-radius: 8px;
+  margin-bottom: 12px;
+  font-weight: 600;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+label {
+  font-weight: 600;
+  color: #374151;
+  font-size: 13px;
+}
+
+.input-field {
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid #e6e9ef;
+  background: #fafbfd;
+  font-size: 14px;
+  color: #1f2937;
+}
+
+.input-field.textarea {
+  min-height: 96px;
+  resize: vertical;
+}
+
+.input-field:focus {
+  outline: none;
+  border-color: #5867f2;
+  box-shadow: 0 6px 18px rgba(88,103,242,0.08);
+}
+
+.member-input-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.add-member-btn {
+  background: #2f7be4;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 12px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.add-member-btn[disabled] {
+  opacity: 0.7;
+  cursor: default;
+}
+
+.member-list {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.member-tag.professional-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 10px;
+  background: #f6f8ff;
+  border-radius: 999px;
+  border: 1px solid #eef2ff;
+  align-items: center;
+}
+
+.chip-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: linear-gradient(135deg,#6b8cff,#3a5bdc);
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+}
+
+.chip-name {
+  font-weight: 600;
+  color: #162032;
+}
+
+.remove-member {
+  background: transparent;
+  border: none;
+  color: #7b8596;
+  cursor: pointer;
+  padding: 4px;
+  display: inline-flex;
+  align-items: center;
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 6px;
+}
+
+.cancel-btn, .create-btn {
+  padding: 10px 18px;
+  border-radius: 8px;
+  font-weight: 700;
+  cursor: pointer;
+  border: none;
+}
+
+.cancel-btn {
+  background: #f3f6fb;
+  color: #4b5563;
+  border: 1px solid #e6e9ef;
+}
+
+.create-btn {
+  background: #2f7be4;
+  color: #fff;
+}
+
+.field-error {
+  margin-top: 8px;
+  color: #c53030;
+  font-weight: 600;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+  .create-wrapper { padding: 0 12px; }
+}
