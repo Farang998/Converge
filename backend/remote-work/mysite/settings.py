@@ -12,8 +12,10 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 
 from pathlib import Path
 import os
+from datetime import timedelta
 import ssl
 from mongoengine import connect
+from datetime import timedelta
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -44,6 +46,10 @@ INSTALLED_APPS = [
     'api',
     'mongoengine',
     'corsheaders',
+    'Chat',
+    'channels',
+    'rest_framework',
+    'rest_framework_simplejwt'
 ]
 
 MIDDLEWARE = [
@@ -75,15 +81,58 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'mysite.wsgi.application'
+ASGI_APPLICATION = 'mysite.asgi.application'
 
 
+CHANNEL_LAYERS = {
+    'default' : {
+        'BACKEND' : 'channels_redis.core.RedisChannelLayer',
+        'CONFIG' : {
+            'hosts' : [('127.0.0.1',6379)],
+        },
+    },
+}
+
+
+REST_FRAMEWORK = {
+    'DEFULT_AUTHENTICATION_CLASSES' : (
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ),
+}
+
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME' : timedelta(days=1),
+    'REFRESH_TOKEN_LIFETIME' : timedelta(days=30),
+}
+
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:5173",
+]
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(days=1),         
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=30),
+}
+
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:5173",
+]
+
 DATABASES = {
+    
     'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'postgres',
+        'USER': 'postgres',
+        'PASSWORD': 'converge.23$S',
+        'HOST': 'convergechat.cfwsyokua33d.eu-north-1.rds.amazonaws.com', 
+        'PORT': '5432',
+    },
+    'mongodb':{
         'ENGINE': 'django.db.backends.dummy',
-    }
+    },
 }
 
 # MongoDB configuration
