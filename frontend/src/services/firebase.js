@@ -4,13 +4,13 @@ import { getAuth, GoogleAuthProvider } from "firebase/auth";
 
 // Your web app's Firebase configuration (converge-d547c project with Auth enabled)
 const firebaseConfig = {
-  apiKey: "AIzaSyB1bqAyPUbf65bg0QIjTCfep98jp4i86G8",
-  authDomain: "converge-d547c.firebaseapp.com",
-  projectId: "converge-d547c",
-  storageBucket: "converge-d547c.firebasestorage.app",
-  messagingSenderId: "613076096377",
-  appId: "1:613076096377:web:4ac5a50ed224695751cba8",
-  measurementId: "G-GR7HXNJX7W"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
 };
 
 // Initialize Firebase
