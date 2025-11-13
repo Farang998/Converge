@@ -119,6 +119,7 @@ export default function Login() {
               }
             } catch (gErr) {
               console.error('[Google Login] Error:', gErr);
+              setError('Google login failed. Please try again.');
             }
           }}
         >
