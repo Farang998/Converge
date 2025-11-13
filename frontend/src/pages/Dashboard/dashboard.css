@@ -1,9 +1,37 @@
 /* ==================== GLOBAL STYLES ==================== */
-body {
-  margin: 0;
-  font-family: "Poppins", sans-serif;
+.dashboard-page {
+  min-height: 100vh;
   background-color: #f5f8fa;
   color: #333;
+}
+
+.dashboard-page.loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: 4rem 1.5rem;
+  text-align: center;
+}
+
+.error-text {
+  color: #e74c3c;
+  font-weight: 600;
+}
+
+.retry-btn {
+  background-color: rgb(1, 142, 197);
+  color: white;
+  border: none;
+  padding: 0.6rem 1.6rem;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+
+.retry-btn:hover {
+  background-color: rgb(0, 120, 170);
 }
 
 /* ==================== NAVBAR ==================== */
@@ -178,9 +206,71 @@ body {
   transform: translateY(-4px);
 }
 
+.project-card.selected {
+  border: 2px solid rgb(1, 142, 197);
+  box-shadow: 0 4px 14px rgba(1, 142, 197, 0.18);
+}
+
 .project-card h3 {
   margin: 0 0 8px 0;
   color: #222;
+}
+
+.project-card-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.project-type {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #6b7280;
+}
+
+.role-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: white;
+}
+
+.role-chip.leader {
+  background: linear-gradient(135deg, #0087c9, #00a4ec);
+}
+
+.role-chip.member {
+  background: linear-gradient(135deg, #1abc9c, #16a085);
+}
+
+.role-chip.pending {
+  background: linear-gradient(135deg, #f39c12, #f1c40f);
+  color: #2d2d2d;
+}
+
+.role-chip.collaborator {
+  background: linear-gradient(135deg, #9b59b6, #8e44ad);
+}
+
+.project-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  font-size: 0.85rem;
+  color: #4b5563;
+  margin-bottom: 0.75rem;
+}
+
+.project-meta strong {
+  color: #111827;
 }
 
 .progress-bar {
@@ -202,16 +292,17 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 1rem;
 }
 
-.deadline {
-  font-size: 14px;
-  font-weight: 500;
+.members {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #374151;
 }
 
-.deadline span {
-  font-style: italic;
-  color: red;
+.members span {
+  color: #111827;
 }
 
 .details-btn {
@@ -235,6 +326,59 @@ body {
   border-left: 4px solid rgb(1, 142, 197);
   border-radius: 6px;
   font-size: 14px;
+}
+
+.project-details h4 {
+  margin: 0.5rem 0;
+  color: #0f1724;
+}
+
+.member-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.member-list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: white;
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
+  box-shadow: inset 0 0 0 1px #e5e7eb;
+  font-size: 0.85rem;
+}
+
+.badge {
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.badge.accepted {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.badge.pending {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.info-card {
+  text-align: center;
+}
+
+.info-card .muted {
+  color: #6b7280;
+  margin-top: 0.5rem;
 }
 
 /* ==================== TASKS SECTION ==================== */
@@ -283,10 +427,16 @@ body {
   margin-bottom: 10px;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
   transition: transform 0.2s;
+  cursor: pointer;
 }
 
 .task-card:hover {
   transform: scale(1.02);
+}
+
+.task-card:focus {
+  outline: 2px solid rgb(1, 142, 197);
+  outline-offset: 2px;
 }
 
 .task-header {
@@ -307,16 +457,26 @@ body {
   color: white;
 }
 
-.priority.high {
-  background: #e74c3c;
-}
-
-.priority.medium {
+.priority.pending {
   background: #f39c12;
 }
 
-.priority.low {
-  background: #27ae60;
+.priority.in-progress {
+  background: #3498db;
+}
+
+.priority.completed {
+  background: #2ecc71;
+}
+
+.priority.cancelled {
+  background: #95a5a6;
+}
+
+.assigned {
+  font-size: 0.8rem;
+  color: #4b5563;
+  margin-top: 4px;
 }
 
 .due {

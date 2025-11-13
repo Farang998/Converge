@@ -11,8 +11,7 @@ import {
 
 const AuthPage = () => {
   const [isLogin, setIsLogin] = useState(true);
-  const [loading, setLoading] = useState(false); // 🔄 Loading state
-
+  const [loading, setLoading] = useState(false);
   const handleGoogleSignIn = async () => {
     try {
       setLoading(true);

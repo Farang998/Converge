@@ -43,6 +43,69 @@ class ProjectViewSet(viewsets.ViewSet):
             raise Exception(ERROR_INVALID_TOKEN, status.HTTP_401_UNAUTHORIZED)
         return user
 
+    def list(self, request):
+        """
+        Lists projects where the authenticated user is the leader or an accepted member.
+        Maps to: GET /api/projects/
+        """
+        try:
+            user = self._authenticate_user(request)
+        except Exception as e:
+            return Response({'error': str(e.args[0])}, status=e.args[1])
+
+        leader_projects = list(Project.objects(team_leader=user))
+        member_projects = list(Project.objects(
+            team_members__match={'user': str(user.id)}
+        ))
+
+        # Merge and remove duplicates while preserving order (leader projects first)
+        project_map = {str(project.id): project for project in leader_projects}
+        for project in member_projects:
+            project_map.setdefault(str(project.id), project)
+
+        projects = list(project_map.values())
+
+        # Build user lookup for team members to enrich response
+        team_member_ids = set()
+        for project in projects:
+            for member in project.team_members:
+                member_id = member.get('user')
+                if member_id:
+                    team_member_ids.add(member_id)
+
+        users_lookup = {}
+        if team_member_ids:
+            users_lookup = {
+                str(user_obj.id): user_obj.username
+                for user_obj in User.objects(id__in=list(team_member_ids))
+            }
+
+        serialized = []
+        for project in projects:
+            team_members = []
+            for member in project.team_members:
+                member_id = member.get('user')
+                team_members.append({
+                    'user_id': member_id,
+                    'username': users_lookup.get(member_id),
+                    'accepted': bool(member.get('accepted', False))
+                })
+
+            serialized.append({
+                'id': str(project.id),
+                'name': project.name,
+                'description': project.description,
+                'project_type': project.project_type,
+                'team_leader': {
+                    'user_id': str(project.team_leader.id),
+                    'username': getattr(project.team_leader, 'username', None)
+                },
+                'team_members': team_members,
+                'created_at': project.created_at.isoformat() if project.created_at else None,
+            })
+
+        return Response(serialized, status=status.HTTP_200_OK)
+
     def create(self, request):
         """
         Creates a new Project.
