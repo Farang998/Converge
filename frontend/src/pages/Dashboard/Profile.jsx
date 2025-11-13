@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { FaUser, FaEnvelope, FaCalendarAlt, FaIdBadge } from "react-icons/fa";
+import { FaUser, FaEnvelope, FaCalendarAlt } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 import api from "../../services/api";
 import "./profile.css";
@@ -82,7 +82,6 @@ export default function Profile() {
   const membershipDate = formatDate(user?.date_joined);
   const email = user?.email || "Not provided";
   const username = user?.username || "Unknown user";
-  const userId = user?.id || "Unavailable";
 
   if (loading) {
     return (
@@ -119,9 +118,6 @@ export default function Profile() {
             <h2>{displayName}</h2>
             <p className="email">{email}</p>
           </div>
-          <button className="edit-btn" type="button" disabled>
-            <FaIdBadge /> Manage
-          </button>
         </div>
 
         <div className="profile-body">
@@ -148,14 +144,6 @@ export default function Profile() {
             <div>
               <strong>Member Since</strong>
               <p>{membershipDate}</p>
-            </div>
-          </div>
-
-          <div className="detail-row">
-            <FaIdBadge className="icon" />
-            <div>
-              <strong>User ID</strong>
-              <p>{userId}</p>
             </div>
           </div>
         </div>
