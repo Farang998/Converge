@@ -66,3 +66,4 @@ ehthumbs.db
 
 # Generated OTP storage (if any local temp)
 backend/remote-work/api/email_otps.json
+frontend/src/pages/Dashboard.jsx
