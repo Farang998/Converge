@@ -122,7 +122,7 @@ class searchuser(APIView):
         
         query = request.data.get('query', '')
         if not query:
-            return Response({'':''}, status=status.HTTP_200_OK)
+            return Response({'results': [], 'message': 'No query provided'}, status=status.HTTP_200_OK)
         
         matched_users = User.objects.filter(username__icontains=query)[:10]
         result = {}
