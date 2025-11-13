@@ -4,6 +4,12 @@
   padding: 0;
   box-sizing: border-box;
 }
+
+body, html {
+  height: 100%;
+  overflow: hidden; /* prevents outer scrollbar */
+}
+
 /* Dashboard Layout */
 .dashboard-page {
   min-height: 100vh;
@@ -44,9 +50,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.9rem clamp(1.25rem, 5vw, 2.75rem);
-  /* Using a bright cyan as requested */
-  background: #00bcd4;
+  padding: 0.8rem 2rem;
+  background: #ffffff;
   border-bottom: 1px solid #0097a7;
   position: sticky;
   top: 0;
@@ -67,7 +72,7 @@
 }
 
 .navbar-left h2 {
-  color: #ffffff;
+  color: #000000;
   font-weight: 700;
   letter-spacing: 0.6px;
 }
@@ -79,8 +84,10 @@
 }
 
 .navbar-center .search-bar {
-  width: clamp(240px, 32vw, 420px);
-  padding: 10px 14px;
+  width: clamp(240px, 100vw, 920px);
+  padding: 14px 14px;
+  display: flex;
+  align-items: center;
   border-radius: 10px;
   border: 1px solid #0097a7;
   background: #f7f9ff;
@@ -102,12 +109,12 @@
 .icon {
   font-size: 20px;
   cursor: pointer;
-  color: #ffffff;
+  color: #000000;
   transition: transform 0.2s ease, color 0.2s ease;
 }
 
 .icon:hover {
-  color: #f1f1f1;
+  color: #000000;
 }
 
 .profile-container {
@@ -177,14 +184,40 @@
   grid-template-columns: minmax(0, 2.3fr) minmax(0, 1fr);
   gap: clamp(1.4rem, 4vw, 2.6rem);
   align-items: flex-start;
+  border-top: 1px solid #e5e7eb;
+}
+
+.projects-section {
+  max-height: calc(100vh - 180px);   /* enough space for navbar + padding */
+  overflow-y: auto;
+  padding-right: 14px; /* so the scrollbar doesn't overlap content */
+}
+
+.projects-section::-webkit-scrollbar {
+  width: 10px;
+}
+
+.projects-section::-webkit-scrollbar-track {
+  background: transparent;  /* no ugly gray bar */
+  margin-block: 6px;        /* creates a top/bottom gap like your screenshot */
+}
+
+.projects-section::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #49d7ff, #32a9ff); 
+  border-radius: 10px;
+  border: 3px solid #ffffff; /* gives the white gap around the bar */
+}
+
+.projects-section::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #32a9ff, rgb(50, 149, 255));
 }
 
 .section-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 1rem;
   margin-bottom: 1.5rem;
+  padding-left: 0.3rem;
 }
 
 .section-header h2 {
@@ -195,6 +228,10 @@
 
 .add-btn {
   /* Removed gradient and shadow */
+  
+  width: auto !important;
+  flex-shrink: 0 !important;
+  flex-grow: 0 !important;
   background: #0f7ac0;
   color: #ffffff;
   border: none;
@@ -216,23 +253,23 @@
 
 /* Projects */
 .projects-list {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 1.2rem;
+  display: block;   /* one column */
 }
 
 .project-card {
+  width: 100%;
   background: #ffffff;
-  border-radius: 16px;
-  padding: 1.2rem 1.4rem;
-  /* Replaced shadow with border */
-  border: 1px solid #d9e1ec;
-  transition: border-color 0.2s ease;
+  border-radius: 18px;
+  padding: 2rem !important;
+  border: 1px solid #e5e7eb !important;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+  transition: border-color 0.2s ease, background 0.2s ease;
+  margin-bottom: 1.5rem;
 }
 
 .project-card:hover {
-  /* Removed transform and shadow */
   border-color: #0f7ac0;
+  background: #fafcff;
 }
 
 .project-card.selected {
@@ -326,18 +363,18 @@
 }
 
 .details-btn {
-  background: #0fb879;
-  color: #fff;
-  border: none;
-  padding: 8px 14px;
+  background: #06c167 !important;
+  width: 100%;
+  padding: 12px 0;
+  font-size: 1rem;
   border-radius: 10px;
-  cursor: pointer;
-  transition: background 0.2s ease;
+  font-weight: 600;
 }
 
 .details-btn:hover {
-  background: #0a935f;
+  background: #05a85a !important;
 }
+
 
 .project-details {
   margin-top: 12px;
@@ -402,6 +439,8 @@
   min-height: 340px;
   display: flex;
   flex-direction: column;
+  position: sticky;
+  top: 90px;
 }
 
 .tasks-section .section-header {
