@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './Login.css';
+import api from '../services/api';
 
 
 export default function Register() {
@@ -41,37 +42,35 @@ export default function Register() {
         return;
       }
       try {
-        const validationResponse = await fetch('http://localhost:8000/api/auth/validate-user/', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ username: form.username, email: form.email })
+        const validationResponse = await api.post('auth/validate-user/', {
+          username: form.username,
+          email: form.email
         });
-        const validationData = await validationResponse.json();
-        if (!validationResponse.ok || !validationData.success) {
-          setError(validationData.message || 'Username or email already exists.');
+
+        if (!validationResponse.data?.success) {
+          setError(validationResponse.data?.message || 'Username or email already exists.');
           return;
         }
       } catch (err) {
-        setError('Network error while validating username and email.');
+        setError(err?.response?.data?.message || 'Network error while validating username and email.');
         return;
       }
 
       // Step 2: Send OTP
       try {
-        const response = await fetch('http://localhost:8000/api/auth/send-otp/', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: form.email, purpose: 'register' })
+        const { data } = await api.post('auth/send-otp/', {
+          email: form.email,
+          purpose: 'register'
         });
-        const data = await response.json();
-        if (response.ok && data.success) {
+
+        if (data?.success) {
           setOtpSent(true);
           setSuccess('OTP sent to your email. Please enter it below.');
         } else {
-          setError(data.message || 'Failed to send OTP.');
+          setError(data?.message || 'Failed to send OTP.');
         }
       } catch (err) {
-        setError('Network error while sending OTP.');
+        setError(err?.response?.data?.message || 'Network error while sending OTP.');
       }
       return;
     }
@@ -82,18 +81,18 @@ export default function Register() {
         return;
       }
       try {
-        const response = await fetch('http://localhost:8000/api/auth/validate-otp/', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: form.email, otp: otp.trim(), purpose: 'register' })
+        const { data } = await api.post('auth/validate-otp/', {
+          email: form.email,
+          otp: otp.trim(),
+          purpose: 'register'
         });
-        const data = await response.json();
-        if (!(response.ok && data.success)) {
+
+        if (!data?.success) {
           setError((data && (data.message || data.error)) || 'Invalid OTP.');
           return;
         }
       } catch (err) {
-        setError('Network error while validating OTP.');
+        setError(err?.response?.data?.message || 'Network error while validating OTP.');
         return;
       }
     }
@@ -106,20 +105,12 @@ export default function Register() {
       password: form.password
     };
     try {
-      const response = await fetch('http://localhost:8000/api/auth/register/', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-      if (response.ok) {
-        setSuccess('Registration successful! Redirecting...');
-        setTimeout(() => navigate('/login'), 2000);
-      } else {
-        const data = await response.json();
-        setError(data.error || data.message || 'Registration failed');
-      }
+      await api.post('auth/register/', payload);
+      setSuccess('Registration successful! Redirecting...');
+      setTimeout(() => navigate('/login'), 2000);
     } catch (err) {
-      setError('Network error during registration.');
+      const message = err?.response?.data?.error || err?.response?.data?.message || 'Registration failed';
+      setError(message);
     }
   }
 

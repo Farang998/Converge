@@ -9,9 +9,9 @@ const api = axios.create({
 });
 
 // Initialize auth header from localStorage if present
-const token = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null;
+const token = typeof window !== "undefined" ? localStorage.getItem("authToken") : null;
 if (token) {
-  api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+  api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
 }
 
 // Simple request logger and ensure base is used
@@ -42,16 +42,34 @@ api.interceptors.response.use((response) => {
 
 export function setAuthToken(newToken) {
   if (newToken) {
-    localStorage.setItem('authToken', newToken);
-    api.defaults.headers.common['Authorization'] = `Token ${newToken}`;
+    localStorage.setItem("authToken", newToken);
+    api.defaults.headers.common["Authorization"] = `Bearer ${newToken}`;
   } else {
-    localStorage.removeItem('authToken');
-    delete api.defaults.headers.common['Authorization'];
+    localStorage.removeItem("authToken");
+    delete api.defaults.headers.common["Authorization"];
   }
 }
 
-export function logout() {
-  setAuthToken(null);
+export async function login(credentials) {
+  const { data } = await api.post("auth/login/", credentials);
+  if (data?.token) {
+    setAuthToken(data.token);
+  }
+  return data;
+}
+
+export async function logout() {
+  const storedToken = typeof window !== "undefined" ? localStorage.getItem("authToken") : null;
+  try {
+    if (storedToken) {
+      await api.post("auth/logout/", { token: storedToken });
+    }
+  } catch (err) {
+    // ignore logout errors
+  } finally {
+    setAuthToken(null);
+  }
 }
 
 export default api;
+

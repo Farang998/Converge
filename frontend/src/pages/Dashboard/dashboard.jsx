@@ -1,37 +1,221 @@
-import React, { useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import "./dashboard.css";
 import { FaBell, FaCog, FaUser, FaPlus } from "react-icons/fa";
-import { logout } from "../../services/api";
+import { useNavigate } from "react-router-dom";
+import api, { logout } from "../../services/api";
 
 export default function Dashboard() {
-  const [projects, setProjects] = useState([
-    {
-      id: 1,
-      name: "UI Revamp",
-      progress: 70,
-      deadline: "2025-11-01",
-      description: "Redesigning the main application interface.",
-      members: 5,
-      showDetails: false,
-    },
-    {
-      id: 2,
-      name: "AI Chatbot Integration",
-      progress: 40,
-      deadline: "2025-12-10",
-      description: "Integrating chatbot for automated user assistance.",
-      members: 3,
-      showDetails: false,
-    },
-  ]);
-
-  const [tasks, setTasks] = useState([
-    { id: 1, name: "Fix Navbar", due: "2025-10-20", priority: "High" },
-    { id: 2, name: "Add File Upload", due: "2025-10-25", priority: "Medium" },
-    { id: 3, name: "Update Chat UI", due: "2025-10-28", priority: "High" },
-  ]);
-
+  const [projects, setProjects] = useState([]);
+  const [tasks, setTasks] = useState([]);
+  const [selectedProjectId, setSelectedProjectId] = useState(null);
+  const [loadingProjects, setLoadingProjects] = useState(false);
+  const [loadingTasks, setLoadingTasks] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [currentUser, setCurrentUser] = useState(null);
+  const [loadingUser, setLoadingUser] = useState(true);
+  const [userError, setUserError] = useState("");
+  const [userRefreshKey, setUserRefreshKey] = useState(0);
+
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadUser() {
+      try {
+        const { data } = await api.get("auth/identify-user/");
+        if (!active) {
+          return;
+        }
+        if (data?.user) {
+          setCurrentUser(data.user);
+          setUserError("");
+        } else {
+          setUserError("Unable to load user profile.");
+        }
+      } catch (err) {
+        if (!active) {
+          return;
+        }
+        if (err?.response?.status === 401) {
+          navigate("/login");
+          return;
+        }
+        setUserError(err?.response?.data?.error || "Failed to load user profile.");
+      } finally {
+        if (active) {
+          setLoadingUser(false);
+        }
+      }
+    }
+
+    loadUser();
+
+    return () => {
+      active = false;
+    };
+  }, [navigate, userRefreshKey]);
+
+  useEffect(() => {
+    if (!currentUser) {
+      setProjects([]);
+      setSelectedProjectId(null);
+      return;
+    }
+
+    let mounted = true;
+
+    async function loadProjects() {
+      setLoadingProjects(true);
+      try {
+        const { data } = await api.get("projects/");
+        if (!mounted) return;
+
+        const formatted = (data || []).map((project) => {
+          const members = Array.isArray(project?.team_members)
+            ? project.team_members.map((member) => ({
+                user_id: member.user_id,
+                username: member.username || "Unknown",
+                accepted: Boolean(member.accepted),
+              }))
+            : [];
+
+          const acceptedMembersCount =
+            members.filter((member) => member.accepted).length + 1; // include leader
+          const totalMembers = members.length + 1;
+          const isLeader = project?.team_leader?.user_id === currentUser.id;
+          const membershipEntry = members.find((member) => member.user_id === currentUser.id);
+
+          let membershipLabel = "Collaborator";
+          let membershipDescription = "You have access to this project.";
+          let membershipKey = "collaborator";
+
+          if (isLeader) {
+            membershipLabel = "Team Leader";
+            membershipDescription = "You are leading this project.";
+            membershipKey = "leader";
+          } else if (membershipEntry) {
+            membershipLabel = membershipEntry.accepted ? "Member" : "Invitation Pending";
+            membershipDescription = membershipEntry.accepted
+              ? "You are an accepted member of this project."
+              : "Please accept your invitation to start collaborating.";
+            membershipKey = membershipEntry.accepted ? "member" : "pending";
+          }
+
+          const createdAt = project?.created_at
+            ? new Date(project.created_at).toLocaleDateString()
+            : "Not available";
+
+          const detailedMembers = [
+            {
+              user_id: project?.team_leader?.user_id || "leader",
+              username: project?.team_leader?.username || "Leader",
+              accepted: true,
+              role: "Team Leader",
+            },
+            ...members.map((member) => ({
+              ...member,
+              role: member.accepted ? "Member" : "Invited",
+            })),
+          ];
+
+          return {
+            id: project.id,
+            name: project.name,
+            description: project.description || "No description provided.",
+            projectType: project.project_type || "General",
+            createdAt,
+            acceptedMembers: acceptedMembersCount,
+            totalMembers,
+            membershipLabel,
+            membershipDescription,
+            membershipKey,
+            teamMembers: detailedMembers,
+            showDetails: false,
+          };
+        });
+
+        setProjects(formatted);
+        if (formatted.length > 0) {
+          setSelectedProjectId(formatted[0].id);
+        } else {
+          setSelectedProjectId(null);
+        }
+      } catch (err) {
+        console.error("[dashboard] Failed to load projects", err);
+        if (err?.response?.status === 401) {
+          navigate("/login");
+          return;
+        }
+        setProjects([]);
+        setSelectedProjectId(null);
+      } finally {
+        if (mounted) {
+          setLoadingProjects(false);
+        }
+      }
+    }
+
+    loadProjects();
+    return () => {
+      mounted = false;
+    };
+  }, [currentUser, navigate]);
+
+  useEffect(() => {
+    let mounted = true;
+
+    if (!currentUser || !selectedProjectId) {
+      setTasks([]);
+      return;
+    }
+
+    async function loadTasks() {
+      setLoadingTasks(true);
+      try {
+        const { data } = await api.get("tasks/", {
+          params: { project_id: selectedProjectId },
+        });
+        if (!mounted) return;
+
+        const formatted = (data || []).map((task) => {
+          const dueDate = task?.due_date
+            ? new Date(task.due_date).toLocaleDateString()
+            : "No due date";
+          const assignedTo = task?.assigned_to?.username || "Unassigned";
+          const status = task?.status || "pending";
+
+          return {
+            id: task.id,
+            name: task.name,
+            due: dueDate,
+            status,
+            assignedTo,
+          };
+        });
+
+        setTasks(formatted);
+      } catch (err) {
+        console.error("[dashboard] Failed to load tasks", err);
+        if (err?.response?.status === 401) {
+          navigate("/login");
+          return;
+        }
+        if (mounted) {
+          setTasks([]);
+        }
+      } finally {
+        if (mounted) {
+          setLoadingTasks(false);
+        }
+      }
+    }
+
+    loadTasks();
+    return () => {
+      mounted = false;
+    };
+  }, [currentUser, selectedProjectId, navigate]);
 
   const toggleDetails = (id) => {
     setProjects(
@@ -39,37 +223,65 @@ export default function Dashboard() {
         proj.id === id ? { ...proj, showDetails: !proj.showDetails } : proj
       )
     );
+    setSelectedProjectId(id);
   };
 
-  const username =
-    typeof window !== "undefined"
-      ? localStorage.getItem("username") || "User"
-      : "User";
+  const username = useMemo(() => {
+    if (currentUser) {
+      const first = currentUser.first_name?.trim();
+      if (first) {
+        return first;
+      }
+      return currentUser.username;
+    }
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("username") || "User";
+    }
+    return "User";
+  }, [currentUser]);
 
   const handleLogout = async () => {
-    // If logout() is defined and returns a promise, call it but don't block on it.
-    try {
-      if (typeof logout === "function") {
-        // optionally wait for it: await logout();
-        logout().catch(() => {
-          /* ignore network errors */
-        });
-      }
-    } catch (err) {
-      // ignore if logout import missing / not a function
-    }
-
-    // Clear auth data
+    await logout();
     try {
       localStorage.removeItem("authToken");
       localStorage.removeItem("username");
     } catch (e) {
-      // ignore in case localStorage is not available
+      // ignore storage errors
     }
-
-    // Redirect to login page
-    window.location.href = "/login";
+    navigate("/login");
   };
+
+  if (loadingUser) {
+    return (
+      <div className="dashboard-page loading-state">
+        <p>Loading your workspace...</p>
+      </div>
+    );
+  }
+
+  if (userError) {
+    return (
+      <div className="dashboard-page loading-state">
+        <p className="error-text">{userError}</p>
+        <button
+          className="retry-btn"
+          type="button"
+          onClick={() => {
+            setLoadingUser(true);
+            setUserError("");
+            setCurrentUser(null);
+            setUserRefreshKey((prev) => prev + 1);
+          }}
+        >
+          Try again
+        </button>
+      </div>
+    );
+  }
+
+  const completedCount = tasks.filter(
+    (task) => task.status?.toLowerCase() === "completed"
+  ).length;
 
   return (
     <div className="dashboard-page">
@@ -109,9 +321,30 @@ export default function Dashboard() {
               <div className="profile-menu">
                 <p className="profile-name">{username}</p>
                 <ul>
-                  <li>View Profile</li>
-                  <li>Settings</li>
-                  <li>Help & Support</li>
+                  <li
+                    onClick={() => {
+                      setShowProfileMenu(false);
+                      navigate("/profile");
+                    }}
+                  >
+                    View Profile
+                  </li>
+                  <li
+                    onClick={() => {
+                      setShowProfileMenu(false);
+                      navigate("/settings");
+                    }}
+                  >
+                    Settings
+                  </li>
+                  <li
+                    onClick={() => {
+                      setShowProfileMenu(false);
+                      navigate("/help");
+                    }}
+                  >
+                    Help &amp; Support
+                  </li>
                   <hr />
                   <li onClick={handleLogout} className="logout">
                     Logout
@@ -131,55 +364,91 @@ export default function Dashboard() {
             <h2>Projects</h2>
             <button
               className="add-btn"
-              onClick={() =>
-                setProjects([
-                  ...projects,
-                  {
-                    id: projects.length + 1,
-                    name: "New Project",
-                    progress: 0,
-                    deadline: "2025-12-31",
-                    description: "Newly created project.",
-                    members: 1,
-                    showDetails: false,
-                  },
-                ])
-              }
+              type="button"
+              onClick={() => navigate("/projects/create")}
             >
               <FaPlus /> New Project
             </button>
           </div>
 
           <div className="projects-list">
-            {projects.map((proj) => (
-              <div className="project-card" key={proj.id}>
-                <h3>{proj.name}</h3>
-                <div className="progress-bar">
-                  <div
-                    className="progress-fill"
-                    style={{ width: `${proj.progress}%` }}
-                  ></div>
-                </div>
-                <div className="project-footer">
-                  <p className="deadline">
-                    Deadline: <span>{proj.deadline}</span>
-                  </p>
-                  <button
-                    className="details-btn"
-                    onClick={() => toggleDetails(proj.id)}
-                  >
-                    {proj.showDetails ? "Hide" : "Details"}
-                  </button>
-                </div>
-
-                {proj.showDetails && (
-                  <div className="project-details">
-                    <p>{proj.description}</p>
-                    <p>Team Members: {proj.members}</p>
-                  </div>
-                )}
+            {loadingProjects && (
+              <div className="project-card info-card">Loading projects...</div>
+            )}
+            {!loadingProjects && projects.length === 0 && (
+              <div className="project-card info-card">
+                <p>You are not part of any projects yet.</p>
+                <p className="muted">
+                  Create a project or accept an invitation to see it here.
+                </p>
               </div>
-            ))}
+            )}
+            {!loadingProjects &&
+              projects.map((proj) => (
+                <div
+                  className={`project-card ${
+                    selectedProjectId === proj.id ? "selected" : ""
+                  }`}
+                  key={proj.id}
+                  onClick={() => setSelectedProjectId(proj.id)}
+                >
+                  <div className="project-card-top">
+                    <div>
+                      <h3>{proj.name}</h3>
+                      <p className="project-type">{proj.projectType}</p>
+                    </div>
+                    <span className={`role-chip ${proj.membershipKey}`}>
+                      {proj.membershipLabel}
+                    </span>
+                  </div>
+
+                  <div className="project-meta">
+                    <span>
+                      <strong>Created:</strong> {proj.createdAt}
+                    </span>
+                    <span>
+                      <strong>Members:</strong> {proj.acceptedMembers} accepted /{" "}
+                      {proj.totalMembers} total
+                    </span>
+                  </div>
+
+                  <div className="project-footer">
+                    <p className="members">
+                      <strong>Status:</strong>{" "}
+                      <span>{proj.membershipDescription}</span>
+                    </p>
+                    <button
+                      className="details-btn"
+                      type="button"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        toggleDetails(proj.id);
+                      }}
+                    >
+                      {proj.showDetails ? "Hide Details" : "View Details"}
+                    </button>
+                  </div>
+
+                  {proj.showDetails && (
+                    <div className="project-details">
+                      <p>{proj.description}</p>
+                      <h4>Team</h4>
+                      <ul className="member-list">
+                        {proj.teamMembers.map((member) => (
+                          <li key={`${member.user_id}-${member.role}`}>
+                            <span>{member.username}</span>
+                            <span
+                              className={`badge ${member.accepted ? "accepted" : "pending"}`}
+                            >
+                              {member.role}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              ))}
           </div>
         </div>
 
@@ -187,22 +456,6 @@ export default function Dashboard() {
         <div className="tasks-section">
           <div className="section-header">
             <h2>Tasks</h2>
-            <button
-              className="add-btn"
-              onClick={() =>
-                setTasks([
-                  ...tasks,
-                  {
-                    id: tasks.length + 1,
-                    name: "New Task",
-                    due: "2025-12-31",
-                    priority: "Low",
-                  },
-                ])
-              }
-            >
-              <FaPlus /> Create
-            </button>
           </div>
 
           <div className="task-summary">
@@ -211,23 +464,50 @@ export default function Dashboard() {
               <p>Active Tasks</p>
             </div>
             <div className="task-box completed">
-              <h3>1</h3>
+              <h3>{completedCount}</h3>
               <p>Completed</p>
             </div>
           </div>
 
           <div className="tasks-list">
-            {tasks.map((task) => (
-              <div className="task-card" key={task.id}>
-                <div className="task-header">
-                  <h4>{task.name}</h4>
-                  <span className={`priority ${task.priority.toLowerCase()}`}>
-                    {task.priority}
-                  </span>
-                </div>
-                <p className="due">Due: {task.due}</p>
-              </div>
-            ))}
+            {loadingTasks && <div className="task-card">Loading tasks...</div>}
+            {!loadingTasks && tasks.length === 0 && (
+              <div className="task-card">No tasks found for this project.</div>
+            )}
+            {!loadingTasks &&
+              tasks.map((task) => {
+                const normalizedStatus = task.status || "pending";
+                const statusLabel = normalizedStatus
+                  .replace(/_/g, " ")
+                  .replace(/\b\w/g, (ch) => ch.toUpperCase());
+                const statusClass = normalizedStatus
+                  .toLowerCase()
+                  .replace(/\s+/g, "-");
+                return (
+                  <div
+                    className="task-card"
+                    key={task.id}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => navigate(`/tasks/${task.id}`)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        navigate(`/tasks/${task.id}`);
+                      }
+                    }}
+                  >
+                    <div className="task-header">
+                      <h4>{task.name}</h4>
+                      <span className={`priority ${statusClass}`}>
+                        {statusLabel}
+                      </span>
+                    </div>
+                    <p className="due">Due: {task.due}</p>
+                    <p className="assigned">Assigned to: {task.assignedTo}</p>
+                  </div>
+                );
+              })}
           </div>
         </div>
       </div>

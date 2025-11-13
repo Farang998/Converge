@@ -150,7 +150,7 @@ export default function ChatList({ setActiveConversation, currentUserId }) {
             className="conversation-item"
             onClick={() => handleSelect(c)}
           >
-            {c.type === "group" ? `👥 ${c.name}` : `💬 ${c.name}`}
+            {c.type === "group" ? `Group: ${c.name}` : `Chat: ${c.name}`}
           </div>
         ))}
       </div>

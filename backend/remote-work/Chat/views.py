@@ -1,12 +1,12 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
-from channels.layers import async_to_sync
+# from channels.layers import async_to_sync
 from asgiref.sync import async_to_sync
-from django.http import messages
+from django.contrib import messages
 from django.http import HttpResponse
 from django.http import Http404
 from .models import *
-from .forms import *
+# from .forms import *
 
 @login_required
 def chat_view(request, chatroom_name='public-chat'):

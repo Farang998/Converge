@@ -1,106 +1,365 @@
-from django.shortcuts import render
-from rest_framework.decorators import api_view
-from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework import status
+from rest_framework.response import Response
+from rest_framework import status, viewsets
+from rest_framework.decorators import action
 from ..auth.models import User
-from django.contrib.auth.hashers import make_password
-from django.contrib.auth import authenticate, login
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.authentication import SessionAuthentication
-from django.core.validators import validate_email
-from django.core.exceptions import ValidationError as DjangoValidationError
-from mongoengine.errors import ValidationError as MongoValidationError
-from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
-import json
-from django.core.cache import cache
-from django.core.mail import send_mail
 from .models import Project
+from ..tasks.models import Task # We need this for the 'remove_members' check
+from ..notifications.models import Notification
+from mongoengine.errors import DoesNotExist, ValidationError as MongoValidationError
 import threading
+from django.conf import settings
+
+from .utils import send_invitations_background
+
+ERROR_AUTH_HEADER_MISSING = 'Authorization header missing'
+ERROR_INVALID_AUTH_HEADER = 'Invalid authorization header format'
+ERROR_INVALID_TOKEN = 'Invalid or expired token'
 
 
-def send_invitation_email(email, project_name, project_id):
-    subject = f"Invitation to join project {project_name}"
-    message = f"You have been invited to join the project '{project_name}'. Please click the link to accept: http://localhost:5173/accept-invitation/{project_id}"
-    try:
-        send_mail(subject, message, 'vasanidevarsh@gmail.com', [email], fail_silently=False)
-        print(f"Email sent successfully to {email}")
-    except Exception as e:
-        print(f"Failed to send email to {email}: {e}")
+class ProjectViewSet(viewsets.ViewSet):
+    """
+    A ViewSet for creating, updating, and managing Projects and their members.
+    
+    Handles:
+    - POST /api/projects/ (create)
+    - PATCH /api/projects/<id>/ (partial_update for name/description)
+    - POST /api/projects/<id>/add_members/ (custom action)
+    - POST /api/projects/<id>/remove_members/ (custom action)
+    """
 
-def send_invitations_background(team_members_invited, project_name, project_id):
-    for member_id in team_members_invited:
-        try:
-            user = User.objects.get(id=member_id)
-            send_invitation_email(user.email, project_name, project_id)
-        except User.DoesNotExist:
-            pass
-
-class ProjectCreate(APIView):
-    def post(self, request):
-
+    def _authenticate_user(self, request):
         auth_header = request.headers.get('Authorization')
         if not auth_header:
-            return Response({'error': 'Authorization header missing'}, status=status.HTTP_401_UNAUTHORIZED)
+            raise Exception(ERROR_AUTH_HEADER_MISSING, status.HTTP_401_UNAUTHORIZED)
         
         try:
             token = auth_header.split(' ')[1]
         except IndexError:
-            return Response({'error': 'Invalid authorization header format'}, status=status.HTTP_401_UNAUTHORIZED)
+            raise Exception(ERROR_INVALID_AUTH_HEADER, status.HTTP_401_UNAUTHORIZED)
         
         user = User.validate_token(token)
         if not user:
-            return Response({'error': 'Invalid or expired token'}, status=status.HTTP_401_UNAUTHORIZED)
-        
-        team_leader = str(user.id)
+            raise Exception(ERROR_INVALID_TOKEN, status.HTTP_401_UNAUTHORIZED)
+        return user
 
-        name = request.data.get('name')
-        description = request.data.get('description', '')
-        if not name:
-            return Response({'error': 'Name is required'}, status=status.HTTP_400_BAD_REQUEST)
-        project_type = request.data.get('project_type', 'development')
-
-        team_members_invited = request.data.get('team_members', [])
-        team_members = [{'user': member, 'accepted': False} for member in team_members_invited]
-
-        if name == '':
-            return Response({'error': 'Project name cannot be empty'}, status=status.HTTP_400_BAD_REQUEST)
-        if description == '':
-            return Response({'error': 'Project description cannot be empty'}, status=status.HTTP_400_BAD_REQUEST)
-
-        project_obj = Project(name=name, description=description, team_leader=team_leader, project_type=project_type, team_members=team_members)
-        project_obj.save()
-
-        threading.Thread(target=send_invitations_background, args=(team_members_invited, name, str(project_obj.id))).start()
-
-        return Response({'message': 'Project created successfully', 'project_id': str(project_obj.id)}, status=status.HTTP_201_CREATED)
-
-class AcceptInvitation(APIView):
-    def get(self, request, project_id):
-        auth_header = request.headers.get('Authorization')
-        if not auth_header:
-            return Response({'error': 'Authorization header missing'}, status=status.HTTP_401_UNAUTHORIZED)
-        
+    def list(self, request):
+        """
+        Lists projects where the authenticated user is the leader or an accepted member.
+        Maps to: GET /api/projects/
+        """
         try:
-            token = auth_header.split(' ')[1]
-        except IndexError:
-            return Response({'error': 'Invalid authorization header format'}, status=status.HTTP_401_UNAUTHORIZED)
-        
-        user = User.validate_token(token)
-        if not user:
-            return Response({'error': 'Invalid or expired token'}, status=status.HTTP_401_UNAUTHORIZED)
-        
+            user = self._authenticate_user(request)
+        except Exception as e:
+            return Response({'error': str(e.args[0])}, status=e.args[1])
+
+        leader_projects = list(Project.objects(team_leader=user))
+        member_projects = list(Project.objects(
+            team_members__match={'user': str(user.id)}
+        ))
+
+        # Merge and remove duplicates while preserving order (leader projects first)
+        project_map = {str(project.id): project for project in leader_projects}
+        for project in member_projects:
+            project_map.setdefault(str(project.id), project)
+
+        projects = list(project_map.values())
+
+        # Build user lookup for team members to enrich response
+        team_member_ids = set()
+        for project in projects:
+            for member in project.team_members:
+                member_id = member.get('user')
+                if member_id:
+                    team_member_ids.add(member_id)
+
+        users_lookup = {}
+        if team_member_ids:
+            users_lookup = {
+                str(user_obj.id): user_obj.username
+                for user_obj in User.objects(id__in=list(team_member_ids))
+            }
+
+        serialized = []
+        for project in projects:
+            team_members = []
+            for member in project.team_members:
+                member_id = member.get('user')
+                team_members.append({
+                    'user_id': member_id,
+                    'username': users_lookup.get(member_id),
+                    'accepted': bool(member.get('accepted', False))
+                })
+
+            serialized.append({
+                'id': str(project.id),
+                'name': project.name,
+                'description': project.description,
+                'project_type': project.project_type,
+                'team_leader': {
+                    'user_id': str(project.team_leader.id),
+                    'username': getattr(project.team_leader, 'username', None)
+                },
+                'team_members': team_members,
+                'created_at': project.created_at.isoformat() if project.created_at else None,
+            })
+
+        return Response(serialized, status=status.HTTP_200_OK)
+
+    def create(self, request):
+        """
+        Creates a new Project.
+        Maps to: POST /api/projects/
+        """
         try:
-            project = Project.objects.get(id=project_id)
-        except Project.DoesNotExist:
+            user = self._authenticate_user(request)
+        except Exception as e:
+            return Response({'error': str(e.args[0])}, status=e.args[1])
+        
+        data = request.data
+        name = data.get('name')
+        if not name or name.strip() == '':
+            return Response({'error': 'Name is required and cannot be empty'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        team_members_invited = data.get('team_members', [])
+        team_members_db = [{'user': member_id, 'accepted': False} for member_id in team_members_invited]
+
+        try:
+            project = Project(
+                name=name,
+                description=data.get('description', ''),
+                team_leader=user,
+                project_type=data.get('project_type', 'development'),
+                team_members=team_members_db
+            )
+            project.save()
+            project_id = str(project.id)
+
+            try:
+                for member_id in team_members_invited:
+                    try:
+                        invited_user = User.objects.get(id=member_id)
+                        Notification(
+                            user=invited_user,
+                            message=f"You have been invited to join the project '{name}'.",
+                            link_url=f"/projects/{project_id}"
+                        ).save()
+                    except User.DoesNotExist:
+                        print(f"Warning: Could not create notification for non-existent user ID {member_id}")
+            except Exception as e:
+                print(f"Error creating notifications: {e}")
+
+            threading.Thread(target=send_invitations_background, args=(team_members_invited, name, project_id)).start()
+            
+            return Response({'message': 'Project created successfully', 'project_id': project_id}, status=status.HTTP_201_CREATED)
+        except MongoValidationError as e:
+            return Response({'error': f'Validation error: {e}'}, status=status.HTTP_400_BAD_REQUEST)
+
+    def partial_update(self, request, pk=None):
+        """
+        Updates a Project's simple fields (name, description).
+        Maps to: PATCH /api/projects/<project_id>/
+        """
+        try:
+            user = self._authenticate_user(request)
+            project = Project.objects.get(id=pk)
+        except Exception as e:
+            return Response({'error': str(e.args[0])}, status=e.args[1])
+        except (DoesNotExist, MongoValidationError):
             return Response({'error': 'Project not found'}, status=status.HTTP_404_NOT_FOUND)
         
-        user_id = str(user.id)
+        # Authorization
+        if project.team_leader != user:
+            return Response({'error': 'Only the team leader can update this project.'}, status=status.HTTP_403_FORBIDDEN)
+        
+        data = request.data
+        updated = False
+        if 'name' in data:
+            project.name = data['name']
+            updated = True
+        if 'description' in data:
+            project.description = data['description']
+            updated = True
+        
+        if not updated:
+            return Response({'message': 'No changes provided for name or description.'}, status=status.HTTP_200_OK)
+        
+        project.save()
+        return Response({'message': 'Project updated successfully.'}, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=['post'])
+    def add_members(self, request, pk=None):
+        """
+        Adds new members to a project.
+        Maps to: POST /api/projects/<project_id>/add_members/
+        """
+        try:
+            user = self._authenticate_user(request)
+            project = Project.objects.get(id=pk)
+        except Exception as e:
+            return Response({'error': str(e.args[0])}, status=e.args[1])
+        except (DoesNotExist, MongoValidationError):
+            return Response({'error': 'Project not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        # Authorization
+        if project.team_leader != user:
+            return Response({'error': 'Only the team leader can add members.'}, status=status.HTTP_403_FORBIDDEN)
+        
+        data = request.data
+        if 'add_members' not in data or not isinstance(data['add_members'], list):
+            return Response({'error': "Expected 'add_members' to be a list of user IDs."}, status=status.HTTP_400_BAD_REQUEST)
+        
+        new_member_ids = set(data['add_members'])
+        existing_member_ids = {m['user'] for m in project.team_members}
+        members_to_add = []
+        
+        for member_id in new_member_ids:
+            if member_id != str(project.team_leader.id) and member_id not in existing_member_ids:
+                project.team_members.append({'user': member_id, 'accepted': False})
+                members_to_add.append(member_id)
+
+        if not members_to_add:
+            return Response({'message': 'No new members to add (or members are already in project).'}, status=status.HTTP_200_OK)
+
+        # Save the new member list to the project
+        project.save()
+
+        # Send in-app notifications
+        try:
+            for member_id in members_to_add:
+                try:
+                    invited_user = User.objects.get(id=member_id)
+                    Notification(
+                        user=invited_user,
+                        message=f"You have been invited to join the project '{project.name}'.",
+                        link_url=f"/projects/{pk}"
+                    ).save()
+                except User.DoesNotExist:
+                    print(f"Warning: Could not create notification for non-existent user ID {member_id}")
+        except Exception as e:
+            print(f"Error creating notifications: {e}")
+
+        # Send email invitations
+        threading.Thread(target=send_invitations_background, args=(members_to_add, project.name, pk)).start()
+        
+        return Response({'message': f'Successfully invited {len(members_to_add)} new member(s).'}, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=['post'])
+    def remove_members(self, request, pk=None):
+        """
+        Removes members from a project, with a confirmation step.
+        Maps to: POST /api/projects/<project_id>/remove_members/
+        """
+        try:
+            user = self._authenticate_user(request)
+            project = Project.objects.get(id=pk)
+        except Exception as e:
+            return Response({'error': str(e.args[0])}, status=e.args[1])
+        except (DoesNotExist, MongoValidationError):
+            return Response({'error': 'Project not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        # Authorization
+        if project.team_leader != user:
+            return Response({'error': 'Only the team leader can remove members.'}, status=status.HTTP_403_FORBIDDEN)
+        
+        data = request.data
+        force_remove = data.get('force_remove', False)
+
+        if 'remove_members' not in data or not isinstance(data['remove_members'], list):
+            return Response({'error': "Expected 'remove_members' to be a list of user IDs."}, status=status.HTTP_400_BAD_REQUEST)
+
+        ids_to_remove = set(data['remove_members'])
+        
+        # --- Confirmation Logic ---
+        if not force_remove:
+            conflicts_found = []
+            for user_id in ids_to_remove:
+                try:
+                    # Find tasks using the direct model references
+                    assigned_tasks = Task.objects(project=project, assigned_to=user_id, status__ne='completed')
+                    completed_tasks = Task.objects(project=project, assigned_to=user_id, status='completed')
+
+                    if assigned_tasks.count() > 0 or completed_tasks.count() > 0:
+                        user_obj = User.objects.get(id=user_id)
+                        profile = {
+                            "user_id": user_id,
+                            "username": user_obj.username,
+                            "assigned_tasks": [f"{task.name} (Status: {task.status})" for task in assigned_tasks],
+                            "completed_tasks_count": completed_tasks.count()
+                        }
+                        conflicts_found.append(profile)
+                except User.DoesNotExist:
+                    pass 
+
+            if conflicts_found:
+                return Response({
+                    "error": "Confirmation required. Member(s) have assigned tasks.",
+                    "confirmation_details": conflicts_found,
+                    "message": "To proceed with removal, resend this request with 'force_remove': true."
+                }, status=status.HTTP_409_CONFLICT)
+        
+        # --- Removal Logic ---
+        original_members = project.team_members
+        new_members_list = [m for m in original_members if m.get('user') not in ids_to_remove]
+        
+        if len(new_members_list) == len(original_members):
+            return Response({'message': 'No members found to remove.'}, status=status.HTTP_200_OK)
+
+        project.team_members = new_members_list
+        project.save()
+        
+        # Consequence: Un-assign all tasks from the removed members
+        for user_id in ids_to_remove:
+            Task.objects(
+                project=project, 
+                assigned_to=user_id
+            ).update(set__assigned_to=None) # Set assigned_to to null
+            
+        return Response({'message': 'Members removed successfully and their tasks have been unassigned.'}, status=status.HTTP_200_OK)
+
+
+class AcceptInvitation(APIView):
+    """
+    This view is separate as it's a unique action for an
+    invited user, not part of the standard Project CRUD.
+    Maps to: GET /api/projects/accept-invitation/<project_id>/
+    """
+    def get(self, request, project_id):
+        # 1. Authenticate the user
+        auth_header = request.headers.get('Authorization')
+        if not auth_header:
+            return Response({'error': ERROR_AUTH_HEADER_MISSING}, status=status.HTTP_401_UNAUTHORIZED)
+        
+        try:
+            token = auth_header.split(' ')[1]
+            user = User.validate_token(token)
+            if not user:
+                return Response({'error': ERROR_INVALID_TOKEN}, status=status.HTTP_401_UNAUTHORIZED)
+        except IndexError:
+            return Response({'error': ERROR_INVALID_AUTH_HEADER}, status=status.HTTP_401_UNAUTHORIZED)
+        
+        # 2. Find the project
+        try:
+            project = Project.objects.get(id=project_id)
+        except (DoesNotExist, MongoValidationError):
+            return Response({'error': 'Project not found'}, status=status.HTTP_404_NOT_FOUND)
+        
+        # 3. Check if the user is the team leader
+        if project.team_leader == user:
+            return Response({'message': 'You are the team leader of this project and are already a member.'}, status=status.HTTP_200_OK)
+       
+        # 4. Find and update the user in the team_members list
+        user_id_str = str(user.id)
+        member_found = False
         for member in project.team_members:
-            if member['user'] == user_id:
+            if member['user'] == user_id_str:
+                if member['accepted']:
+                    return Response({'message': 'Invitation already accepted.'}, status=status.HTTP_200_OK)
+                
                 member['accepted'] = True
                 project.save()
+                member_found = True
                 return Response({'message': 'Invitation accepted successfully'}, status=status.HTTP_200_OK)
         
-        return Response({'error': 'You are not invited to this project'}, status=status.HTTP_403_FORBIDDEN)
+        if not member_found:
+            return Response({'error': 'You are not invited to this project'}, status=status.HTTP_403_FORBIDDEN)

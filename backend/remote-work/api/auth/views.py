@@ -11,11 +11,30 @@ from rest_framework.authentication import SessionAuthentication
 from django.core.validators import validate_email
 from django.core.exceptions import ValidationError as DjangoValidationError
 from mongoengine.errors import ValidationError as MongoValidationError
+from mongoengine.queryset.visitor import Q
 from .utils import send_otp_email
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 import json
 from django.core.cache import cache
+
+
+def _get_authenticated_user(request):
+    auth_header = request.headers.get('Authorization')
+    if not auth_header:
+        return None, Response({'error': 'Authorization token is required'}, status=status.HTTP_401_UNAUTHORIZED)
+
+    try:
+        token_type, token = auth_header.split(' ')
+        if token_type.lower() != 'bearer':
+            return None, Response({'error': 'Invalid token type'}, status=status.HTTP_401_UNAUTHORIZED)
+    except ValueError:
+        return None, Response({'error': 'Invalid authorization'}, status=status.HTTP_401_UNAUTHORIZED)
+
+    user = User.validate_token(token)
+    if not user:
+        return None, Response({'error': 'Invalid or expired token'}, status=status.HTTP_401_UNAUTHORIZED)
+    return user, None
 
 
 def contain_all_numbers(s):
@@ -207,23 +226,98 @@ class ResetPasswordView(APIView):
 
 class IdentifyUserView(APIView):
     def get(self, request):
-        auth_header = request.headers.get('Authorization')
-        if not auth_header:
-            return Response({'error': 'Authorization token is required'}, status=status.HTTP_401_UNAUTHORIZED)
+        user, error_response = _get_authenticated_user(request)
+        if error_response:
+            return error_response
 
+        date_joined = getattr(user, 'date_joined', None)
+        first_name = getattr(user, 'firstName', '')
+        last_name = getattr(user, 'lastName', '')
+
+        return Response({
+            'message': 'User identified successfully',
+            'user': {
+                'id': str(user.id),
+                'username': user.username,
+                'email': user.email,
+                'first_name': first_name,
+                'last_name': last_name,
+                'date_joined': date_joined.isoformat() if date_joined else None,
+            }
+        }, status=status.HTTP_200_OK)
+
+
+class UserListView(APIView):
+    def get(self, request):
+        user, error_response = _get_authenticated_user(request)
+        if error_response:
+            return error_response
+
+        query = request.query_params.get('q', '').strip()
         try:
-            token_type, token = auth_header.split(' ')
-            if token_type.lower() != 'bearer':
-                return Response({'error': 'Invalid token type'}, status=status.HTTP_401_UNAUTHORIZED)
-        except ValueError:
-            return Response({'error': 'Invalid authorization'}, status=status.HTTP_401_UNAUTHORIZED)
+            limit = int(request.query_params.get('limit', 25))
+        except (TypeError, ValueError):
+            limit = 25
+        limit = max(1, min(limit, 100))
 
-        user = User.validate_token(token)
-        if not user:
-            return Response({'error': 'Invalid or expired token'}, status=status.HTTP_401_UNAUTHORIZED)
+        users_qs = User.objects
+        if query:
+            users_qs = users_qs.filter(
+                Q(username__icontains=query) |
+                Q(email__icontains=query) |
+                Q(firstName__icontains=query) |
+                Q(lastName__icontains=query)
+            )
 
-        return Response({'message': 'User identified successfully', 'user': {
-            'id': str(user.id),
-            'username': user.username,
-            'email': user.email
-        }}, status=status.HTTP_200_OK)
+        users_qs = users_qs.order_by('username')
+        users = users_qs[:limit]
+
+        data = [{
+            'id': str(u.id),
+            'username': u.username,
+            'email': u.email,
+            'first_name': getattr(u, 'firstName', ''),
+            'last_name': getattr(u, 'lastName', '')
+        } for u in users]
+
+        return Response({'users': data}, status=status.HTTP_200_OK)
+
+
+class UpdateProfileView(APIView):
+    def patch(self, request):
+        user, error_response = _get_authenticated_user(request)
+        if error_response:
+            return error_response
+
+        first_name = request.data.get('first_name')
+        last_name = request.data.get('last_name')
+
+        updated = False
+
+        if first_name is not None:
+            if not isinstance(first_name, str):
+                return Response({'error': 'First name must be a string.'}, status=status.HTTP_400_BAD_REQUEST)
+            user.firstName = first_name.strip()
+            updated = True
+
+        if last_name is not None:
+            if not isinstance(last_name, str):
+                return Response({'error': 'Last name must be a string.'}, status=status.HTTP_400_BAD_REQUEST)
+            user.lastName = last_name.strip()
+            updated = True
+
+        if not updated:
+            return Response({'message': 'No changes provided.'}, status=status.HTTP_200_OK)
+
+        user.save()
+
+        return Response({
+            'message': 'Profile updated successfully.',
+            'user': {
+                'id': str(user.id),
+                'username': user.username,
+                'email': user.email,
+                'first_name': getattr(user, 'firstName', ''),
+                'last_name': getattr(user, 'lastName', '')
+            }
+        }, status=status.HTTP_200_OK)

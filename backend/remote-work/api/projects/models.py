@@ -1,12 +1,13 @@
-from mongoengine import Document, StringField, ListField, DictField, DateTimeField
+from mongoengine import Document, StringField, ListField, DictField, DateTimeField, ReferenceField
 from django.utils import timezone
+from ..auth.models import User
 
 class Project(Document):
     name = StringField(required=True)
     description = StringField()
-    team_leader = StringField(required=True)
+    team_leader = ReferenceField(User, required=True)
     project_type = StringField(default='development')
-    team_members = ListField(DictField())  # list of {'user': str, 'accepted': bool}
+    team_members = ListField(DictField())
     created_at = DateTimeField(default=timezone.now)
 
     meta = {'collection': 'projects'}

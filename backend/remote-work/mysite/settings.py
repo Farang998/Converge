@@ -32,6 +32,7 @@ DEBUG = True
 
 ALLOWED_HOSTS = ['localhost', '127.0.0.1']
 
+FRONTEND_URL = 'http://localhost:5173'
 
 # Application definition
 
@@ -193,7 +194,7 @@ USE_TZ = True
 
 # Development: print emails to console to avoid SMTP errors locally.
 # if DEBUG:
-#     EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 # else:
 #     EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 
