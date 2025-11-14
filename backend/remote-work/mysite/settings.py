@@ -16,6 +16,11 @@ from datetime import timedelta
 import ssl
 from mongoengine import connect
 from datetime import timedelta
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
+
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -25,7 +30,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-g_&8@lud^j0yhf^ifr7ny#4jkzk0wae(#mnmo+jezlnfaq*zo&'
+SECRET_KEY = os.getenv("SECRET_KEY")
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -139,7 +144,7 @@ DATABASES = {
 # MongoDB configuration
 # Support a full MongoDB URI via `MONGO_URI` env var (e.g.
 # mongodb://localhost:27017/). If not provided, fall back to host/port.
-MONGO_URI = 'mongodb+srv://convergework23_db_user:DRPxZfsnHQRCHQ58@cluster0.s0y3bgk.mongodb.net/'
+MONGO_URI = os.getenv("MONGO_URI")
 if MONGO_URI:
     # If a full connection URI is provided, use it.
     connect(db='converge_db', host=MONGO_URI, ssl=True, tlsAllowInvalidCertificates=True)
@@ -161,7 +166,7 @@ EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
-EMAIL_HOST_USER = "vasanidevarsh@gmail.com"
+EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER")
 EMAIL_HOST_PASSWORD = APP_PASSWORD
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
@@ -234,3 +239,8 @@ CSRF_TRUSTED_ORIGINS = [
     'http://localhost:5174',
     'http://127.0.0.1:5174',
 ]
+
+GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
+GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET")
+GOOGLE_REDIRECT_URI = os.getenv("GOOGLE_REDIRECT_URI")
+
