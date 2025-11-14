@@ -29,14 +29,20 @@ const CreateProject = () => {
   // Returns user object (with at least an id/_id and username) or null if not found or error.
   const fetchUserByUsername = async (username) => {
     if (!username) return null;
+    const baseUrl = 'http://localhost:8000/api';
     const endpoints = [
-      `/api/users/by-username?username=${encodeURIComponent(username)}`,
-      `/api/users?username=${encodeURIComponent(username)}`,
-      `/api/users/exists?username=${encodeURIComponent(username)}`
+      `${baseUrl}/auth/users/by-username?username=${encodeURIComponent(username)}`,
+      `${baseUrl}/users?username=${encodeURIComponent(username)}`,
+      `${baseUrl}/users/exists?username=${encodeURIComponent(username)}`
     ];
     for (const url of endpoints) {
       try {
-        const res = await fetch(url, { method: 'GET' });
+        const res = await fetch(url, { 
+          method: url.includes('/api/projects/') ? 'GET' : 'GET',
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('authToken')}` // assuming token is stored
+          }
+        });
         if (!res.ok) {
           // if 404 continue to next guess, otherwise if 204/empty also continue
           continue;
@@ -93,23 +99,24 @@ const CreateProject = () => {
     }
 
     // Build payload to match database fields:
-    // db expects: name, description, members (array of user ids).
-    // If we only have usernames for some members (no id), send usernames; backend should resolve.
-    const membersForPayload = formData.teamMembers.map((m) => {
-      return m.id || m._id || m.username;
-    });
+    // db expects: name, description, members (array of usernames).
+    // Backend will resolve usernames to users and send emails.
+    const membersForPayload = formData.teamMembers.map((m) => m.username);
 
     const payload = {
       name: formData.name.trim(),
       description: formData.description.trim(),
-      members: membersForPayload
+      team_members: membersForPayload
     };
 
     // submit to backend
     try {
-      const res = await fetch('/api/projects', {
+      const res = await fetch('http://localhost:8000/api/projects/create/', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+        },
         body: JSON.stringify(payload)
       });
       if (res.ok) {
@@ -142,7 +149,7 @@ const CreateProject = () => {
 
     // validate allowed characters (now numbers allowed)
     if (!isValidUsername(candidate)) {
-      setMemberError('Username invalid — use 3–30 chars: letters, numbers, ., _, -');
+      setMemberError('Username invalid — use 3-30 chars: letters, numbers, ., _, -');
       return;
     }
 

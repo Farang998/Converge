@@ -9,19 +9,36 @@ import HelpSupport from './pages/Dashboard/HelpSupport'
 import TaskDetails from './pages/Dashboard/TaskDetails'
 import ForgotPassword from './pages/ForgotPassword'
 import AcceptInvitation from './pages/AcceptInvitation'
+import CreateProject from '../pages/Dashboard/CreateProject'
 
-function App() {
+function AppRoutes() {
+  const { isAuthenticated, loading } = useAuth();
+
+  if (loading) {
+    return <div>Loading...</div>; // Or a proper loading component
+  }
+
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/login" element={<Login />} />
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/register" element={<Register />} />
-        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/login" element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <Login />} />
+        <Route path="/register" element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <Register />} />
+        <Route path="/forgot-password" element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <ForgotPassword />} />
+        <Route path="/dashboard" element={isAuthenticated ? <Dashboard /> : <Navigate to="/login" replace />} />
+        <Route path="/projects/create" element={isAuthenticated ? <CreateProject /> : <Navigate to="/login" replace />} />
         <Route path="/accept-invitation/:projectId" element={<AcceptInvitation />} />
-        <Route path="*" element={<Navigate to="/login" replace />} />
+        <Route path="/profile" element={isAuthenticated ? <Profile /> : <Navigate to="/login" replace />} />
+        <Route path="*" element={<Navigate to={isAuthenticated ? "/dashboard" : "/login"} replace />} />
       </Routes>
     </BrowserRouter>
+  );
+}
+
+function App() {
+  return (
+    <AuthProvider>
+      <AppRoutes />
+    </AuthProvider>
   )
 }
 

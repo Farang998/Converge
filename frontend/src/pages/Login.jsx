@@ -4,6 +4,7 @@ import './Login.css';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import api, { setAuthToken } from '../services/api';
+import { useAuth } from '../contexts/AuthContext';
 export default function Login() {
   const navigate = useNavigate();
   const { login } = useAuth();
@@ -31,28 +32,23 @@ export default function Login() {
     try {
       const response = await api.post('auth/login/', payload);
       if (response.data.token) {
+        // Set the token first
         setAuthToken(response.data.token);
-        toast.success('Login successful! Redirecting...');
-        setTimeout(() => navigate('/dashboard'), 1500);
+        // Fetch user identity
+        const identity = await api.get('auth/identify-user/');
+        if (identity?.data?.user) {
+          login(identity.data.user, response.data.token);
+          localStorage.setItem('username', identity.data.user.username);
+          toast.success('Login successful! Redirecting...');
+          setTimeout(() => navigate('/dashboard'), 1500);
+        } else {
+          setError('Failed to get user information.');
+        }
       } else {
         setError('Login failed. Please try again.');
-        return;
       }
-
-      try {
-        const identity = await api.get('auth/identify-user/');
-        if (identity?.data?.user?.username) {
-          localStorage.setItem('username', identity.data.user.username);
-        }
-      } catch (identityError) {
-        // ignore identity fetch errors but log them for debugging
-        console.error('[login] Failed to fetch identity', identityError);
-      }
-
-      toast.success('Login successful! Redirecting...');
-      navigate('/dashboard');
-    } catch (err) {
-      setError(err.response?.data?.error || 'Network error. Please try again.');
+    } catch (error) {
+      setError(error?.response?.data?.error || 'Login failed. Please try again.');
     }
   }
 

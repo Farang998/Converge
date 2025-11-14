@@ -11,10 +11,12 @@ import threading
 from django.conf import settings
 
 from .utils import send_invitations_background
+from rest_framework.exceptions import AuthenticationFailed, NotFound
 
 ERROR_AUTH_HEADER_MISSING = 'Authorization header missing'
 ERROR_INVALID_AUTH_HEADER = 'Invalid authorization header format'
 ERROR_INVALID_TOKEN = 'Invalid or expired token'
+PROJECT_NOT_FOUND_ERROR = 'Project not found'
 
 
 class ProjectViewSet(viewsets.ViewSet):
@@ -31,16 +33,16 @@ class ProjectViewSet(viewsets.ViewSet):
     def _authenticate_user(self, request):
         auth_header = request.headers.get('Authorization')
         if not auth_header:
-            raise Exception(ERROR_AUTH_HEADER_MISSING, status.HTTP_401_UNAUTHORIZED)
+            raise AuthenticationFailed(ERROR_AUTH_HEADER_MISSING)
         
         try:
             token = auth_header.split(' ')[1]
         except IndexError:
-            raise Exception(ERROR_INVALID_AUTH_HEADER, status.HTTP_401_UNAUTHORIZED)
+            raise AuthenticationFailed(ERROR_INVALID_AUTH_HEADER)
         
         user = User.validate_token(token)
         if not user:
-            raise Exception(ERROR_INVALID_TOKEN, status.HTTP_401_UNAUTHORIZED)
+            raise AuthenticationFailed(ERROR_INVALID_TOKEN)
         return user
 
     def list(self, request):
@@ -122,7 +124,17 @@ class ProjectViewSet(viewsets.ViewSet):
             return Response({'error': 'Name is required and cannot be empty'}, status=status.HTTP_400_BAD_REQUEST)
         
         team_members_invited = data.get('team_members', [])
-        team_members_db = [{'user': member_id, 'accepted': False} for member_id in team_members_invited]
+        team_members_db = []
+        invited_users = []
+
+        for username in team_members_invited:
+            try:
+                invited_user = User.objects.get(username=username)
+                team_members_db.append({'user': str(invited_user.id), 'accepted': False})
+                invited_users.append(invited_user)
+            except User.DoesNotExist:
+                # Skip invalid usernames
+                continue
 
         try:
             project = Project(
@@ -136,20 +148,17 @@ class ProjectViewSet(viewsets.ViewSet):
             project_id = str(project.id)
 
             try:
-                for member_id in team_members_invited:
-                    try:
-                        invited_user = User.objects.get(id=member_id)
-                        Notification(
-                            user=invited_user,
-                            message=f"You have been invited to join the project '{name}'.",
-                            link_url=f"/projects/{project_id}"
-                        ).save()
-                    except User.DoesNotExist:
-                        print(f"Warning: Could not create notification for non-existent user ID {member_id}")
+                for invited_user in invited_users:
+                    Notification(
+                        user=invited_user,
+                        message=f"You have been invited to join the project '{name}'.",
+                        link_url=f"/projects/{project_id}"
+                    ).save()
             except Exception as e:
                 print(f"Error creating notifications: {e}")
 
-            threading.Thread(target=send_invitations_background, args=(team_members_invited, name, project_id)).start()
+            # Send email invitations in the background
+            threading.Thread(target=send_invitations_background, args=([str(u.id) for u in invited_users], name, project_id)).start()
             
             return Response({'message': 'Project created successfully', 'project_id': project_id}, status=status.HTTP_201_CREATED)
         except MongoValidationError as e:
@@ -166,7 +175,7 @@ class ProjectViewSet(viewsets.ViewSet):
         except Exception as e:
             return Response({'error': str(e.args[0])}, status=e.args[1])
         except (DoesNotExist, MongoValidationError):
-            return Response({'error': 'Project not found'}, status=status.HTTP_404_NOT_FOUND)
+            return Response({'error': PROJECT_NOT_FOUND_ERROR}, status=status.HTTP_404_NOT_FOUND)
         
         # Authorization
         if project.team_leader != user:
@@ -199,7 +208,7 @@ class ProjectViewSet(viewsets.ViewSet):
         except Exception as e:
             return Response({'error': str(e.args[0])}, status=e.args[1])
         except (DoesNotExist, MongoValidationError):
-            return Response({'error': 'Project not found'}, status=status.HTTP_404_NOT_FOUND)
+            return Response({'error': PROJECT_NOT_FOUND_ERROR}, status=status.HTTP_404_NOT_FOUND)
 
         # Authorization
         if project.team_leader != user:
@@ -253,69 +262,30 @@ class ProjectViewSet(viewsets.ViewSet):
         try:
             user = self._authenticate_user(request)
             project = Project.objects.get(id=pk)
-        except Exception as e:
-            return Response({'error': str(e.args[0])}, status=e.args[1])
-        except (DoesNotExist, MongoValidationError):
-            return Response({'error': 'Project not found'}, status=status.HTTP_404_NOT_FOUND)
+        except AuthenticationFailed as e:
+            return Response({'error': str(e)}, status=status.HTTP_401_UNAUTHORIZED)
+        except Project.DoesNotExist:
+            return Response({'error': PROJECT_NOT_FOUND_ERROR}, status=status.HTTP_404_NOT_FOUND)
 
         # Authorization
         if project.team_leader != user:
             return Response({'error': 'Only the team leader can remove members.'}, status=status.HTTP_403_FORBIDDEN)
         
         data = request.data
-        force_remove = data.get('force_remove', False)
-
-        if 'remove_members' not in data or not isinstance(data['remove_members'], list):
+        members_to_remove = data.get('remove_members', [])
+        if not isinstance(members_to_remove, list):
             return Response({'error': "Expected 'remove_members' to be a list of user IDs."}, status=status.HTTP_400_BAD_REQUEST)
 
-        ids_to_remove = set(data['remove_members'])
-        
-        # --- Confirmation Logic ---
-        if not force_remove:
-            conflicts_found = []
-            for user_id in ids_to_remove:
-                try:
-                    # Find tasks using the direct model references
-                    assigned_tasks = Task.objects(project=project, assigned_to=user_id, status__ne='completed')
-                    completed_tasks = Task.objects(project=project, assigned_to=user_id, status='completed')
+        existing_member_ids = {m['user'] for m in project.team_members}
+        members_to_remove = [m for m in members_to_remove if m in existing_member_ids]
 
-                    if assigned_tasks.count() > 0 or completed_tasks.count() > 0:
-                        user_obj = User.objects.get(id=user_id)
-                        profile = {
-                            "user_id": user_id,
-                            "username": user_obj.username,
-                            "assigned_tasks": [f"{task.name} (Status: {task.status})" for task in assigned_tasks],
-                            "completed_tasks_count": completed_tasks.count()
-                        }
-                        conflicts_found.append(profile)
-                except User.DoesNotExist:
-                    pass 
+        if not members_to_remove:
+            return Response({'message': 'No valid members to remove.'}, status=status.HTTP_200_OK)
 
-            if conflicts_found:
-                return Response({
-                    "error": "Confirmation required. Member(s) have assigned tasks.",
-                    "confirmation_details": conflicts_found,
-                    "message": "To proceed with removal, resend this request with 'force_remove': true."
-                }, status=status.HTTP_409_CONFLICT)
-        
-        # --- Removal Logic ---
-        original_members = project.team_members
-        new_members_list = [m for m in original_members if m.get('user') not in ids_to_remove]
-        
-        if len(new_members_list) == len(original_members):
-            return Response({'message': 'No members found to remove.'}, status=status.HTTP_200_OK)
-
-        project.team_members = new_members_list
+        project.team_members = [m for m in project.team_members if m['user'] not in members_to_remove]
         project.save()
-        
-        # Consequence: Un-assign all tasks from the removed members
-        for user_id in ids_to_remove:
-            Task.objects(
-                project=project, 
-                assigned_to=user_id
-            ).update(set__assigned_to=None) # Set assigned_to to null
-            
-        return Response({'message': 'Members removed successfully and their tasks have been unassigned.'}, status=status.HTTP_200_OK)
+
+        return Response({'message': f'Successfully removed {len(members_to_remove)} member(s).'}, status=status.HTTP_200_OK)
 
 
 class AcceptInvitation(APIView):
@@ -360,28 +330,100 @@ class AcceptInvitation(APIView):
                 return Response({'message': 'Invitation accepted successfully'}, status=status.HTTP_200_OK)
         
         return Response({'error': 'You are not invited to this project'}, status=status.HTTP_403_FORBIDDEN)
-    
-    class searchuser(APIView):
-        def post(self, request):
-            auth_header = request.headers.get('Authorization')
-            if not auth_header:
-                return Response({'error': 'Authorization header missing'}, status=status.HTTP_401_UNAUTHORIZED)
-            
+
+class searchuser(APIView):
+    def post(self, request):
+        auth_header = request.headers.get('Authorization')
+        if not auth_header:
+            return Response({'error': 'Authorization header missing'}, status=status.HTTP_401_UNAUTHORIZED)
+
+        try:
+            token = auth_header.split(' ')[1]
+        except IndexError:
+            return Response({'error': 'Invalid authorization header format'}, status=status.HTTP_401_UNAUTHORIZED)
+
+        user = User.validate_token(token)
+        if not user:
+            return Response({'error': 'Invalid or expired token'}, status=status.HTTP_401_UNAUTHORIZED)
+
+        query = request.data.get('query', '')
+        if not query:
+            return Response({'':''}, status=status.HTTP_200_OK)
+
+        matched_users = User.objects.filter(username__icontains=query)[:10]
+        result = {}
+        for user in matched_users:
+            result[str(user.id)] = user.username
+        return Response({'results': result}, status=status.HTTP_200_OK)
+
+class ProjectCreate(APIView):
+    """
+    API view to handle project creation.
+    """
+
+    def _authenticate_user(self, request):
+        auth_header = request.headers.get('Authorization')
+        if not auth_header:
+            raise AuthenticationFailed(ERROR_AUTH_HEADER_MISSING)
+        
+        try:
+            token = auth_header.split(' ')[1]
+        except IndexError:
+            raise AuthenticationFailed(ERROR_INVALID_AUTH_HEADER)
+        
+        user = User.validate_token(token)
+        if not user:
+            raise AuthenticationFailed(ERROR_INVALID_TOKEN)
+        return user
+
+    def post(self, request):
+        try:
+            user = self._authenticate_user(request)
+        except Exception as e:
+            return Response({'error': str(e.args[0])}, status=e.args[1])
+
+        data = request.data
+        name = data.get('name')
+        if not name or name.strip() == '':
+            return Response({'error': 'Name is required and cannot be empty'}, status=status.HTTP_400_BAD_REQUEST)
+
+        team_members_invited = data.get('team_members', [])
+        team_members_db = []
+        invited_users = []
+
+        for username in team_members_invited:
             try:
-                token = auth_header.split(' ')[1]
-            except IndexError:
-                return Response({'error': 'Invalid authorization header format'}, status=status.HTTP_401_UNAUTHORIZED)
-            
-            user = User.validate_token(token)
-            if not user:
-                return Response({'error': 'Invalid or expired token'}, status=status.HTTP_401_UNAUTHORIZED)
-            
-            query = request.data.get('query', '')
-            if not query:
-                return Response({'':''}, status=status.HTTP_200_OK)
-            
-            matched_users = User.objects.filter(username__icontains=query)[:10]
-            result = {}
-            for user in matched_users:
-                result[str(user.id)] = user.username
-            return Response({'results': result}, status=status.HTTP_200_OK)
+                invited_user = User.objects.get(username=username)
+                team_members_db.append({'user': str(invited_user.id), 'accepted': False})
+                invited_users.append(invited_user)
+            except User.DoesNotExist:
+                # Skip invalid usernames
+                continue
+
+        try:
+            project = Project(
+                name=name,
+                description=data.get('description', ''),
+                team_leader=user,
+                project_type=data.get('project_type', 'development'),
+                team_members=team_members_db
+            )
+            project.save()
+            project_id = str(project.id)
+
+            # Send notifications
+            for invited_user in invited_users:
+                Notification(
+                    user=invited_user,
+                    message=f"You have been invited to join the project '{name}'.",
+                    link_url=f"/projects/{project_id}"
+                ).save()
+
+            # Send email invitations in the background
+            threading.Thread(target=send_invitations_background, args=([str(u.id) for u in invited_users], name, project_id)).start()
+
+            return Response({'message': 'Project created successfully', 'project_id': project_id}, status=status.HTTP_201_CREATED)
+        except MongoValidationError as e:
+            return Response({'error': f'Validation error: {e}'}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({'error': f'Server error: {e}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

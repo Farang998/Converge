@@ -2,7 +2,8 @@ import React, { useEffect, useMemo, useState } from "react";
 import "./dashboard.css";
 import { FaBell, FaCog, FaUser, FaPlus } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
-import api, { logout } from "../../services/api";
+import api from "../../services/api";
+import { useAuth } from "../../contexts/AuthContext";
 
 export default function Dashboard() {
   const [projects, setProjects] = useState([]);
@@ -17,6 +18,7 @@ export default function Dashboard() {
   const [userRefreshKey, setUserRefreshKey] = useState(0);
 
   const navigate = useNavigate();
+  const { logout } = useAuth();
 
   useEffect(() => {
     let active = true;
@@ -241,14 +243,8 @@ export default function Dashboard() {
   }, [currentUser]);
 
   const handleLogout = async () => {
-    await logout();
-    try {
-      localStorage.removeItem("authToken");
-      localStorage.removeItem("username");
-    } catch (e) {
-      // ignore storage errors
-    }
-    navigate("/login");
+    logout();
+    navigate('/login');
   };
 
   if (loadingUser) {
