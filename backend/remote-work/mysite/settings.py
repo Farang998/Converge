@@ -94,7 +94,7 @@ CHANNEL_LAYERS = {
 
 
 REST_FRAMEWORK = {
-    'DEFULT_AUTHENTICATION_CLASSES' : (
+    'DEFAULT_AUTHENTICATION_CLASSES' : (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ),
 }
@@ -115,9 +115,10 @@ SIMPLE_JWT = {
     'REFRESH_TOKEN_LIFETIME': timedelta(days=30),
 }
 
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:5173",
-]
+# Media files (Uploaded by users)
+
+MEDIA_URL = '/media/'                          
+MEDIA_ROOT = BASE_DIR / 'media'  
 
 DATABASES = {
     
@@ -215,6 +216,7 @@ SESSION_ENGINE = 'django.contrib.sessions.backends.signed_cookies'
 # frontend served on different host/port can reach the API. Do NOT use this
 # setting in production.
 CORS_ALLOWED_ORIGINS = [
+    'http://localhost:5173',
     'http://localhost:3000',  # Frontend URL
     'http://127.0.0.1:3000',  # Add this if using 127.0.0.1
     'http://localhost:5173',  # Add this for Vite development server

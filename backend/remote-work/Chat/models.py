@@ -19,6 +19,8 @@ class GroupMessage(Document):
     chat = ReferenceField(GroupChat, required=True, reverse_delete_rule=2)  # CASCADE
     sender = StringField(required=True)  # user id
     content = StringField(default='')
+    file_url = StringField(blank=True, null=True)
+    file_type = StringField(choices=['image', 'video', 'audio', 'document'], null=True)
     timestamp = DateTimeField(default=timezone.now)
     meta = {'collection': 'group_messages'}
 
@@ -26,5 +28,7 @@ class IndividualMessage(Document):
     chat = ReferenceField(IndividualChat, required=True, reverse_delete_rule=2)
     sender = StringField(required=True)  # user id
     content = StringField(default='')
+    file_url = StringField(blank=True, null=True)
+    file_type = StringField(choices=['image', 'video', 'audio', 'document'], null=True)
     timestamp = DateTimeField(default=timezone.now)
     meta = {'collection': 'individual_messages'}

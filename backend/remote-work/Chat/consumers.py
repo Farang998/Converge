@@ -4,6 +4,11 @@ from channels.generic.websocket import AsyncWebsocketConsumer
 from datetime import datetime
 from api.auth.models import User   # MongoEngine User
 from .models import GroupChat, GroupMessage  # use your Mongo MongoEngine models
+import base64
+from django.core.files.base import ContentFile
+from django.core.files.storage import default_storage
+from django.conf import settings
+
 
 class ChatConsumer(AsyncWebsocketConsumer):
     async def connect(self):
@@ -46,13 +51,30 @@ class ChatConsumer(AsyncWebsocketConsumer):
         chat = GroupChat.objects(name=self.room).first()
         if not chat:
             return
+        
+        content = data.get("text", "")
+        file_name = data.get("file_name")
+        file_data = data.get("file_data")
+
+        file_url = None
+        file_type = None
+
+        # Handle file upload (base64 → actual file)
+        if file_name and file_data:
+            decoded_file = base64.b64decode(file_data)
+            file_path = default_storage.save(f"files/{file_name}", ContentFile(decoded_file))
+            file_url = f"{settings.MEDIA_URL}{file_path}"
+            file_type = file_name.split('.')[-1].lower()
+
 
         # Save message to MongoDB
         msg = GroupMessage(
             chat=chat,
             sender=sender_id,
-            content=message_text,
-            timestamp=datetime.utcnow()
+            content=content,
+            timestamp=datetime.utcnow(),
+            file_url=file_url,
+            file_type=file_type,
         )
         msg.save()
 
@@ -62,8 +84,10 @@ class ChatConsumer(AsyncWebsocketConsumer):
             {
                 "type": "chat_message",    # will trigger chat_message()
                 "sender": user.username,
-                "content": message_text,
-                "timestamp": msg.timestamp.isoformat()
+                "content": content,
+                "timestamp": msg.timestamp.isoformat(),
+                "file_url": file_url,
+                "file_type": file_type,
             }
         )
 
@@ -74,5 +98,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
         await self.send(text_data=json.dumps({
             "sender": event["sender"],
             "content": event["content"],
-            "timestamp": event["timestamp"]
+            "timestamp": event["timestamp"],
+            "file_url": event["file_url"],
+            "file_type": event["file_type"],
         }))

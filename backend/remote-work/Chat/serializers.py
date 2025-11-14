@@ -16,4 +16,6 @@ def group_message_public(msg, users_by_id):
         "content": msg.content,
         "timestamp": msg.timestamp.isoformat(),
         "sender": {"id": msg.sender, "username": sender.username if sender else "Unknown"},
+        "file_url" : getattr(msg, "file_url", None),
+        "file_type" : getattr(msg, "file_type", None),
     }
