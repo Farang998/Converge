@@ -417,16 +417,28 @@ export default function Dashboard() {
                       <strong>Status:</strong>{" "}
                       <span>{proj.membershipDescription}</span>
                     </p>
-                    <button
-                      className="details-btn"
-                      type="button"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        toggleDetails(proj.id);
-                      }}
-                    >
-                      {proj.showDetails ? "Hide Details" : "View Details"}
-                    </button>
+                    <div className="project-actions">
+                      <button
+                        className="details-btn"
+                        type="button"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          toggleDetails(proj.id);
+                        }}
+                      >
+                        {proj.showDetails ? "Hide Details" : "View Details"}
+                      </button>
+                      <button
+                        className="chat-btn"
+                        type="button"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          navigate(`/chat/${proj.id}`);
+                        }}
+                      >
+                        Chat
+                      </button>
+                    </div>
                   </div>
 
                   {proj.showDetails && (

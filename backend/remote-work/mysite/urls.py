@@ -19,7 +19,9 @@ from django.urls import path, include
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    # Chat URLs - most specific patterns come first in Chat/urls.py
+    path('api/chats/', include('Chat.urls')),
+    # Other API URLs
     path('api/', include('api.urls')),
-    path('', include('Chat.urls')),
 ]
 
