@@ -1,10 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './Login.css';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import api, { setAuthToken } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
+const GOOGLE_CLIENT_ID = "93962274226-t1ngpdrcblqqiqmvkpji6eq7h0vvhovl.apps.googleusercontent.com";
+
 export default function Login() {
   const navigate = useNavigate();
   const { login } = useAuth();
@@ -14,6 +16,20 @@ export default function Login() {
   });
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [googleLoaded, setGoogleLoaded] = useState(false);
+
+  useEffect(() => {
+    const script = document.createElement('script');
+    script.src = 'https://accounts.google.com/gsi/client';
+    script.async = true;
+    script.defer = true;
+    script.onload = () => setGoogleLoaded(true);
+    document.body.appendChild(script);
+
+    return () => {
+      document.body.removeChild(script);
+    };
+  }, []);
 
   function handleChange(e) {
     setForm({ ...form, [e.target.id]: e.target.value });
@@ -32,9 +48,7 @@ export default function Login() {
     try {
       const response = await api.post('auth/login/', payload);
       if (response.data.token) {
-        // Set the token first
         setAuthToken(response.data.token);
-        // Fetch user identity
         const identity = await api.get('auth/identify-user/');
         if (identity?.data?.user) {
           login(identity.data.user, response.data.token);
@@ -51,6 +65,67 @@ export default function Login() {
       setError(error?.response?.data?.error || 'Login failed. Please try again.');
     }
   }
+
+  const handleGoogleSignIn = async (response) => {
+    setError('');
+    setSuccess('');
+    
+    try {
+      
+      const resp = await api.post('auth/google-login/', { 
+        id_token: response.credential 
+      });
+      
+      
+      if (resp.data.success && resp.data.token && resp.data.user) {
+        setAuthToken(resp.data.token);
+        login(resp.data.user, resp.data.token);
+        localStorage.setItem('username', resp.data.user.username);
+        
+        if (resp.data.is_new_user) {
+          toast.success(`🎉 ${resp.data.message}`);
+          setSuccess(`Welcome! Your account has been created. Redirecting to dashboard...`);
+        } else {
+          toast.success(resp.data.message);
+          setSuccess(`${resp.data.message} Redirecting...`);
+        }
+        
+        setTimeout(() => navigate('/dashboard'), 1500);
+      } else {
+        const errorMsg = resp.data.error || 'Failed to complete Google login.';
+        setError(errorMsg);
+        toast.error(errorMsg);
+      }
+    } catch (gErr) {
+      const errorMessage = gErr?.response?.data?.error || 'Google authentication failed. Please try again.';
+      setError(errorMessage);
+      toast.error(errorMessage);
+      
+      if (gErr?.response?.status === 400) {
+        setError(errorMessage + ' Please make sure you\'re using a valid Google account.');
+      }
+    }
+  };
+
+  useEffect(() => {
+    if (googleLoaded && window.google) {
+      window.google.accounts.id.initialize({
+        client_id: GOOGLE_CLIENT_ID,
+        callback: handleGoogleSignIn,
+      });
+
+      window.google.accounts.id.renderButton(
+        document.getElementById('googleSignInButton'),
+        { 
+          theme: 'outline', 
+          size: 'large',
+          width: 300,
+          text: 'continue_with'
+        }
+      );
+    }
+  }, [googleLoaded]);
+
 
   return (
     <div className="container" id="authContainer">
@@ -90,39 +165,17 @@ export default function Login() {
           required
         />
         <button type="submit">Login</button>
-        <button
-          type="button"
-          style={{ marginTop: '0.75rem', background: '#4285F4' }}
-          onClick={async () => {
-            setError('');
-            try {
-              // Clear any stale token
-              setAuthToken(null);
-              
-              console.log('[Google Login] Starting Google sign-in popup...');
-              const result = await signInWithPopup(auth, googleProvider);
-              console.log('[Google Login] Sign-in successful, getting ID token...');
-              
-              const idToken = await result.user.getIdToken();
-              console.log('[Google Login] ID token obtained, sending to backend...');
-              
-              const resp = await api.post('auth/google-login/', { id_token: idToken });
-              console.log('[Google Login] Backend response:', resp.data);
-              
-              if (resp.data.token && resp.data.user) {
-                login(resp.data.user, resp.data.token);
-                toast.success('Google login successful! Redirecting...');
-                setTimeout(() => navigate('/dashboard'), 1200);
-              } else {
-                setError('Failed to complete Google login.');
-              }
-            } catch (gErr) {
-              console.error('[Google Login] Error:', gErr);
-            }
+        
+        {}
+        <div 
+          id="googleSignInButton" 
+          style={{ 
+            marginTop: '0.75rem', 
+            display: 'flex', 
+            justifyContent: 'center' 
           }}
-        >
-          Continue with Google
-        </button>
+        ></div>
+        
         {error && <div style={{ color: 'red', marginTop: '1rem' }}>{error}</div>}
         {success && <div style={{ color: 'green', marginTop: '1rem' }}>{success}</div>}
       </form>
