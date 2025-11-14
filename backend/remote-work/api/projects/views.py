@@ -18,7 +18,7 @@ from django.core.cache import cache
 from django.core.mail import send_mail
 from .models import Project
 import threading
-
+import requests
 
 def send_invitation_email(email, project_name, project_id):
     subject = f"Invitation to join project {project_name}"
@@ -74,6 +74,21 @@ class ProjectCreate(APIView):
 
         threading.Thread(target=send_invitations_background, args=(team_members_invited, name, str(project_obj.id))).start()
 
+        chat_api_url = "http://localhost:8000/chats/create/"
+        chat_payload = {
+            "name" : name,
+            "admin" : team_leader,
+            "participants" : team_members_invited
+        }
+
+        try:
+            chat_response = requests.post(chat_api_url, json=chat_payload)
+            if chat_response.status_code != 201:
+                print(f"Failed to create chat for project {name}: {chat_response.text}")
+        except Exception as e:
+            print(f"Error while creating chat for project {name}: {e}")
+
+        
         return Response({'message': 'Project created successfully', 'project_id': str(project_obj.id)}, status=status.HTTP_201_CREATED)
 
 class AcceptInvitation(APIView):
