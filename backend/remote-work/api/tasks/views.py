@@ -179,6 +179,27 @@ class TaskViewSet(viewsets.ViewSet):
                 status='pending'
             )
             new_task.save()
+
+            # --- Create Google Calendar Event if due_date exists ---
+            if due_date_obj and project.calendar_id:
+                from ..calendar.models import GoogleCredentials
+                from ..calendar.google_service import create_event
+
+                # Team leader credentials control the project calendar
+                credentials = GoogleCredentials.objects(user=project.team_leader).first()
+                if credentials:
+                    create_event(credentials, project.calendar_id, {
+                        "summary": new_task.name,
+                        "description": new_task.description,
+                        "start": due_date_obj.isoformat(),
+                        "end": due_date_obj.isoformat(),
+                        "task_id": str(new_task.id)  # So we can update/delete it later
+                    })
+                    event_id = create_event(credentials, project.calendar_id, {...})
+                    new_task.calendar_event_id = event_id
+                    new_task.save()
+
+
             return Response({
                 'message': 'Task created successfully',
                 'task_id': str(new_task.id)
@@ -265,6 +286,20 @@ class TaskViewSet(viewsets.ViewSet):
 
         try:
             task.save()
+            # --- Update Calendar Event if due date or name changed ---
+            if task.calendar_event_id and task.project.calendar_id:
+                from ..calendar.models import GoogleCredentials
+                from ..calendar.google_service import update_event
+
+                credentials = GoogleCredentials.objects(user=task.project.team_leader).first()
+                if credentials and task.due_date:
+                    update_event(credentials, task.project.calendar_id, task.calendar_event_id, {
+                        "summary": task.name,
+                        "description": task.description,
+                        "start": task.due_date.isoformat(),
+                        "end": task.due_date.isoformat()
+                    })
+
             return Response({'message': 'Task updated successfully.', 'task': self._serialize_task(task)}, status=status.HTTP_200_OK)
         except MongoValidationError as e:
             return Response({'error': f'Validation error: {e}'}, status=status.HTTP_400_BAD_REQUEST)
@@ -285,6 +320,15 @@ class TaskViewSet(viewsets.ViewSet):
         # Authorization: Only the Team Leader can delete tasks
         if task.project.team_leader != user:
             return Response({'error': 'Only the project team leader can delete tasks.'}, status=status.HTTP_403_FORBIDDEN)
-        
+
+        # --- Delete the calendar event ---
+        if task.calendar_event_id and task.project.calendar_id:
+            from ..calendar.models import GoogleCredentials
+            from ..calendar.google_service import delete_event
+
+            credentials = GoogleCredentials.objects(user=task.project.team_leader).first()
+            if credentials:
+                delete_event(credentials, task.project.calendar_id, task.calendar_event_id)
+
         task.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)

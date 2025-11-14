@@ -1,21 +1,15 @@
-/* dashboard.css (Simplified) */
+/* Dashboard Layout */
 * {
-  margin: 0;
-  padding: 0;
   box-sizing: border-box;
 }
-
-body, html {
-  height: 100%;
-  overflow: hidden; /* prevents outer scrollbar */
-}
-
-/* Dashboard Layout */
 .dashboard-page {
+  height: 100vh;
+  overflow: hidden;
   min-height: 100vh;
-  width: 100%;
+  width: 100vw;
   background: #eef3f8;
   color: #1f2937;
+  display: block !important;
 }
 
 .dashboard-page.loading-state {

@@ -12,6 +12,9 @@ from django.conf import settings
 
 from .utils import send_invitations_background
 
+from ..calendar.models import GoogleCredentials
+from ..calendar.google_service import create_project_calendar
+
 ERROR_AUTH_HEADER_MISSING = 'Authorization header missing'
 ERROR_INVALID_AUTH_HEADER = 'Invalid authorization header format'
 ERROR_INVALID_TOKEN = 'Invalid or expired token'
@@ -134,6 +137,13 @@ class ProjectViewSet(viewsets.ViewSet):
             )
             project.save()
             project_id = str(project.id)
+
+            credentials = GoogleCredentials.objects(user=user).first()
+            if credentials:
+                calendar_id = create_project_calendar(credentials, name)
+                project.calendar_id = calendar_id
+                project.save()
+
 
             try:
                 for member_id in team_members_invited:

@@ -53,61 +53,63 @@ export default function Login() {
   }
 
   return (
-    <div className="container" id="authContainer">
-      <div className="logo">
-        <img src="logo.png" alt="logo" />
-        <span className="brand">
-          <span className="green">C</span>
-          <span className="blue">o</span>
-          <span className="green">n</span>
-          <span className="blue">v</span>
-          <span className="green">e</span>
-          <span className="blue">r</span>
-          <span className="green">g</span>
-          <span className="blue">e</span>
-        </span>
+    <div className="loginpage">
+      <div className="container" id="authContainer">
+        <div className="logo">
+          <img src="logo.png" alt="logo" />
+          <span className="brand">
+            <span className="green">C</span>
+            <span className="blue">o</span>
+            <span className="green">n</span>
+            <span className="blue">v</span>
+            <span className="green">e</span>
+            <span className="blue">r</span>
+            <span className="green">g</span>
+            <span className="blue">e</span>
+          </span>
+        </div>
+        <p className="subtitle">The all-in-one remote work collaboration platform</p>
+        <form id="loginForm" onSubmit={handleSubmit}>
+          <div className="form-title">Login to your account</div>
+          <label>Email or Username</label>
+          <input
+            type="text"
+            id="loginIdentifier"
+            placeholder="naitik@example.com or Naitik"
+            value={form.loginIdentifier}
+            onChange={handleChange}
+            required
+          />
+          <label>Password</label>
+          <input
+            type="password"
+            id="loginPassword"
+            value={form.loginPassword}
+            onChange={handleChange}
+            required
+          />
+          <button type="submit">Login</button>
+          {error && <div style={{ color: 'red', marginTop: '1rem' }}>{error}</div>}
+          {success && <div style={{ color: 'green', marginTop: '1rem' }}>{success}</div>}
+        </form>
+        <button
+          type="button"
+          className="tab"
+          style={{ marginTop: '1rem' }}
+          onClick={() => navigate('/forgot-password')}
+        >
+          Forgot password?
+        </button>
+        <button
+          type="button"
+          className="tab"
+          style={{ marginTop: '1rem' }}
+          onClick={() => navigate('/register')}
+        >
+          If you don't have an account, Register
+        </button>
+        
       </div>
-      <p className="subtitle">The all-in-one remote work collaboration platform</p>
-      <form id="loginForm" onSubmit={handleSubmit}>
-        <div className="form-title">Login to your account</div>
-        <label>Email or Username</label>
-        <input
-          type="text"
-          id="loginIdentifier"
-          placeholder="naitik@example.com or Naitik"
-          value={form.loginIdentifier}
-          onChange={handleChange}
-          required
-        />
-        <label>Password</label>
-        <input
-          type="password"
-          id="loginPassword"
-          value={form.loginPassword}
-          onChange={handleChange}
-          required
-        />
-        <button type="submit">Login</button>
-        {error && <div style={{ color: 'red', marginTop: '1rem' }}>{error}</div>}
-        {success && <div style={{ color: 'green', marginTop: '1rem' }}>{success}</div>}
-      </form>
-      <button
-        type="button"
-        className="tab"
-        style={{ marginTop: '1rem' }}
-        onClick={() => navigate('/forgot-password')}
-      >
-        Forgot password?
-      </button>
-      <button
-        type="button"
-        className="tab"
-        style={{ marginTop: '1rem' }}
-        onClick={() => navigate('/register')}
-      >
-        If you don't have an account, Register
-      </button>
-      
     </div>
   );
 }

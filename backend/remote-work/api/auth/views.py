@@ -25,7 +25,7 @@ def _get_authenticated_user(request):
         return None, Response({'error': 'Authorization token is required'}, status=status.HTTP_401_UNAUTHORIZED)
 
     try:
-        token_type, token = auth_header.split(' ')
+        token_type, token = auth_header.split(' ', 1)
         if token_type.lower() != 'bearer':
             return None, Response({'error': 'Invalid token type'}, status=status.HTTP_401_UNAUTHORIZED)
     except ValueError:
