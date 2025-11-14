@@ -3,9 +3,14 @@ import { useNavigate } from 'react-router-dom';
 import './Login.css';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import api, { login as loginRequest } from '../services/api';
+import api, { setAuthToken } from '../services/api';
+import { useAuth } from '../contexts/AuthContext';
+import { auth, googleProvider } from '../firebase';
+import { signInWithPopup } from 'firebase/auth';
+
 export default function Login() {
   const navigate = useNavigate();
+  const { login } = useAuth();
   const [form, setForm] = useState({
     loginIdentifier: '',
     loginPassword: ''
@@ -28,88 +33,108 @@ export default function Login() {
     };
 
     try {
-      const data = await loginRequest(payload);
-
-      if (!data?.token) {
-        setError('Login failed. Please try again.');
-        return;
-      }
-
-      try {
+      const response = await api.post('auth/login/', payload);
+      if (response.data.token) {
+        // Set the token first
+        setAuthToken(response.data.token);
+        // Fetch user identity
         const identity = await api.get('auth/identify-user/');
-        if (identity?.data?.user?.username) {
+        if (identity?.data?.user) {
+          login(identity.data.user, response.data.token);
           localStorage.setItem('username', identity.data.user.username);
+          toast.success('Login successful! Redirecting...');
+          setTimeout(() => navigate('/dashboard'), 1500);
+        } else {
+          setError('Failed to get user information.');
         }
-      } catch (identityError) {
-        // ignore identity fetch errors but log them for debugging
-        console.error('[login] Failed to fetch identity', identityError);
+      } else {
+        setError('Login failed. Please try again.');
       }
-
-      toast.success('Login successful! Redirecting...');
-      navigate('/dashboard');
-    } catch (err) {
-      setError(err.response?.data?.error || 'Network error. Please try again.');
+    } catch (error) {
+      setError(error?.response?.data?.error || 'Login failed. Please try again.');
     }
   }
 
   return (
     <div className="loginpage">
-      <div className="container" id="authContainer">
-        <div className="logo">
-          <img src="logo.png" alt="logo" />
-          <span className="brand">
-            <span className="green">C</span>
-            <span className="blue">o</span>
-            <span className="green">n</span>
-            <span className="blue">v</span>
-            <span className="green">e</span>
-            <span className="blue">r</span>
-            <span className="green">g</span>
-            <span className="blue">e</span>
-          </span>
-        </div>
-        <p className="subtitle">The all-in-one remote work collaboration platform</p>
-        <form id="loginForm" onSubmit={handleSubmit}>
-          <div className="form-title">Login to your account</div>
-          <label>Email or Username</label>
-          <input
-            type="text"
-            id="loginIdentifier"
-            placeholder="naitik@example.com or Naitik"
-            value={form.loginIdentifier}
-            onChange={handleChange}
-            required
-          />
-          <label>Password</label>
-          <input
-            type="password"
-            id="loginPassword"
-            value={form.loginPassword}
-            onChange={handleChange}
-            required
-          />
-          <button type="submit">Login</button>
-          {error && <div style={{ color: 'red', marginTop: '1rem' }}>{error}</div>}
-          {success && <div style={{ color: 'green', marginTop: '1rem' }}>{success}</div>}
-        </form>
+      <p className="subtitle">The all-in-one remote work collaboration platform</p>
+      <form id="loginForm" onSubmit={handleSubmit}>
+        <div className="form-title">Login to your account</div>
+        <label htmlFor="loginIdentifier">Email or Username</label>
+        <input
+          type="text"
+          id="loginIdentifier"
+          name="loginIdentifier"
+          placeholder="naitik@example.com or Naitik"
+          value={form.loginIdentifier}
+          onChange={handleChange}
+          required
+        />
+        <label htmlFor="loginPassword">Password</label>
+        <input
+          type="password"
+          id="loginPassword"
+          name="loginPassword"
+          value={form.loginPassword}
+          onChange={handleChange}
+          required
+        />
+        <button type="submit">Login</button>
         <button
           type="button"
-          className="tab"
-          style={{ marginTop: '1rem' }}
-          onClick={() => navigate('/forgot-password')}
+          style={{ marginTop: '0.75rem', background: '#4285F4' }}
+          onClick={async () => {
+            setError('');
+            try {
+              // Clear any stale token
+              setAuthToken(null);
+              
+              console.log('[Google Login] Starting Google sign-in popup...');
+              const result = await signInWithPopup(auth, googleProvider);
+              console.log('[Google Login] Sign-in successful, getting ID token...');
+              
+              const idToken = await result.user.getIdToken();
+              console.log('[Google Login] ID token obtained, sending to backend...');
+              
+              const resp = await api.post('auth/google-login/', { id_token: idToken });
+              console.log('[Google Login] Backend response:', resp.data);
+              
+              if (resp.data.token && resp.data.user) {
+                login(resp.data.user, resp.data.token);
+                toast.success('Google login successful! Redirecting...');
+                setTimeout(() => navigate('/dashboard'), 1200);
+              } else {
+                setError('Failed to complete Google login.');
+              }
+            } catch (gErr) {
+              console.error('[Google Login] Error:', gErr);
+            }
+          }}
         >
-          Forgot password?
+          Continue with Google
         </button>
-        <button
-          type="button"
-          className="tab"
-          style={{ marginTop: '1rem' }}
-          onClick={() => navigate('/register')}
-        >
-          If you don't have an account, Register
-        </button>
-        
-      </div>
+        {error && <div style={{ color: 'red', marginTop: '1rem' }}>{error}</div>}
+        {success && <div style={{ color: 'green', marginTop: '1rem' }}>{success}</div>}
+      </form>
+      {/* Toast container for login notifications */}
+      <ToastContainer />
+      <button
+        type="button"
+        className="tab"
+        style={{ marginTop: '1rem' }}
+        onClick={() => navigate('/forgot-password')}
+      >
+        Forgot password?
+      </button>
+      <button
+        type="button"
+        className="tab"
+        style={{ marginTop: '1rem' }}
+        onClick={() => navigate('/register')}
+      >
+        If you don't have an account, Register
+      </button>
+      
     </div>
   );
 }
