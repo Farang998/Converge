@@ -390,7 +390,24 @@ export default function Dashboard() {
                 >
                   <div className="project-card-top">
                     <div>
-                      <h3>{proj.name}</h3>
+                      <h3
+                        className="project-title"
+                        role="link"
+                        tabIndex={0}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate(`/projects/${proj.id}`);
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            navigate(`/projects/${proj.id}`);
+                          }
+                        }}
+                      >
+                        {proj.name}
+                      </h3>
                       <p className="project-type">{proj.projectType}</p>
                     </div>
                     <span className={`role-chip ${proj.membershipKey}`}>
