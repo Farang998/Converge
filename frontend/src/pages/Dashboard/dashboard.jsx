@@ -4,6 +4,7 @@ import { FaBell, FaCog, FaUser, FaPlus } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 import api from "../../services/api";
 import { useAuth } from "../../contexts/AuthContext";
+import CreateProject from "../../../pages/Dashboard/CreateProject";
 
 export default function Dashboard() {
   const [projects, setProjects] = useState([]);
@@ -16,6 +17,9 @@ export default function Dashboard() {
   const [loadingUser, setLoadingUser] = useState(true);
   const [userError, setUserError] = useState("");
   const [userRefreshKey, setUserRefreshKey] = useState(0);
+  const [showCreateProjectModal, setShowCreateProjectModal] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState(searchTerm);
 
   const navigate = useNavigate();
   const { logout } = useAuth();
@@ -58,6 +62,12 @@ export default function Dashboard() {
     };
   }, [navigate, userRefreshKey]);
 
+  // Debounce the search term to reduce API calls
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(searchTerm.trim()), 400);
+    return () => clearTimeout(t);
+  }, [searchTerm]);
+
   useEffect(() => {
     if (!currentUser) {
       setProjects([]);
@@ -70,7 +80,8 @@ export default function Dashboard() {
     async function loadProjects() {
       setLoadingProjects(true);
       try {
-        const { data } = await api.get("projects/");
+        const params = debouncedSearch ? { search: debouncedSearch } : {};
+        const { data } = await api.get("projects/", { params });
         if (!mounted) return;
 
         const formatted = (data || []).map((project) => {
@@ -162,7 +173,7 @@ export default function Dashboard() {
     return () => {
       mounted = false;
     };
-  }, [currentUser, navigate]);
+  }, [currentUser, navigate, debouncedSearch]);
 
   useEffect(() => {
     let mounted = true;
@@ -293,6 +304,8 @@ export default function Dashboard() {
             type="text"
             placeholder="Search projects, tasks..."
             className="search-bar"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
 
@@ -361,7 +374,7 @@ export default function Dashboard() {
             <button
               className="add-btn"
               type="button"
-              onClick={() => navigate("/projects/create")}
+              onClick={() => setShowCreateProjectModal(true)}
             >
               <FaPlus /> New Project
             </button>
@@ -507,6 +520,89 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
+      
+      {/* Create Project Modal */}
+      {showCreateProjectModal && (
+        <CreateProject
+          isModal={true}
+          onClose={() => {
+            setShowCreateProjectModal(false);
+            // Reload projects after closing
+            if (currentUser) {
+              api.get("projects/")
+                .then(({ data }) => {
+                  const formatted = (data || []).map((project) => {
+                    const members = Array.isArray(project?.team_members)
+                      ? project.team_members.map((member) => ({
+                          user_id: member.user_id,
+                          username: member.username || "Unknown",
+                          accepted: Boolean(member.accepted),
+                        }))
+                      : [];
+
+                    const acceptedMembersCount =
+                      members.filter((member) => member.accepted).length + 1;
+                    const totalMembers = members.length + 1;
+                    const isLeader = project?.team_leader?.user_id === currentUser.id;
+                    const membershipEntry = members.find((member) => member.user_id === currentUser.id);
+
+                    let membershipLabel = "Collaborator";
+                    let membershipDescription = "You have access to this project.";
+                    let membershipKey = "collaborator";
+
+                    if (isLeader) {
+                      membershipLabel = "Team Leader";
+                      membershipDescription = "You are leading this project.";
+                      membershipKey = "leader";
+                    } else if (membershipEntry) {
+                      membershipLabel = membershipEntry.accepted ? "Member" : "Invitation Pending";
+                      membershipDescription = membershipEntry.accepted
+                        ? "You are an accepted member of this project."
+                        : "Please accept your invitation to start collaborating.";
+                      membershipKey = membershipEntry.accepted ? "member" : "pending";
+                    }
+
+                    const createdAt = project?.created_at
+                      ? new Date(project.created_at).toLocaleDateString()
+                      : "Unknown";
+
+                    return {
+                      id: project.id,
+                      name: project.name,
+                      description: project.description || "",
+                      projectType: project.project_type || "development",
+                      teamMembers: [
+                        {
+                          user_id: project.team_leader?.user_id,
+                          username: project.team_leader?.username || "Unknown",
+                          role: "Team Leader",
+                          accepted: true,
+                        },
+                        ...members.map((m) => ({
+                          user_id: m.user_id,
+                          username: m.username,
+                          role: m.accepted ? "Member" : "Pending",
+                          accepted: m.accepted,
+                        })),
+                      ],
+                      membershipLabel,
+                      membershipDescription,
+                      membershipKey,
+                      acceptedMembers: acceptedMembersCount,
+                      totalMembers,
+                      createdAt,
+                      showDetails: false,
+                    };
+                  });
+                  setProjects(formatted);
+                })
+                .catch((err) => {
+                  console.error("Error reloading projects:", err);
+                });
+            }
+          }}
+        />
+      )}
     </div>
   );
 }

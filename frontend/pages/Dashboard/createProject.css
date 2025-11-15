@@ -20,6 +20,44 @@
   box-sizing: border-box;
 }
 
+/* Modal overlay styles */
+.create-wrapper.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1000;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(2px);
+  min-height: 100vh;
+  padding: 20px;
+  overflow-y: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.create-wrapper.modal-overlay .create-card {
+  position: relative;
+  z-index: 1001;
+  max-height: 90vh;
+  overflow-y: auto;
+  margin: auto;
+  animation: modalSlideIn 0.3s ease-out;
+}
+
+@keyframes modalSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
 /* Modal card */
 .create-card {
   position: relative;
