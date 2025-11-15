@@ -1,4 +1,4 @@
-from mongoengine import Document, StringField, ReferenceField, ListField, DateTimeField
+from mongoengine import Document, StringField, ReferenceField, ListField, DateTimeField, IntField
 from django.utils import timezone
 from api.auth.models import User
 
@@ -20,6 +20,11 @@ class GroupMessage(Document):
     sender = StringField(required=True)  # user id
     content = StringField(default='')
     timestamp = DateTimeField(default=timezone.now)
+    # Media fields
+    file_url = StringField()  # URL/path to the file
+    file_type = StringField()  # 'image', 'video', 'document', 'audio'
+    file_name = StringField()  # Original filename
+    file_size = IntField()  # File size in bytes
     meta = {'collection': 'group_messages'}
 
 class IndividualMessage(Document):
@@ -27,4 +32,9 @@ class IndividualMessage(Document):
     sender = StringField(required=True)  # user id
     content = StringField(default='')
     timestamp = DateTimeField(default=timezone.now)
+    # Media fields
+    file_url = StringField()  # URL/path to the file
+    file_type = StringField()  # 'image', 'video', 'document', 'audio'
+    file_name = StringField()  # Original filename
+    file_size = IntField()  # File size in bytes
     meta = {'collection': 'individual_messages'}
