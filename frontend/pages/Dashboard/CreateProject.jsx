@@ -124,7 +124,9 @@ const CreateProject = () => {
         navigate('/');
       } else {
         const resp = await res.json().catch(() => ({}));
-        setError(resp.message || 'Failed to create project.');
+        // Prefer server-provided `error`, then `message`, otherwise include status code.
+        setError(resp.error || resp.message || `Failed to create project. (status ${res.status})`);
+        console.debug('Create project failed:', res.status, resp);
       }
     } catch (err) {
       console.error(err);
