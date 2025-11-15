@@ -28,6 +28,8 @@ function AppRoutes() {
         <Route path="/projects/create" element={isAuthenticated ? <CreateProject /> : <Navigate to="/login" replace />} />
         <Route path="/accept-invitation/:projectId" element={<AcceptInvitation />} />
         <Route path="/profile" element={isAuthenticated ? <Profile /> : <Navigate to="/login" replace />} />
+        <Route path="/settings" element={isAuthenticated ? <Settings /> : <Navigate to="/login" replace />} />
+        <Route path="/help" element={isAuthenticated ? <HelpSupport /> : <Navigate to="/login" replace />} />
         <Route path="*" element={<Navigate to={isAuthenticated ? "/dashboard" : "/login"} replace />} />
       </Routes>
     </BrowserRouter>
