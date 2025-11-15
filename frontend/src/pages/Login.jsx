@@ -61,26 +61,42 @@ export default function Login() {
         <p className="subtitle">The all-in-one remote work collaboration platform</p>
         <form id="loginForm" onSubmit={handleSubmit}>
           <div className="form-title">Login to your account</div>
+
           <label htmlFor="loginIdentifier">Email or Username</label>
           <input
             type="text"
             id="loginIdentifier"
             name="loginIdentifier"
-            placeholder="naitik@example.com or Naitik"
+            placeholder="example@gmail.com"
             value={form.loginIdentifier}
             onChange={handleChange}
             required
           />
-          <label htmlFor="loginPassword">Password</label>
-          <input
-            type="password"
-            id="loginPassword"
-            name="loginPassword"
-            value={form.loginPassword}
-            onChange={handleChange}
-            required
-          />
-          <button type="submit" className="primary-btn">Login</button>
+
+          <div className="password-row">
+            <div style={{flex:1}}>
+              <label htmlFor="loginPassword">Password</label>
+              <input
+                type="password"
+                id="loginPassword"
+                name="loginPassword"
+                value={form.loginPassword}
+                onChange={handleChange}
+                required
+              />
+            </div>
+            <button
+              type="button"
+              className="forgot-inline"
+              onClick={() => navigate('/forgot-password')}
+            >
+              Forgot Password?
+            </button>
+          </div>
+
+          <button type="submit" className="primary-btn">LOG IN</button>
+
+          <div className="divider">or</div>
 
           <button
             type="button"
@@ -88,19 +104,10 @@ export default function Login() {
             onClick={async () => {
               setError('');
               try {
-                // Clear any stale token
                 setAuthToken(null);
-                
-                console.log('[Google Login] Starting Google sign-in popup...');
                 const result = await signInWithPopup(auth, googleProvider);
-                console.log('[Google Login] Sign-in successful, getting ID token...');
-                
                 const idToken = await result.user.getIdToken();
-                console.log('[Google Login] ID token obtained, sending to backend...');
-                
                 const resp = await api.post('auth/google-login/', { id_token: idToken });
-                console.log('[Google Login] Backend response:', resp.data);
-                
                 if (resp.data.token && resp.data.user) {
                   login(resp.data.user, resp.data.token);
                   toast.success('Google login successful! Redirecting...');
@@ -113,33 +120,21 @@ export default function Login() {
               }
             }}
           >
-            <span className="g-icon" aria-hidden="true"></span>
-            Continue with Google
+            <img
+              src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg"
+              alt="Google"
+            />
+            <span>Sign in with Google</span>
           </button>
 
           {error && <div style={{ color: 'red', marginTop: '1rem' }}>{error}</div>}
           {success && <div style={{ color: 'green', marginTop: '1rem' }}>{success}</div>}
+
+          <p className="switch-text">Don't have an account yet? <span className="link" onClick={() => navigate('/register')}>CREATE NEW ONE</span></p>
         </form>
 
         {/* Toast container for login notifications */}
         <ToastContainer />
-
-        <div className="links">
-          <button
-            type="button"
-            className="tab"
-            onClick={() => navigate('/forgot-password')}
-          >
-            Forgot password?
-          </button>
-          <button
-            type="button"
-            className="tab"
-            onClick={() => navigate('/register')}
-          >
-            Register
-          </button>
-        </div>
       </div>
     </div>
   );
