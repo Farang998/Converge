@@ -11,5 +11,6 @@ class Task(Document):
     status = StringField(default='pending', choices=['pending', 'in_progress', 'completed'])
     due_date = DateTimeField(null=True)
     created_at = DateTimeField(default=timezone.now)
+    calendar_event_id = StringField()
 
     meta = {'collection': 'tasks'}

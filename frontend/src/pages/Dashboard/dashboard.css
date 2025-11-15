@@ -1,21 +1,15 @@
-/* dashboard.css (Simplified) */
+/* Dashboard Layout */
 * {
-  margin: 0;
-  padding: 0;
   box-sizing: border-box;
 }
-
-body, html {
-  height: 100%;
-  overflow: hidden; /* prevents outer scrollbar */
-}
-
-/* Dashboard Layout */
 .dashboard-page {
+  height: 100vh;
+  overflow: hidden;
   min-height: 100vh;
-  width: 100%;
+  width: 100vw;
   background: #eef3f8;
   color: #1f2937;
+  display: block !important;
 }
 
 .dashboard-page.loading-state {
@@ -117,6 +111,29 @@ body, html {
   color: #000000;
 }
 
+.notification-icon-container {
+  position: relative;
+}
+
+.notification-badge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  background: #dc2626;
+  color: #ffffff;
+  border-radius: 10px;
+  min-width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 0 4px;
+  border: 2px solid #ffffff;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
 .profile-container {
   position: relative;
 }
@@ -205,7 +222,7 @@ body, html {
 .projects-section::-webkit-scrollbar-thumb {
   background: linear-gradient(180deg, #49d7ff, #32a9ff); 
   border-radius: 10px;
-  border: 3px solid #ffffff; /* gives the white gap around the bar */
+  border: 2px solid #ffffff; /* gives the white gap around the bar */
 }
 
 .projects-section::-webkit-scrollbar-thumb:hover {
@@ -363,16 +380,16 @@ body, html {
 }
 
 .details-btn {
-  background: #06c167 !important;
+  background: #09d1a3 !important;
   width: 100%;
   padding: 12px 0;
   font-size: 1rem;
-  border-radius: 10px;
+  border-radius: 5px;
   font-weight: 600;
 }
 
 .details-btn:hover {
-  background: #05a85a !important;
+  background: #02bb9f !important;
 }
 
 
@@ -380,7 +397,7 @@ body, html {
   margin-top: 12px;
   padding: 12px 14px;
   background: #f7fbff;
-  border-left: 4px solid #0f7ac0;
+  border-left: 2px solid #0f7ac0;
   border-radius: 12px;
   font-size: 0.92rem;
   color: #334155;

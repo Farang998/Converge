@@ -176,57 +176,71 @@ export default function Dashboard() {
 
           <div className="projects-grid">
             {projects.map((proj) => (
-              <div className="project-card" key={proj.id}>
-                <div className="card-head">
-                  <div className="title">
-                    <h3>{proj.name}</h3>
-                    <div className="badges">
-                      {proj.tags?.map((t) => (
-                        <span className="tag" key={t}>
-                          {t}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="card-actions">
-                    <div className="muted small">{proj.members} members</div>
-                  </div>
-                </div>
+  <div
+    className="project-card"
+    key={proj.id}
+    // // optional: make whole card clickable
+    // onClick={() => navigate(`/project/${proj.id}`, { state: { project: proj } })}
+    // style={{ cursor: "pointer" }}
+  >
+    <div className="card-head">
+      <div className="title">
+        {/* keep semantic h3 but stop propagation for inner buttons if needed */}
+        <h3 onClick={() => navigate(`/project/${proj.id}`, { state: { project: proj } })}>
+          {proj.name}
+        </h3>
+        <div className="badges">
+          {proj.tags?.map((t) => (
+            <span className="tag" key={t}>
+              {t}
+            </span>
+          ))}
+        </div>
+      </div>
+      <div className="card-actions">
+        <div className="muted small">{proj.members} members</div>
+      </div>
+    </div>
 
-                <div className="progress-row">
-                  <div className="progress-bar">
-                    <div
-                      className="progress-fill"
-                      style={{ width: `${proj.progress}%` }}
-                    />
-                  </div>
-                  <div className="percent">{proj.progress}%</div>
-                </div>
+    {/* rest remains unchanged */}
+    <div className="progress-row">
+      <div className="progress-bar">
+        <div
+          className="progress-fill"
+          style={{ width: `${proj.progress}%` }}
+        />
+      </div>
+      <div className="percent">{proj.progress}%</div>
+    </div>
 
-                <div className="meta-row">
-                  <div className="deadline">
-                    <FaCalendarAlt /> <span>Due {proj.deadline}</span>
-                  </div>
-                  <div className="actions">
-                    <button
-                      className="details-btn outline"
-                      onClick={() => toggleDetails(proj.id)}
-                    >
-                      {proj.showDetails ? "Hide" : "Details"}
-                    </button>
-                  </div>
-                </div>
+    <div className="meta-row">
+      <div className="deadline">
+        <FaCalendarAlt /> <span>Due {proj.deadline}</span>
+      </div>
+      <div className="actions">
+        <button
+          className="details-btn outline"
+          onClick={(e) => {
+            e.stopPropagation(); // prevent card click
+            toggleDetails(proj.id);
+          }}
+        >
+          {proj.showDetails ? "Hide" : "Details"}
+        </button>
+      </div>
+    </div>
 
-                {proj.showDetails && (
-                  <div className="project-details">
-                    <p className="desc">{proj.description}</p>
-                    <div className="detail-meta">
-                      <span>Team members: {proj.members}</span>
-                    </div>
-                  </div>
-                )}
-              </div>
-            ))}
+    {proj.showDetails && (
+      <div className="project-details">
+        <p className="desc">{proj.description}</p>
+        <div className="detail-meta">
+          <span>Team members: {proj.members}</span>
+        </div>
+      </div>
+    )}
+  </div>
+))}
+
           </div>
         </div>
 

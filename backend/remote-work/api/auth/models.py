@@ -23,7 +23,12 @@ class Token(Document):
     token = StringField(required=True, unique=True)
     created_at = DateTimeField(default=timezone.now)
 
-    meta = {'collection': 'tokens'}
+    meta = {'collection': 'tokens',
+            'indexes': [
+                # expire after 7 days (604800 seconds); adjust as desired
+                {'fields': ['created_at'], 'expireAfterSeconds': 7 * 24 * 60 * 60}
+            ]
+    }
 
 class User(Document):
     username = StringField(required=True, unique=True, max_length=150)

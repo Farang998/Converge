@@ -9,5 +9,6 @@ class Project(Document):
     project_type = StringField(default='development')
     team_members = ListField(DictField())
     created_at = DateTimeField(default=timezone.now)
+    calendar_id = StringField()
 
     meta = {'collection': 'projects'}
