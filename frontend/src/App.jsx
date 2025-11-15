@@ -10,6 +10,7 @@ import ForgotPassword from './pages/ForgotPassword'
 import AcceptInvitation from './pages/AcceptInvitation'
 import ProjectCreate from './pages/project_create'
 import Conversation from './pages/Conversation'
+import IndividualChat from './pages/IndividualChat'
 
 function App() {
   return (
@@ -23,6 +24,7 @@ function App() {
         <Route path="/tasks/:taskId" element={<TaskDetails />} />
         <Route path="/projects/create" element={<ProjectCreate />} />
         <Route path="/chat/:projectId" element={<Conversation />} />
+        <Route path="/chat/individual/:chatId" element={<IndividualChat />} />
         <Route path="/register" element={<Register />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/accept-invitation/:projectId" element={<AcceptInvitation />} />

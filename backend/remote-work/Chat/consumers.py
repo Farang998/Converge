@@ -5,7 +5,7 @@ from django.utils import timezone
 from asgiref.sync import sync_to_async
 from api.auth.models import User   # MongoEngine User
 from api.projects.models import Project
-from .models import GroupChat, GroupMessage  # use your Mongo MongoEngine models
+from .models import GroupChat, GroupMessage, IndividualChat, IndividualMessage  # use your Mongo MongoEngine models
 
 class ChatConsumer(AsyncWebsocketConsumer):
     async def connect(self):
@@ -183,7 +183,7 @@ class ProjectChatConsumer(AsyncWebsocketConsumer):
         """
         Send message to WebSocket client when broadcast is received.
         """
-        await self.send(text_data=json.dumps({
+        message_data = {
             "type": "chat_message",
             "id": event["message_id"],
             "sender": {
@@ -193,6 +193,22 @@ class ProjectChatConsumer(AsyncWebsocketConsumer):
             "content": event["content"],
             "timestamp": event["timestamp"],
             "created_at": event["timestamp"]  # Alias for frontend compatibility
+        }
+        # Add media fields if present
+        if event.get("file_url"):
+            message_data["file_url"] = event["file_url"]
+            message_data["file_type"] = event.get("file_type")
+            message_data["file_name"] = event.get("file_name")
+            message_data["file_size"] = event.get("file_size")
+        await self.send(text_data=json.dumps(message_data))
+    
+    async def project_chat_delete(self, event):
+        """
+        Send delete event to WebSocket client when message is deleted.
+        """
+        await self.send(text_data=json.dumps({
+            "type": "message_deleted",
+            "message_id": event["message_id"]
         }))
     
     def _get_project(self):
@@ -239,3 +255,129 @@ class ProjectChatConsumer(AsyncWebsocketConsumer):
             chat.save()
         
         return chat
+
+
+class IndividualChatConsumer(AsyncWebsocketConsumer):
+    """
+    WebSocket consumer for individual (1-on-1) chats.
+    Route: ws/chat/individual/<chat_id>/
+    """
+    
+    async def connect(self):
+        self.chat_id = self.scope["url_route"]["kwargs"]["chat_id"]
+        self.user = self.scope.get("user")
+        
+        # Validate user from middleware
+        if not self.user or not hasattr(self.user, 'id'):
+            await self.close()
+            return
+        
+        # Get chat and validate membership
+        chat = await sync_to_async(self._get_chat)()
+        if not chat:
+            await self.close()
+            return
+        
+        # Verify user is a participant
+        uid = str(self.user.id)
+        if uid not in chat.participants:
+            await self.close()
+            return
+        
+        # Set group name based on chat ID
+        self.group_name = f"individual_chat_{self.chat_id}"
+        self.chat = chat
+        
+        # Join channel group
+        await self.channel_layer.group_add(self.group_name, self.channel_name)
+        await self.accept()
+        
+        # Send connection confirmation
+        await self.send(text_data=json.dumps({
+            "type": "connection_established",
+            "message": f"Connected to individual chat",
+            "chat_id": self.chat_id
+        }))
+    
+    async def disconnect(self, close_code):
+        if hasattr(self, 'group_name'):
+            await self.channel_layer.group_discard(self.group_name, self.channel_name)
+    
+    async def receive(self, text_data):
+        """
+        Handle incoming WebSocket messages.
+        Expected JSON: {"content": "message text"}
+        """
+        try:
+            data = json.loads(text_data)
+            content = data.get("content", "").strip()
+            
+            if not content:
+                return
+            
+            # User is already validated in connect()
+            sender_id = str(self.user.id)
+            
+            # Save message to MongoDB
+            msg = IndividualMessage(
+                chat=self.chat,
+                sender=sender_id,
+                content=content,
+                timestamp=timezone.now()
+            )
+            await sync_to_async(msg.save)()
+            
+            # Broadcast to both participants
+            await self.channel_layer.group_send(
+                self.group_name,
+                {
+                    "type": "individual_chat_message",
+                    "message_id": str(msg.id),
+                    "sender_id": sender_id,
+                    "sender_username": self.user.username,
+                    "content": content,
+                    "timestamp": msg.timestamp.isoformat()
+                }
+            )
+        except Exception as e:
+            print(f"[IndividualChatConsumer] Error receiving message: {e}")
+    
+    async def individual_chat_message(self, event):
+        """
+        Send message to WebSocket client when broadcast is received.
+        """
+        message_data = {
+            "type": "chat_message",
+            "id": event["message_id"],
+            "sender": {
+                "id": event["sender_id"],
+                "username": event["sender_username"]
+            },
+            "content": event["content"],
+            "timestamp": event["timestamp"],
+            "created_at": event["timestamp"]  # Alias for frontend compatibility
+        }
+        # Add media fields if present
+        if event.get("file_url"):
+            message_data["file_url"] = event["file_url"]
+            message_data["file_type"] = event.get("file_type")
+            message_data["file_name"] = event.get("file_name")
+            message_data["file_size"] = event.get("file_size")
+        await self.send(text_data=json.dumps(message_data))
+    
+    async def individual_chat_delete(self, event):
+        """
+        Send delete event to WebSocket client when message is deleted.
+        """
+        await self.send(text_data=json.dumps({
+            "type": "message_deleted",
+            "message_id": event["message_id"]
+        }))
+    
+    def _get_chat(self):
+        """Get chat by ID (sync function)"""
+        try:
+            return IndividualChat.objects.get(id=self.chat_id)
+        except Exception as e:
+            print(f"[IndividualChatConsumer] Chat not found: {e}")
+            return None
