@@ -14,6 +14,7 @@ from .utils import send_invitations_background
 from rest_framework.exceptions import AuthenticationFailed, NotFound
 
 from ..calendar.models import GoogleCredentials
+from mongoengine.queryset.visitor import Q
 from ..calendar.google_service import create_project_calendar
 
 ERROR_AUTH_HEADER_MISSING = 'Authorization header missing'
@@ -58,10 +59,30 @@ class ProjectViewSet(viewsets.ViewSet):
         except Exception as e:
             return Response({'error': str(e.args[0])}, status=e.args[1])
 
-        leader_projects = list(Project.objects(team_leader=user))
-        member_projects = list(Project.objects(
-            team_members__match={'user': str(user.id)}
-        ))
+        # Optional search parameter to filter projects by name or description
+        search = request.query_params.get('search') or request.query_params.get('q')
+
+        try:
+            if search and str(search).strip() != "":
+                search = str(search).strip()
+                leader_projects_qs = Project.objects(
+                    Q(team_leader=user) & (Q(name__icontains=search) | Q(description__icontains=search))
+                )
+                member_projects_qs = Project.objects(
+                    Q(team_members__match={'user': str(user.id)}) & (Q(name__icontains=search) | Q(description__icontains=search))
+                )
+            else:
+                leader_projects_qs = Project.objects(team_leader=user)
+                member_projects_qs = Project.objects(team_members__match={'user': str(user.id)})
+
+            leader_projects = list(leader_projects_qs)
+            member_projects = list(member_projects_qs)
+        except Exception:
+            # Fallback to previous behavior if query construction fails
+            leader_projects = list(Project.objects(team_leader=user))
+            member_projects = list(Project.objects(
+                team_members__match={'user': str(user.id)}
+            ))
 
         # Merge and remove duplicates while preserving order (leader projects first)
         project_map = {str(project.id): project for project in leader_projects}
