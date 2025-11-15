@@ -18,6 +18,7 @@ export default function Dashboard() {
   const [userRefreshKey, setUserRefreshKey] = useState(0);
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState(searchTerm);
+  const [unreadNotificationsCount, setUnreadNotificationsCount] = useState(0);
 
   const navigate = useNavigate();
   const { logout } = useAuth();
@@ -176,6 +177,35 @@ export default function Dashboard() {
   useEffect(() => {
     let mounted = true;
 
+    async function loadNotifications() {
+      try {
+        const { data } = await api.get('notifications/');
+        if (mounted) {
+          const unread = (data || []).filter(n => !n.read).length;
+          setUnreadNotificationsCount(unread);
+        }
+      } catch (err) {
+        // Silently fail - notifications are not critical for dashboard
+        if (mounted) {
+          setUnreadNotificationsCount(0);
+        }
+      }
+    }
+
+    if (currentUser) {
+      loadNotifications();
+      // Refresh notifications every 30 seconds
+      const interval = setInterval(loadNotifications, 30000);
+      return () => {
+        mounted = false;
+        clearInterval(interval);
+      };
+    }
+  }, [currentUser]);
+
+  useEffect(() => {
+    let mounted = true;
+
     if (!currentUser || !selectedProjectId) {
       setTasks([]);
       return;
@@ -308,11 +338,14 @@ export default function Dashboard() {
         </div>
 
         <div className="navbar-right">
-          <div className="icon" title="Settings">
+          <div className="icon" title="Settings" onClick={() => navigate('/settings')}>
             <FaCog />
           </div>
-          <div className="icon" title="Notifications">
+          <div className="icon notification-icon-container" title="Notifications" onClick={() => navigate('/notifications')}>
             <FaBell />
+            {unreadNotificationsCount > 0 && (
+              <span className="notification-badge">{unreadNotificationsCount > 99 ? '99+' : unreadNotificationsCount}</span>
+            )}
           </div>
 
           <div className="profile-container">
