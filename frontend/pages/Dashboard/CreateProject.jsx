@@ -1,10 +1,10 @@
 // ...existing code...
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import './createProject.css';
 import { FiUsers, FiX } from 'react-icons/fi';
 import { useNavigate } from 'react-router-dom';
 
-const CreateProject = () => {
+const CreateProject = ({ onClose, isModal = false }) => {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
     name: '',
@@ -120,11 +120,17 @@ const CreateProject = () => {
         body: JSON.stringify(payload)
       });
       if (res.ok) {
-        // navigate back or to project list
-        navigate('/');
+        // Close modal or navigate back
+        if (isModal && onClose) {
+          onClose();
+        } else {
+          navigate('/');
+        }
       } else {
         const resp = await res.json().catch(() => ({}));
-        setError(resp.message || 'Failed to create project.');
+        // Prefer server-provided `error`, then `message`, otherwise include status code.
+        setError(resp.error || resp.message || `Failed to create project. (status ${res.status})`);
+        console.debug('Create project failed:', res.status, resp);
       }
     } catch (err) {
       console.error(err);
@@ -193,8 +199,30 @@ const CreateProject = () => {
   };
 
   const closeModal = () => {
-    navigate(-1);
+    if (isModal && onClose) {
+      onClose();
+    } else {
+      navigate(-1);
+    }
   };
+
+  // Close modal on Escape key
+  useEffect(() => {
+    if (!isModal) return;
+    
+    const handleEscape = (e) => {
+      if (e.key === 'Escape') {
+        if (isModal && onClose) {
+          onClose();
+        } else {
+          navigate(-1);
+        }
+      }
+    };
+    
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, [isModal, onClose, navigate]);
 
   const initialsFromUsername = (usernameOrObj) => {
     if (!usernameOrObj) return '';
@@ -204,8 +232,8 @@ const CreateProject = () => {
   };
 
   return (
-    <div className="create-wrapper">
-      <div className="create-card wide" role="dialog" aria-labelledby="create-title">
+    <div className={`create-wrapper ${isModal ? 'modal-overlay' : ''}`} onClick={isModal ? (e) => e.target === e.currentTarget && closeModal() : undefined}>
+      <div className="create-card wide" role="dialog" aria-labelledby="create-title" onClick={(e) => e.stopPropagation()}>
         <button className="close-btn" type="button" aria-label="Close" onClick={closeModal}>
           <FiX size={20} />
         </button>
