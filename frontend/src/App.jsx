@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { AuthProvider, useAuth } from './contexts/AuthContext'
 import Login from './pages/Login'
 import Register from './pages/Register'
 import Dashboard from './pages/Dashboard/dashboard'
@@ -8,32 +9,50 @@ import HelpSupport from './pages/Dashboard/HelpSupport'
 import TaskDetails from './pages/Dashboard/TaskDetails'
 import ForgotPassword from './pages/ForgotPassword'
 import AcceptInvitation from './pages/AcceptInvitation'
-import ProjectCreate from './pages/project_create'
+import Notifications from './pages/Notifications'
+import Calendar from './pages/Calendar'
+import CreateProject from '../pages/Dashboard/CreateProject'
+import ProjectWorkspace from '../pages/ProjectWorkspace/ProjectWorkspace'
 import Conversation from './pages/Conversation'
 import IndividualChat from './pages/IndividualChat'
 
-function App() {
+function AppRoutes() {
+  const { isAuthenticated, loading } = useAuth();
+
+  if (loading) {
+    return <div>Loading...</div>; // Or a proper loading component
+  }
+
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/login" element={<Login />} />
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/profile" element={<Profile />} />
-        <Route path="/settings" element={<Settings />} />
-        <Route path="/help" element={<HelpSupport />} />
-        <Route path="/tasks/:taskId" element={<TaskDetails />} />
-        <Route path="/projects/create" element={<ProjectCreate />} />
-        <Route path="/chat/:projectId" element={<Conversation />} />
-        <Route path="/chat/individual/:chatId" element={<IndividualChat />} />
-        <Route path="/register" element={<Register />} />
-        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/login" element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <Login />} />
+        <Route path="/register" element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <Register />} />
+        <Route path="/forgot-password" element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <ForgotPassword />} />
+        <Route path="/dashboard" element={isAuthenticated ? <Dashboard /> : <Navigate to="/login" replace />} />
+        <Route path="/projects/create" element={isAuthenticated ? <CreateProject /> : <Navigate to="/login" replace />} />
+        <Route path="/projects/:projectId" element={isAuthenticated ? <ProjectWorkspace /> : <Navigate to="/login" replace />} />
         <Route path="/accept-invitation/:projectId" element={<AcceptInvitation />} />
-        <Route path="*" element={<Navigate to="/login" replace />} />
+        <Route path="/notifications" element={isAuthenticated ? <Notifications /> : <Navigate to="/login" replace />} />
+        <Route path="/calendar" element={isAuthenticated ? <Calendar /> : <Navigate to="/login" replace />} />
+        <Route path="/profile" element={isAuthenticated ? <Profile /> : <Navigate to="/login" replace />} />
+        <Route path="/settings" element={isAuthenticated ? <Settings /> : <Navigate to="/login" replace />} />
+        <Route path="/help" element={isAuthenticated ? <HelpSupport /> : <Navigate to="/login" replace />} />
+        <Route path="*" element={<Navigate to={isAuthenticated ? "/dashboard" : "/login"} replace />} />
+        <Route path="/chat/:projectId" element={<Navigate to={isAuthenticated ? "/Coversation" : "/login"} replace />} />
+        <Route path="/chat/individual/:chatId"element={<Navigate to={isAuthenticated ? "/IndividualChat" : "/login"} replace />} />
       </Routes>
     </BrowserRouter>
+  );
+}
+
+function App() {
+  return (
+    <AuthProvider>
+      <AppRoutes />
+    </AuthProvider>
   )
 }
 
 export default App
-
 
