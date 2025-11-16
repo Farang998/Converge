@@ -4,7 +4,8 @@ from .views import (
     ProjectChatMessages, SendProjectMessage, DeleteMessage,
     ProjectTeamMembers, GetOrCreateIndividualChat,
     IndividualChatMessages, SendIndividualMessage,
-    SearchGroupChatMessages, SearchIndividualChatMessages
+    SearchGroupChatMessages, SearchIndividualChatMessages,
+    ListProjectThreads, GetThreadMessages, ReplyToThread
 )
 
 urlpatterns = [
@@ -20,6 +21,9 @@ urlpatterns = [
     path('message/<str:message_id>/', DeleteMessage.as_view()),  # /api/chats/message/<message_id>/
     path('create/', CreateGroup.as_view()),  # /api/chats/create/
     path('direct/<str:username>/', DirectChat.as_view()),  # /api/chats/direct/<username>/
+    path("project/<str:project_id>/threads/", ListProjectThreads.as_view(), name="project_threads"), # /api/chats/project/<project_id>/threads/
+    path("project/<str:project_id>/threads/<str:thread_id>/", GetThreadMessages.as_view(), name="project_thread_messages"), # /api/chats/project/<project_id>/threads/<thread_id>/
+    path("project/<str:project_id>/threads/<str:thread_id>/reply/", ReplyToThread.as_view(), name="project_thread_reply"), # /api/chats/project/<project_id>/threads/<thread_id>/reply
     # Generic patterns LAST
     path('<str:chatroom_name>/messages/', ChatMessages.as_view()),  # /api/chats/<chatroom_name>/messages/
     path('', ChatList.as_view()),  # /api/chats/ - empty pattern last

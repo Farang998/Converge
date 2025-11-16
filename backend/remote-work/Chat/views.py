@@ -14,8 +14,8 @@ import uuid
 from pathlib import Path
 from api.auth.models import User  # your MongoEngine User with validate_token
 from api.projects.models import Project
-from .models import GroupChat, GroupMessage, IndividualChat, IndividualMessage
-from .serializers import group_chat_public, group_message_public, individual_message_public
+from .models import GroupChat, GroupMessage, IndividualChat, IndividualMessage, Thread, ThreadMessage
+from .serializers import group_chat_public, group_message_public, individual_message_public, thread_public, thread_message_public
 
 def _get_user_from_auth(request):
     auth = request.headers.get("Authorization", "")
@@ -667,7 +667,7 @@ class SearchGroupChatMessages(APIView):
             return Response({"error": "You are not a member of this project"}, status=403)
         
         # Get chat by project name
-        chat = GroupChat.objects(name=project.name).first()
+        chat = GroupChat.objects(project_id=project_id).first()
         if not chat:
             return Response({
                 "project_id": str(project.id),
@@ -773,3 +773,167 @@ class SearchIndividualChatMessages(APIView):
             "total_results": len(messages),
             "messages": messages
         }, status=200)
+    
+class ListProjectThreads(APIView):
+    """
+    Returns a list of thread root messages for the group chat 
+    """
+    def get(self, request, project_id):
+        user, err = _get_user_from_auth(request)
+        if err:
+            return err
+        
+        # verifying if the project exists
+        try:
+            project = Project.objects.get(id=project_id)
+        except DoesNotExist:
+            return Response({"error": "Project not found"}, status=404)
+        
+        uid = str(user.id)
+        is_leader = str(project.team_leader.id) == uid
+        is_member = any(str(member.get('user')) == uid for member in (project.team_member or []))
+        if not is_leader and not is_member:
+            return Response({"error": "You are not a member of this project"}, status=403)
+        
+        chat = GroupChat.objects(project_id=project.id).first()
+        if not chat: # corresponding group chat doesn't exist
+            return Response({"error": "Chat not found"}, status=404)
+        
+        threads = Thread.objects(chat=chat).order_by("-created_at")[:50]
+        return Response({
+            "project_id": str(project.id),
+            "project_name": project.name,
+            "chat_id": str(chat.id),
+            "threads": [thread_public(t) for t in threads]
+        }, status=200)
+    
+class GetThreadMessages(APIView):
+    """
+    Returns the root and the thread messages
+    """
+    def get(self, request, project_id, thread_id):
+        user, err = _get_user_from_auth(request)
+        if err:
+            return err
+        try:
+            project = Project.objects.get(id=project_id)
+        except DoesNotExist:
+            return Response({"error": "Project not found"}, status=404)
+        
+        uid = str(user.id)
+        is_leader = str(project.team_leader.id) == uid
+        is_member = any(str(m.get('user')) == uid for m in (project.team_members or []))
+        if not is_leader and not is_member:
+            return Response({"error": "You are not a member of this project"}, status=403)
+
+        chat = GroupChat.objects(project_id=project.id).first()
+        if not chat:
+            return Response({"error": "Chat not found"}, status=404)
+
+        try:
+            thread = Thread.objects.get(id=thread_id, chat=chat)
+        except DoesNotExist:
+            return Response({"error": "Thread not found in this chat"}, status=404)
+
+        parent = thread.parent_message
+        replies = ThreadMessage.objects(thread=thread).order_by("timestamp")
+        sender_ids = list({parent.sender} | {r.sender for r in replies})
+        users = {str(u.id): u for u in User.objects(id__in=sender_ids)}
+        return Response({
+            "thread": thread_public(thread),
+            "parent_message": group_message_public(parent, users),
+            "replies": [thread_message_public(r, users) for r in replies]
+        }, status=200)
+    
+class ReplyToThread(APIView):
+    def post(self, request, project_id, thread_id):
+        user, err = _get_user_from_auth(request)
+        if err:
+            return err
+        
+        content = request.data.get("content", "").strip()
+        file = request.FILES.get("file")
+        if not content and not file:
+            return Response({"error": "Either meassage content or file is required"}, status=400)
+        
+        try:
+            project = Project.objects.get(id=project_id)
+        except DoesNotExist:
+            return Response({"error": "Project not found"}, status=404)
+        
+        uid = str(user.id)
+        is_leader = str(project.team_leader.id) == uid
+        is_member = any(str(m.get('user')) == uid for m in (project.team_members or []))
+        if not is_leader and not is_member:
+            return Response({"error": "You are not a member of this project"}, status=403)
+
+        chat = GroupChat.objects(name=project.name).first()
+        if not chat:
+            return Response({"error": "Chat not found"}, status=404)
+
+        try:
+            thread = Thread.objects.get(id=thread_id, chat=chat)
+        except DoesNotExist:
+            return Response({"error": "Thread not found"}, status=404)
+        
+        file_data = None
+        if file:
+            try:
+                file_data = _save_uploaded_file(file, uid)
+            except ValueError as e:
+                return Response({"error": str(e)}, status=400)
+            except Exception as e:
+                print(f"[ReplyToThread] File upload failed: {e}")
+                return Response({"error": "Failed to upload file"}, status=500)
+            
+            tmsg = ThreadMessage(
+                thread = thread,
+                sender = uid,
+                content = content,
+                timestamp = timezone.now()
+            )
+            if file_data:
+                tmsg.file_url = file_data['file_url']
+                tmsg.file_type = file_data['file_type']
+                tmsg.file_name = file_data['file_name']
+                tmsg.file_size = file_data['file_size']
+            tmsg.save()
+
+            try:
+                channel_layer = get_channel_layer
+                if channel_layer:
+                    channels_group_name = f"project_{chat.project_id}_group_{chat.id}"
+                    async_to_sync(channel_layer.group_send)(
+                        channels_group_name,
+                        {
+                            "type": "thread_message_broadcast",
+                            "thread_id": str(thread.id),
+                            "message_id": str(tmsg.id),
+                            "sender_id": uid,
+                            "sender_username": user.username,
+                            "content": content,
+                            "timestamp": tmsg.timestamp.isoformat(),
+                            "file_url": tmsg.file_url if tmsg.file_url else None,
+                            "file_type": tmsg.file_type if tmsg.file_type else None,
+                            "file_name": tmsg.file_name if tmsg.file_name else None,
+                            "file_size": tmsg.file_size if tmsg.file_size else None,
+                        }
+                    )
+            except Exception as e:
+                print(f"[ReplyToThread] Error broadcasting: {e}")
+
+            users = {str(u.id): u for u in User.objects(id__in=[uid])}
+            return Response(thread_message_public(tmsg, users), status=201)
+        
+        message = GroupMessage(
+            chat = chat,
+            sender = uid,
+            content = content,
+            timestamp = timezone.now()
+        )
+        if file_data:
+            message.file_url = file_data['file_url']
+            message.file_type = file_data['file_type']
+            message.file_name = file_data['file_name']
+            message.file_size = file_data['file_size']
+        message.save()
