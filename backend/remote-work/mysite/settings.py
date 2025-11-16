@@ -38,6 +38,8 @@ ALLOWED_HOSTS = ['localhost', '127.0.0.1']
 
 FRONTEND_URL = 'http://localhost:5173'
 
+GOOGLE_OAUTH_CLIENT_ID = os.environ.get('GOOGLE_OAUTH_CLIENT_ID', '93962274226-t1ngpdrcblqqiqmvkpji6eq7h0vvhovl.apps.googleusercontent.com')
+
 # Application definition
 
 INSTALLED_APPS = [
@@ -121,8 +123,8 @@ SIMPLE_JWT = {
     'REFRESH_TOKEN_LIFETIME': timedelta(days=30),
 }
 
+# CORS Configuration - Allow frontend to communicate with backend
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:5173",
 ]
 
 DATABASES = {

@@ -18,8 +18,8 @@ from django.views.decorators.csrf import csrf_exempt
 import json
 from django.core.cache import cache
 import secrets
-import firebase_admin
-from firebase_admin import auth as firebase_auth
+from google.oauth2 import id_token
+from google.auth.transport import requests
 
 
 def _get_authenticated_user(request):
@@ -305,35 +305,112 @@ class UserByUsernameView(APIView):
             return Response({'error': 'Server error: ' + str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 class GoogleAuthView(APIView):
-    """Authenticate a user via Google/Firebase ID token."""
+    """Authenticate a user via Google OAuth ID token."""
     
     def post(self, request):
-        id_token = request.data.get('id_token')
-        if not id_token:
+        token = request.data.get('id_token')
+        if not token:
             return Response({'error': 'id_token is required'}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            # Initialize Firebase app once (idempotent)
-            if not firebase_admin._apps:
-                firebase_admin.initialize_app()
+            # Get Google Client ID from settings
+            from django.conf import settings
+            CLIENT_ID = settings.GOOGLE_OAUTH_CLIENT_ID
+            
+            print(f"[GoogleAuth] Using Client ID: {CLIENT_ID[:20]}...")
+            print(f"[GoogleAuth] Token received (first 30 chars): {token[:30]}...")
+            
+            # Verify the Google ID token
+            # The token is verified against Google's public keys
+            idinfo = id_token.verify_oauth2_token(
+                token, 
+                requests.Request(), 
+                CLIENT_ID
+            )
 
-            # Verify the Firebase ID token
-            decoded_token = firebase_auth.verify_id_token(id_token)
-            email = decoded_token.get('email')
+            print(f"[GoogleAuth] Token verified successfully for: {idinfo.get('email')}")
 
+            # Verify the token is for the correct app
+            if idinfo['iss'] not in ['accounts.google.com', 'https://accounts.google.com']:
+                return Response({'error': 'Invalid token issuer'}, status=status.HTTP_400_BAD_REQUEST)
+
+            email = idinfo.get('email')
+            email_verified = idinfo.get('email_verified', False)
+            
             if not email:
                 return Response({'error': 'Email not found in token'}, status=status.HTTP_400_BAD_REQUEST)
+            
+            if not email_verified:
+                return Response({'error': 'Email not verified by Google'}, status=status.HTTP_400_BAD_REQUEST)
 
+            # Get user info from token
+            given_name = idinfo.get('given_name', '')
+            family_name = idinfo.get('family_name', '')
+            picture = idinfo.get('picture', '')
+            
+            # Check if user exists
             user = User.objects(email=email).first()
+            is_new_user = False
+            
             if not user:
-                user = User.create_user(username=email.split('@')[0], email=email, password=secrets.token_urlsafe())
+                # User doesn't exist, create new account
+                is_new_user = True
+                
+                # Generate unique username from email
+                base_username = email.split('@')[0]
+                username = base_username
+                counter = 1
+                while User.objects(username=username).first():
+                    username = f"{base_username}{counter}"
+                    counter += 1
+                
+                # Create user with random secure password
+                user = User.create_user(
+                    username=username, 
+                    email=email, 
+                    password=secrets.token_urlsafe(32),
+                    firstName=given_name,
+                    lastName=family_name
+                )
+                
+                message = f'Welcome! Account created successfully for {email}'
+            else:
+                # User exists, logging them in
+                message = f'Welcome back, {user.username}!'
 
-            token = User.generate_token(user.id)
-            return Response({'message': 'Login successful', 'token': token}, status=status.HTTP_200_OK)
-        except firebase_auth.InvalidIdTokenError:
-            return Response({'error': 'Invalid ID token'}, status=status.HTTP_400_BAD_REQUEST)
-        except Exception:
-            return Response({'error': 'Server error'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            # Generate auth token
+            auth_token = User.generate_token(user.id)
+            
+            return Response({
+                'success': True,
+                'message': message,
+                'is_new_user': is_new_user,
+                'token': auth_token,
+                'user': {
+                    'id': str(user.id),
+                    'username': user.username,
+                    'email': user.email,
+                    'first_name': getattr(user, 'firstName', ''),
+                    'last_name': getattr(user, 'lastName', ''),
+                }
+            }, status=status.HTTP_200_OK)
+            
+        except ValueError as e:
+            # Invalid token
+            return Response({
+                'success': False,
+                'error': 'Invalid Google ID token. Please try again.'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        except MongoValidationError as e:
+            return Response({
+                'success': False,
+                'error': f'Error creating user account: {str(e)}'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({
+                'success': False,
+                'error': 'Authentication failed. Please try again later.'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 class UpdateProfileView(APIView):
     permission_classes = [IsAuthenticated]

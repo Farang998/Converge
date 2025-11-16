@@ -58,7 +58,8 @@ class ProjectViewSet(viewsets.ViewSet):
         except AuthenticationFailed as e:
             return Response({'error': str(e)}, status=status.HTTP_401_UNAUTHORIZED)
 
-        search = request.query_params.get('search', '')
+        # Optional search parameter to filter projects by name or description
+        search = request.query_params.get('search') or request.query_params.get('q') or ''
         user_id = str(user.id)
         try:
             if search and str(search).strip() != "":

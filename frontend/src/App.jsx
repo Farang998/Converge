@@ -16,7 +16,6 @@ import ProjectWorkspace from '../pages/ProjectWorkspace/ProjectWorkspace'
 import Conversation from './pages/Conversation'
 import IndividualChat from './pages/IndividualChat'
 
-
 function AppRoutes() {
   const { isAuthenticated, loading } = useAuth();
 
