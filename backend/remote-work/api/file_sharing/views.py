@@ -56,7 +56,22 @@ def _check_project_access(user, project):
     
     return False
 
-
+def _get_s3_client():
+    """Initialize and return S3 client."""
+    # Validate AWS settings
+    if not settings.AWS_ACCESS_KEY_ID:
+        raise ValueError('AWS_ACCESS_KEY_ID is not configured')
+    if not settings.AWS_SECRET_ACCESS_KEY:
+        raise ValueError('AWS_SECRET_ACCESS_KEY is not configured')
+    if not settings.AWS_STORAGE_BUCKET_NAME:
+        raise ValueError('AWS_STORAGE_BUCKET_NAME is not configured')
+    
+    return boto3.client(
+        's3',
+        aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
+        aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
+        region_name=settings.AWS_S3_REGION_NAME or 'us-east-1'
+    )
 
 
 class FileUploadView(APIView):
@@ -198,7 +213,121 @@ class FileUploadView(APIView):
             'uploaded_at': file_obj.uploaded_at.isoformat()
         }, status=status.HTTP_201_CREATED)
 
+class FileListView(APIView):
+    """
+    List files for a project.
+    GET /api/file_sharing/project/<project_id>/
+    """
+    
+    def get(self, request, project_id):
+        try:
+            user = _authenticate_user(request)
+        except AuthenticationFailed as e:
+            return Response({'error': str(e)}, status=status.HTTP_401_UNAUTHORIZED)
+        
+        # Get project and verify access
+        try:
+            project = Project.objects.get(id=project_id)
+        except (DoesNotExist, MongoValidationError):
+            return Response({'error': 'Project not found'}, status=status.HTTP_404_NOT_FOUND)
+        
+        # Verify user has access to project
+        if not _check_project_access(user, project):
+            return Response({
+                'error': 'You do not have access to this project'
+            }, status=status.HTTP_403_FORBIDDEN)
+        
+        # Get all files for this project
+        files = File.objects(project=project).order_by('-uploaded_at')
+        
+        files_list = []
+        for file_obj in files:
+            # Get uploader info
+            uploader = file_obj.uploaded_by
+            files_list.append({
+                'file_id': str(file_obj.id),
+                'file_name': file_obj.name,
+                'file_size': file_obj.file_size,
+                'content_type': file_obj.content_type,
+                'uploaded_by': {
+                    'user_id': str(uploader.id),
+                    'username': uploader.username
+                },
+                'uploaded_at': file_obj.uploaded_at.isoformat() if file_obj.uploaded_at else None,
+                's3_path': file_obj.s3_key
+            })
+        
+        return Response({
+            'project_id': str(project.id),
+            'project_name': project.name,
+            'files': files_list,
+            'total_files': len(files_list)
+        }, status=status.HTTP_200_OK)
 
+
+class FileDownloadView(APIView):
+    """
+    Get pre-signed URL for file download.
+    GET /api/file_sharing/download/<file_id>/
+    """
+    
+    def get(self, request, file_id):
+        try:
+            user = _authenticate_user(request)
+        except AuthenticationFailed as e:
+            return Response({'error': str(e)}, status=status.HTTP_401_UNAUTHORIZED)
+        
+        # Get file
+        try:
+            file_obj = File.objects.get(id=file_id)
+        except (DoesNotExist, MongoValidationError):
+            return Response({'error': 'File not found'}, status=status.HTTP_404_NOT_FOUND)
+        
+        # Verify user has access to the project
+        project = file_obj.project
+        if not _check_project_access(user, project):
+            return Response({
+                'error': 'You do not have access to this file'
+            }, status=status.HTTP_403_FORBIDDEN)
+        
+        # Generate pre-signed URL (valid for 1 hour)
+        try:
+            s3_client = _get_s3_client()
+            bucket_name = settings.AWS_STORAGE_BUCKET_NAME
+            if not bucket_name:
+                return Response({
+                    'error': 'AWS S3 bucket is not configured. Please set AWS_STORAGE_BUCKET_NAME in environment variables.'
+                }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            
+            presigned_url = s3_client.generate_presigned_url(
+                'get_object',
+                Params={
+                    'Bucket': bucket_name,
+                    'Key': file_obj.s3_key
+                },
+                ExpiresIn=3600  # 1 hour
+            )
+        except ValueError as e:
+            return Response({
+                'error': f'AWS configuration error: {str(e)}. Please configure AWS credentials in environment variables.'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        except ClientError as e:
+            return Response({
+                'error': f'Failed to generate download URL: {str(e)}'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        except Exception as e:
+            return Response({
+                'error': f'Unexpected error generating download URL: {str(e)}'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+        return Response({
+            'file_id': str(file_obj.id),
+            'file_name': file_obj.name,
+            'file_size': file_obj.file_size,
+            'content_type': file_obj.content_type,
+            'download_url': presigned_url,
+            'expires_in_seconds': 3600
+        }, status=status.HTTP_200_OK)
 
 class FileDeleteView(APIView):
     """
