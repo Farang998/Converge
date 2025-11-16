@@ -1,7 +1,11 @@
 # api/projects/utils.py
+import logging
 from django.core.mail import send_mail
 from django.conf import settings
 from ..auth.models import User
+
+logger = logging.getLogger(__name__)
+
 
 def send_invitation_email(email, project_name, project_id):
     """
@@ -22,6 +26,10 @@ def send_invitations_background(team_members_invited, project_name, project_id):
     for member_id in team_members_invited:
         try:
             user = User.objects.get(id=member_id)
-            send_invitation_email(user.email, project_name, project_id)
+            try:
+                send_invitation_email(user.email, project_name, project_id)
+            except Exception as e:
+                # Avoid crashing the background thread — log and continue
+                logger.exception("[projects.utils] Error sending invitation to %s: %s", user.email, str(e))
         except User.DoesNotExist:
-            pass
+            logger.warning("[projects.utils] Could not find invited user id %s", member_id)
