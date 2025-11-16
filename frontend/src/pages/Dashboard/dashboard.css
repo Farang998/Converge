@@ -111,6 +111,29 @@
   color: #000000;
 }
 
+.notification-icon-container {
+  position: relative;
+}
+
+.notification-badge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  background: #dc2626;
+  color: #ffffff;
+  border-radius: 10px;
+  min-width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 0 4px;
+  border: 2px solid #ffffff;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
 .profile-container {
   position: relative;
 }
@@ -199,7 +222,7 @@
 .projects-section::-webkit-scrollbar-thumb {
   background: linear-gradient(180deg, #49d7ff, #32a9ff); 
   border-radius: 10px;
-  border: 3px solid #ffffff; /* gives the white gap around the bar */
+  border: 2px solid #ffffff; /* gives the white gap around the bar */
 }
 
 .projects-section::-webkit-scrollbar-thumb:hover {
@@ -363,20 +386,23 @@
 }
 
 .details-btn {
-  background: #06c167 !important;
+  background: #09d1a3 !important;
   flex: 1;
   padding: 12px 0;
   font-size: 1rem;
-  border-radius: 10px;
+  border-radius: 5px;
   font-weight: 600;
   border: none;
   color: white;
   cursor: pointer;
   transition: background 0.25s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .details-btn:hover {
-  background: #05a85a !important;
+  background: #02bb9f !important;
 }
 
 .chat-btn {
@@ -384,12 +410,15 @@
   flex: 1;
   padding: 12px 0;
   font-size: 1rem;
-  border-radius: 10px;
+  border-radius: 5px;
   font-weight: 600;
   border: none;
   color: white;
   cursor: pointer;
   transition: background 0.25s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .chat-btn:hover {
@@ -401,7 +430,7 @@
   margin-top: 12px;
   padding: 12px 14px;
   background: #f7fbff;
-  border-left: 4px solid #0f7ac0;
+  border-left: 2px solid #0f7ac0;
   border-radius: 12px;
   font-size: 0.92rem;
   color: #334155;

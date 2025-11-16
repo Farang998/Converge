@@ -1,10 +1,10 @@
 // ...existing code...
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import './createProject.css';
 import { FiUsers, FiX } from 'react-icons/fi';
 import { useNavigate } from 'react-router-dom';
 
-const CreateProject = () => {
+const CreateProject = ({ onClose, isModal = false }) => {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
     name: '',
@@ -29,14 +29,20 @@ const CreateProject = () => {
   // Returns user object (with at least an id/_id and username) or null if not found or error.
   const fetchUserByUsername = async (username) => {
     if (!username) return null;
+    const baseUrl = 'http://localhost:8000/api';
     const endpoints = [
-      `/api/users/by-username?username=${encodeURIComponent(username)}`,
-      `/api/users?username=${encodeURIComponent(username)}`,
-      `/api/users/exists?username=${encodeURIComponent(username)}`
+      `${baseUrl}/auth/users/by-username?username=${encodeURIComponent(username)}`,
+      `${baseUrl}/users?username=${encodeURIComponent(username)}`,
+      `${baseUrl}/users/exists?username=${encodeURIComponent(username)}`
     ];
     for (const url of endpoints) {
       try {
-        const res = await fetch(url, { method: 'GET' });
+        const res = await fetch(url, { 
+          method: url.includes('/api/projects/') ? 'GET' : 'GET',
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('authToken')}` // assuming token is stored
+          }
+        });
         if (!res.ok) {
           // if 404 continue to next guess, otherwise if 204/empty also continue
           continue;
@@ -93,31 +99,38 @@ const CreateProject = () => {
     }
 
     // Build payload to match database fields:
-    // db expects: name, description, members (array of user ids).
-    // If we only have usernames for some members (no id), send usernames; backend should resolve.
-    const membersForPayload = formData.teamMembers.map((m) => {
-      return m.id || m._id || m.username;
-    });
+    // db expects: name, description, members (array of usernames).
+    // Backend will resolve usernames to users and send emails.
+    const membersForPayload = formData.teamMembers.map((m) => m.username);
 
     const payload = {
       name: formData.name.trim(),
       description: formData.description.trim(),
-      members: membersForPayload
+      team_members: membersForPayload
     };
 
     // submit to backend
     try {
-      const res = await fetch('/api/projects', {
+      const res = await fetch('http://localhost:8000/api/projects/create/', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+        },
         body: JSON.stringify(payload)
       });
       if (res.ok) {
-        // navigate back or to project list
-        navigate('/');
+        // Close modal or navigate back
+        if (isModal && onClose) {
+          onClose();
+        } else {
+          navigate('/');
+        }
       } else {
         const resp = await res.json().catch(() => ({}));
-        setError(resp.message || 'Failed to create project.');
+        // Prefer server-provided `error`, then `message`, otherwise include status code.
+        setError(resp.error || resp.message || `Failed to create project. (status ${res.status})`);
+        console.debug('Create project failed:', res.status, resp);
       }
     } catch (err) {
       console.error(err);
@@ -142,7 +155,7 @@ const CreateProject = () => {
 
     // validate allowed characters (now numbers allowed)
     if (!isValidUsername(candidate)) {
-      setMemberError('Username invalid — use 3–30 chars: letters, numbers, ., _, -');
+      setMemberError('Username invalid — use 3-30 chars: letters, numbers, ., _, -');
       return;
     }
 
@@ -186,8 +199,30 @@ const CreateProject = () => {
   };
 
   const closeModal = () => {
-    navigate(-1);
+    if (isModal && onClose) {
+      onClose();
+    } else {
+      navigate(-1);
+    }
   };
+
+  // Close modal on Escape key
+  useEffect(() => {
+    if (!isModal) return;
+    
+    const handleEscape = (e) => {
+      if (e.key === 'Escape') {
+        if (isModal && onClose) {
+          onClose();
+        } else {
+          navigate(-1);
+        }
+      }
+    };
+    
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, [isModal, onClose, navigate]);
 
   const initialsFromUsername = (usernameOrObj) => {
     if (!usernameOrObj) return '';
@@ -197,8 +232,8 @@ const CreateProject = () => {
   };
 
   return (
-    <div className="create-wrapper">
-      <div className="create-card wide" role="dialog" aria-labelledby="create-title">
+    <div className={`create-wrapper ${isModal ? 'modal-overlay' : ''}`} onClick={isModal ? (e) => e.target === e.currentTarget && closeModal() : undefined}>
+      <div className="create-card wide" role="dialog" aria-labelledby="create-title" onClick={(e) => e.stopPropagation()}>
         <button className="close-btn" type="button" aria-label="Close" onClick={closeModal}>
           <FiX size={20} />
         </button>

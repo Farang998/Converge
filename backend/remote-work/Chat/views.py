@@ -491,7 +491,7 @@ class SendProjectMessage(APIView):
             # Create chat with all project members
             participants = [str(project.team_leader.id)]
             if project.team_members:
-                participants.extend([str(member.get('user_id')) for member in project.team_members if member.get('user_id')])
+                participants.extend([str(member.get('user')) for member in project.team_members if member.get('user')])
             chat = GroupChat(
                 name=project.name,
                 admin=str(project.team_leader.id),

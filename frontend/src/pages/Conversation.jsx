@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import MessageBubble from "./MessageBubble";
 import DeleteConfirmationModal from "../components/DeleteConfirmationModal";
+import { useAuth } from "../contexts/AuthContext";
 import api from "../services/api";
 import "./Conversation.css";
 
@@ -11,7 +12,7 @@ export default function Conversation() {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [projectName, setProjectName] = useState("");
-  const [currentUser, setCurrentUser] = useState(null);
+  const { user: currentUser } = useAuth();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [sending, setSending] = useState(false);
@@ -35,20 +36,7 @@ export default function Conversation() {
   const messagesEndRef = useRef(null);
   const messagesContainerRef = useRef(null);
 
-  // Fetch current user
-  useEffect(() => {
-    async function loadUser() {
-      try {
-        const { data } = await api.get("auth/identify-user/");
-        if (data?.user) {
-          setCurrentUser(data.user);
-        }
-      } catch (err) {
-        console.error("Failed to load user:", err);
-      }
-    }
-    loadUser();
-  }, []);
+  // Current user is provided by AuthContext
 
   // WebSocket connection function
   const connectWebSocket = () => {

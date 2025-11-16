@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import MessageBubble from "./MessageBubble";
 import DeleteConfirmationModal from "../components/DeleteConfirmationModal";
+import { useAuth } from "../contexts/AuthContext";
 import api from "../services/api";
 import "./Conversation.css";
 
@@ -13,7 +14,7 @@ export default function IndividualChat() {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [otherUser, setOtherUser] = useState(null);
-  const [currentUser, setCurrentUser] = useState(null);
+  const { user: currentUser } = useAuth();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [sending, setSending] = useState(false);
@@ -34,20 +35,7 @@ export default function IndividualChat() {
   const messagesEndRef = useRef(null);
   const messagesContainerRef = useRef(null);
 
-  // Fetch current user
-  useEffect(() => {
-    async function loadUser() {
-      try {
-        const { data } = await api.get("auth/identify-user/");
-        if (data?.user) {
-          setCurrentUser(data.user);
-        }
-      } catch (err) {
-        console.error("Failed to load user:", err);
-      }
-    }
-    loadUser();
-  }, []);
+  // Current user is provided by AuthContext
 
   // WebSocket connection function
   const connectWebSocket = () => {

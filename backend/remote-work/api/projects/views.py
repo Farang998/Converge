@@ -55,9 +55,11 @@ class ProjectViewSet(viewsets.ViewSet):
         """
         try:
             user = self._authenticate_user(request)
-        except Exception as e:
-            return Response({'error': str(e.args[0])}, status=e.args[1])
+        except AuthenticationFailed as e:
+            return Response({'error': str(e)}, status=status.HTTP_401_UNAUTHORIZED)
 
+        search = request.query_params.get('search', '')
+        user_id = str(user.id)
         try:
             if search and str(search).strip() != "":
                 search = str(search).strip()
@@ -65,11 +67,11 @@ class ProjectViewSet(viewsets.ViewSet):
                     Q(team_leader=user) & (Q(name__icontains=search) | Q(description__icontains=search))
                 )
                 member_projects_qs = Project.objects(
-                    Q(team_members__match={'user': str(user.id)}) & (Q(name__icontains=search) | Q(description__icontains=search))
+                    Q(team_members__match={'user': user_id}) & (Q(name__icontains=search) | Q(description__icontains=search))
                 )
             else:
                 leader_projects_qs = Project.objects(team_leader=user)
-                member_projects_qs = Project.objects(team_members__match={'user': str(user.id)})
+                member_projects_qs = Project.objects(team_members__match={'user': user_id})
 
             leader_projects = list(leader_projects_qs)
             member_projects = list(member_projects_qs)
@@ -77,7 +79,7 @@ class ProjectViewSet(viewsets.ViewSet):
             # Fallback to previous behavior if query construction fails
             leader_projects = list(Project.objects(team_leader=user))
             member_projects = list(Project.objects(
-                team_members__match={'user': str(user.id)}
+                team_members__match={'user': user_id}
             ))
 
         # Merge and remove duplicates while preserving order (leader projects first)
@@ -135,8 +137,8 @@ class ProjectViewSet(viewsets.ViewSet):
         """
         try:
             user = self._authenticate_user(request)
-        except Exception as e:
-            return Response({'error': str(e.args[0])}, status=e.args[1])
+        except AuthenticationFailed as e:
+            return Response({'error': str(e)}, status=status.HTTP_401_UNAUTHORIZED)
         
         data = request.data
         name = data.get('name')
@@ -191,7 +193,7 @@ class ProjectViewSet(viewsets.ViewSet):
             chat_payload = {
                 "name" : name,
                 "admin" : str(user.id),
-                "participants" : invited_users
+                "participants" : [str(u.id) for u in invited_users]
             }
 
             try:
@@ -211,11 +213,13 @@ class ProjectViewSet(viewsets.ViewSet):
         """
         try:
             user = self._authenticate_user(request)
+        except AuthenticationFailed as e:
+            return Response({'error': str(e)}, status=status.HTTP_401_UNAUTHORIZED)
+        
+        try:
             project = Project.objects.get(id=pk)
-        except Exception as e:
-            return Response({'error': str(e.args[0])}, status=e.args[1])
         except (DoesNotExist, MongoValidationError):
-            return Response({'error': 'Project not found'}, status=status.HTTP_404_NOT_FOUND)
+            return Response({'error': PROJECT_NOT_FOUND_ERROR}, status=status.HTTP_404_NOT_FOUND)
         
         # Authorization
         if project.team_leader != user:
@@ -236,7 +240,7 @@ class ProjectViewSet(viewsets.ViewSet):
         project.save()
         return Response({'message': 'Project updated successfully.'}, status=status.HTTP_200_OK)
 
-     @action(detail=True, methods=['post'])
+    @action(detail=True, methods=['post'])
     def add_members(self, request, pk=None):
         """
         Adds new members to a project.
@@ -244,9 +248,11 @@ class ProjectViewSet(viewsets.ViewSet):
         """
         try:
             user = self._authenticate_user(request)
+        except AuthenticationFailed as e:
+            return Response({'error': str(e)}, status=status.HTTP_401_UNAUTHORIZED)
+        
+        try:
             project = Project.objects.get(id=pk)
-        except Exception as e:
-            return Response({'error': str(e.args[0])}, status=e.args[1])
         except (DoesNotExist, MongoValidationError):
             return Response({'error': PROJECT_NOT_FOUND_ERROR}, status=status.HTTP_404_NOT_FOUND)
 
@@ -326,6 +332,7 @@ class ProjectViewSet(viewsets.ViewSet):
         project.save()
 
         return Response({'message': f'Successfully removed {len(members_to_remove)} member(s).'}, status=status.HTTP_200_OK)
+
 
 
 class AcceptInvitation(APIView):
@@ -419,8 +426,8 @@ class ProjectCreate(APIView):
     def post(self, request):
         try:
             user = self._authenticate_user(request)
-        except Exception as e:
-            return Response({'error': str(e.args[0])}, status=e.args[1])
+        except AuthenticationFailed as e:
+            return Response({'error': str(e)}, status=status.HTTP_401_UNAUTHORIZED)
 
         data = request.data
         name = data.get('name')
@@ -452,20 +459,39 @@ class ProjectCreate(APIView):
             project_id = str(project.id)
 
             # Send notifications
-            for invited_user in invited_users:
-                Notification(
-                    user=invited_user,
-                    message=f"You have been invited to join the project '{name}'.",
-                    link_url=f"/projects/{project_id}"
-                ).save()
+            credentials = GoogleCredentials.objects(user=user).first()
+            if credentials:
+                calendar_id = create_project_calendar(credentials, name)
+                project.calendar_id = calendar_id
+                project.save()
+
+
+            try:
+                for invited_user in invited_users:
+                    Notification(
+                        user=invited_user,
+                        message=f"You have been invited to join the project '{name}'.",
+                        link_url=f"/projects/{project_id}"
+                    ).save()
+            except Exception as e:
+                print(f"Error creating notifications: {e}")
 
             # Send email invitations in the background
             threading.Thread(target=send_invitations_background, args=([str(u.id) for u in invited_users], name, project_id)).start()
 
+            chat_api_url = "http://localhost:8000/api/chats/create/"
+            chat_payload = {
+                "name" : name,
+                "admin" : str(user.id),
+                "participants" : [str(u.id) for u in invited_users]
+            }
+
+            try:
+                chat_response = requests.post(chat_api_url, json=chat_payload)
+                if chat_response.status_code != 201:
+                    print(f"Failed to create chat for project {name}: {chat_response.text}")
+            except Exception as e:
+                print(f"Error while creating chat for project {name}: {e}")
             return Response({'message': 'Project created successfully', 'project_id': project_id}, status=status.HTTP_201_CREATED)
         except MongoValidationError as e:
             return Response({'error': f'Validation error: {e}'}, status=status.HTTP_400_BAD_REQUEST)
-        except Exception as e:
-            return Response({'error': f'Server error: {e}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-        if not member_found:
-            return Response({'error': 'You are not invited to this project'}, status=status.HTTP_403_FORBIDDEN)

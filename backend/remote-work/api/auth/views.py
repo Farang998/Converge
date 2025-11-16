@@ -17,6 +17,9 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 import json
 from django.core.cache import cache
+import secrets
+import firebase_admin
+from firebase_admin import auth as firebase_auth
 
 
 def _get_authenticated_user(request):
@@ -48,8 +51,8 @@ class RegisterUserView(APIView):
         username = request.data.get('username')
         password = request.data.get('password')
         email = request.data.get('email')
-        firstName = request.data.get('firstName')
-        lastName = request.data.get('lastName')
+        first_name = request.data.get('firstName')
+        last_name = request.data.get('lastName')
 
         if not username or not password or not email:
             return Response({'error': 'All fields are required'}, status=status.HTTP_400_BAD_REQUEST)
@@ -78,7 +81,7 @@ class RegisterUserView(APIView):
             return Response({'error': 'Invalid email address'}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            user = User.create_user(username=username, email=email, password=password, firstName=firstName, lastName=lastName)
+            User.create_user(username=username, email=email, password=password, firstName=first_name, lastName=last_name)
             return Response({'message': 'User registered successfully'}, status=status.HTTP_201_CREATED)
         except MongoValidationError as e:
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
@@ -124,7 +127,7 @@ def send_otp(request):
         email = data.get('email') or request.POST.get('email')
         purpose = data.get('purpose') or request.POST.get('purpose') or 'register'
         if email:
-            otp = send_otp_email(email, purpose)
+            send_otp_email(email, purpose)
             return JsonResponse({'success': True, 'message': 'OTP sent successfully.'})
         return JsonResponse({'success': False, 'message': 'Email is required.'})
     return JsonResponse({'success': False, 'message': 'Invalid request method.'})
@@ -132,32 +135,31 @@ def send_otp(request):
 
 @csrf_exempt
 def validate_otp(request):
-    if request.method == 'POST':
-        try:
-            if request.body:
-                data = json.loads(request.body.decode('utf-8'))
-        except Exception:
-            data = request.POST
-        email = data.get('email') or request.POST.get('email')
-        otp = data.get('otp') or request.POST.get('otp')
-        purpose = data.get('purpose') or request.POST.get('purpose')
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': 'Invalid request method.'})
 
-        if not email or not otp or not purpose:
-            return JsonResponse({'success': False, 'message': 'Email, OTP, and purpose are required.'})
+    try:
+        data = json.loads(request.body.decode('utf-8')) if request.body else request.POST
+    except Exception:
+        data = request.POST
 
-        otp_record = EmailOTP.objects(user=email, purpose=purpose, is_used=False).first()
+    email = data.get('email')
+    otp = data.get('otp')
+    purpose = data.get('purpose')
 
-        if not otp_record:
-            return JsonResponse({'success': False, 'message': 'No OTP found for this email and purpose. Please request a new one.'})
+    if not all([email, otp, purpose]):
+        return JsonResponse({'success': False, 'message': 'Email, OTP, and purpose are required.'})
 
-        if otp_record.otp == str(otp):
-            otp_record.is_used = True
-            otp_record.save()
-            return JsonResponse({'success': True, 'message': 'OTP validated successfully.'})
-        else:
-            return JsonResponse({'success': False, 'message': 'Invalid OTP.'})
+    otp_record = EmailOTP.objects(user=email, purpose=purpose, is_used=False).first()
+    if not otp_record:
+        return JsonResponse({'success': False, 'message': 'No OTP found for this email and purpose. Please request a new one.'})
 
-    return JsonResponse({'success': False, 'message': 'Invalid request method.'})
+    if otp_record.otp != str(otp):
+        return JsonResponse({'success': False, 'message': 'Invalid OTP.'})
+
+    otp_record.is_used = True
+    otp_record.save()
+    return JsonResponse({'success': True, 'message': 'OTP validated successfully.'})
 
 @api_view(['POST'])
 def validate_user(request):
@@ -189,27 +191,22 @@ class ForgotPasswordRequestView(APIView):
         try:
             send_otp_email(email, purpose='password_reset')
             return Response({'message': 'OTP sent to email if account exists.'}, status=status.HTTP_200_OK)
-        except Exception as e:
+        except Exception:
             return Response({'error': 'Failed to send OTP.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class ResetPasswordView(APIView):
     def post(self, request):
         email = request.data.get('email')
-        otp = request.data.get('otp')
         new_password = request.data.get('new_password')
 
-        if not email or not otp or not new_password:
-            return Response({'error': 'Email, OTP and new password are required.'}, status=status.HTTP_400_BAD_REQUEST)
+        if not email or not new_password:
+            return Response({'error': 'Email and new password are required.'}, status=status.HTTP_400_BAD_REQUEST)
 
         otp_record = EmailOTP.objects(user=email, purpose='password_reset', is_used=True).first()
 
         if not otp_record:
-            all_otps = EmailOTP.objects(user=email, purpose='password_reset')
             return Response({'error': 'No OTP found or OTP expired.'}, status=status.HTTP_400_BAD_REQUEST)
-
-        if otp_record.otp != str(otp):
-            return Response({'error': 'Invalid OTP.'}, status=status.HTTP_400_BAD_REQUEST)
 
         user = User.objects(email=email).first()
         if not user:
@@ -221,8 +218,8 @@ class ResetPasswordView(APIView):
             otp_record.is_used = True  
             otp_record.save()
             return Response({'message': 'Password reset successful.'}, status=status.HTTP_200_OK)
-        except Exception as e:
-            return Response({'error': 'Server error: ' + str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        except Exception:
+            return Response({'error': 'Server error'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 class IdentifyUserView(APIView):
     def get(self, request):
@@ -245,8 +242,7 @@ class IdentifyUserView(APIView):
                 'date_joined': date_joined.isoformat() if date_joined else None,
             }
         }, status=status.HTTP_200_OK)
-
-
+    
 class UserListView(APIView):
     def get(self, request):
         user, error_response = _get_authenticated_user(request)
@@ -282,42 +278,100 @@ class UserListView(APIView):
 
         return Response({'users': data}, status=status.HTTP_200_OK)
 
-
-class UpdateProfileView(APIView):
-    def patch(self, request):
+class UserByUsernameView(APIView):
+    def get(self, request):
         user, error_response = _get_authenticated_user(request)
         if error_response:
             return error_response
 
-        first_name = request.data.get('first_name')
-        last_name = request.data.get('last_name')
+        username = request.query_params.get('username', '').strip()
+        if not username:
+            return Response({'error': 'Username parameter is required'}, status=status.HTTP_400_BAD_REQUEST)
 
-        updated = False
+        try:
+            user_obj = User.objects(username=username).first()
+            if not user_obj:
+                return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
 
-        if first_name is not None:
-            if not isinstance(first_name, str):
-                return Response({'error': 'First name must be a string.'}, status=status.HTTP_400_BAD_REQUEST)
-            user.firstName = first_name.strip()
-            updated = True
-
-        if last_name is not None:
-            if not isinstance(last_name, str):
-                return Response({'error': 'Last name must be a string.'}, status=status.HTTP_400_BAD_REQUEST)
-            user.lastName = last_name.strip()
-            updated = True
-
-        if not updated:
-            return Response({'message': 'No changes provided.'}, status=status.HTTP_200_OK)
-
-        user.save()
-
-        return Response({
-            'message': 'Profile updated successfully.',
-            'user': {
-                'id': str(user.id),
-                'username': user.username,
-                'email': user.email,
-                'first_name': getattr(user, 'firstName', ''),
-                'last_name': getattr(user, 'lastName', '')
+            data = {
+                'id': str(user_obj.id),
+                'username': user_obj.username,
+                'email': user_obj.email,
+                'first_name': getattr(user_obj, 'firstName', ''),
+                'last_name': getattr(user_obj, 'lastName', '')
             }
-        }, status=status.HTTP_200_OK)
+            return Response({'user': data}, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({'error': 'Server error: ' + str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+class GoogleAuthView(APIView):
+    """Authenticate a user via Google/Firebase ID token."""
+    
+    def post(self, request):
+        id_token = request.data.get('id_token')
+        if not id_token:
+            return Response({'error': 'id_token is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            # Initialize Firebase app once (idempotent)
+            if not firebase_admin._apps:
+                firebase_admin.initialize_app()
+
+            # Verify the Firebase ID token
+            decoded_token = firebase_auth.verify_id_token(id_token)
+            email = decoded_token.get('email')
+
+            if not email:
+                return Response({'error': 'Email not found in token'}, status=status.HTTP_400_BAD_REQUEST)
+
+            user = User.objects(email=email).first()
+            if not user:
+                user = User.create_user(username=email.split('@')[0], email=email, password=secrets.token_urlsafe())
+
+            token = User.generate_token(user.id)
+            return Response({'message': 'Login successful', 'token': token}, status=status.HTTP_200_OK)
+        except firebase_auth.InvalidIdTokenError:
+            return Response({'error': 'Invalid ID token'}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception:
+            return Response({'error': 'Server error'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+class UpdateProfileView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def put(self, request):
+        user, error_response = _get_authenticated_user(request)
+        if error_response:
+            return error_response
+
+        data = request.data
+        first_name = data.get('first_name', '').strip()
+        last_name = data.get('last_name', '').strip()
+        email = data.get('email', '').strip()
+
+        if email:
+            try:
+                validate_email(email)
+            except DjangoValidationError:
+                return Response({'error': 'Invalid email address'}, status=status.HTTP_400_BAD_REQUEST)
+
+            if User.objects(email=email).exclude(id=user.id).first():
+                return Response({'error': 'Email already in use by another account'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            user.firstName = first_name or user.firstName
+            user.lastName = last_name or user.lastName
+            user.email = email or user.email
+            user.save()
+
+            return Response({
+                'message': 'Profile updated successfully',
+                'user': {
+                    'id': str(user.id),
+                    'username': user.username,
+                    'email': user.email,
+                    'first_name': user.firstName,
+                    'last_name': user.lastName
+                }
+            }, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({'error': 'Failed to update profile: ' + str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
