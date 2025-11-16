@@ -470,5 +470,3 @@ class searchuser(APIView):
         for user in matched_users:
             result[str(user.id)] = user.username
         return Response({'results': result}, status=status.HTTP_200_OK)
-
-# The ProjectCreate class that was here has been removed.
