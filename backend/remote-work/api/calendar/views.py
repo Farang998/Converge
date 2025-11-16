@@ -5,6 +5,14 @@ from rest_framework import status
 from django.conf import settings
 from urllib.parse import urlencode
 from .google_service import get_calendar_events
+import dotenv
+import os
+
+dotenv.load_dotenv()
+
+GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
+GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET")
+GOOGLE_REDIRECT_URI = os.getenv("GOOGLE_REDIRECT_URI")
 
 class GoogleAuthInitView(APIView):
     def get(self, request):
@@ -13,18 +21,20 @@ class GoogleAuthInitView(APIView):
             return Response({"error": "Missing Authorization header"}, status=401)
 
         token = auth_header.split(" ")[1]
+        print("REDIRECT:", GOOGLE_REDIRECT_URI)
 
         params = {
-            "client_id": settings.GOOGLE_CLIENT_ID,
-            "redirect_uri": settings.GOOGLE_REDIRECT_URI,
+            "client_id": GOOGLE_CLIENT_ID,
+            "redirect_uri": GOOGLE_REDIRECT_URI,
             "response_type": "code",
             "scope": "https://www.googleapis.com/auth/calendar",
             "access_type": "offline",
             "prompt": "consent",
-            "state": "e90e6ab44cc21cff4f6c3e092360cb06",  # <-- IMPORTANT!
+            "state": token,
         }
 
         url = f"https://accounts.google.com/o/oauth2/v2/auth?{urlencode(params)}"
+        print("AUTH_URL:", url)
         return Response({"auth_url": url})
 
 import requests
@@ -50,11 +60,11 @@ class GoogleAuthCallbackView(APIView):
         if not user:
             return Response({"error": "Invalid or expired Converge token"}, status=401)
         data = {
-            "client_id": settings.GOOGLE_CLIENT_ID,
-            "client_secret": settings.GOOGLE_CLIENT_SECRET,
+            "client_id": GOOGLE_CLIENT_ID,
+            "client_secret": GOOGLE_CLIENT_SECRET,
             "code": code,
             "grant_type": "authorization_code",
-            "redirect_uri": settings.GOOGLE_REDIRECT_URI,
+            "redirect_uri": GOOGLE_REDIRECT_URI,
         }
 
         token_info = requests.post("https://oauth2.googleapis.com/token", data=data).json()

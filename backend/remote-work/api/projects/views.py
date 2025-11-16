@@ -48,6 +48,7 @@ class ProjectViewSet(viewsets.ViewSet):
             raise AuthenticationFailed(ERROR_INVALID_TOKEN)
         return user
 
+
     def list(self, request):
         """
         Lists projects where the authenticated user is the leader or an accepted member.
@@ -334,7 +335,73 @@ class ProjectViewSet(viewsets.ViewSet):
 
         return Response({'message': f'Successfully removed {len(members_to_remove)} member(s).'}, status=status.HTTP_200_OK)
 
+    from rest_framework.decorators import action
+    from ..calendar.models import GoogleCredentials
+    from ..calendar.google_service import create_project_calendar, create_event
+    from datetime import timedelta
 
+    @action(detail=True, methods=['post'])
+    def create_calendar(self, request, pk=None):
+        """
+        Creates a Google Calendar for a project *after* asking user confirmation.
+        URL: POST /api/projects/<project_id>/create_calendar/
+        """
+        # 1. Authenticate
+        try:
+            user = self._authenticate_user(request)
+        except AuthenticationFailed as e:
+            return Response({'error': str(e)}, status=status.HTTP_401_UNAUTHORIZED)
+
+        # 2. Fetch project
+        try:
+            project = Project.objects.get(id=pk)
+        except Project.DoesNotExist:
+            return Response({'error': 'Project not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        # 3. Only team leader can create calendar
+        if project.team_leader != user:
+            return Response(
+                {'error': 'Only the team leader can create a calendar for this project.'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        # 4. Reject if project already has calendar
+        if getattr(project, 'calendar_id', None):
+            return Response({'message': 'Calendar already exists for this project.', 'calendar_id': project.calendar_id},
+                            status=status.HTTP_200_OK)
+
+        # 5. Retrieve the user's Google credentials
+        credentials = GoogleCredentials.objects(user=user).first()
+        if not credentials:
+            return Response({'error': 'Google Calendar not connected'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # 6. Create Google Calendar
+        calendar_id = create_project_calendar(credentials, project.name)
+        if not calendar_id:
+            return Response({'error': 'Failed to create Google Calendar.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        project.calendar_id = calendar_id
+        project.save()
+
+        # OPTIONAL: Create an initial event marking project creation
+        try:
+            created_start = project.created_at.isoformat()
+            created_end = (project.created_at + timedelta(minutes=30)).isoformat()
+
+            create_event(credentials, calendar_id, {
+                "summary": f"Project Created: {project.name}",
+                "description": project.description or "",
+                "start": created_start,
+                "end": created_end,
+                "task_id": None
+            })
+        except Exception as e:
+            print(f"Failed to create initial event: {e}")
+
+        return Response({
+            'message': 'Project calendar created successfully.',
+            'calendar_id': calendar_id
+        }, status=status.HTTP_201_CREATED)
 
 class AcceptInvitation(APIView):
     """
@@ -404,95 +471,4 @@ class searchuser(APIView):
             result[str(user.id)] = user.username
         return Response({'results': result}, status=status.HTTP_200_OK)
 
-class ProjectCreate(APIView):
-    """
-    API view to handle project creation.
-    """
-
-    def _authenticate_user(self, request):
-        auth_header = request.headers.get('Authorization')
-        if not auth_header:
-            raise AuthenticationFailed(ERROR_AUTH_HEADER_MISSING)
-        
-        try:
-            token = auth_header.split(' ')[1]
-        except IndexError:
-            raise AuthenticationFailed(ERROR_INVALID_AUTH_HEADER)
-        
-        user = User.validate_token(token)
-        if not user:
-            raise AuthenticationFailed(ERROR_INVALID_TOKEN)
-        return user
-
-    def post(self, request):
-        try:
-            user = self._authenticate_user(request)
-        except AuthenticationFailed as e:
-            return Response({'error': str(e)}, status=status.HTTP_401_UNAUTHORIZED)
-
-        data = request.data
-        name = data.get('name')
-        if not name or name.strip() == '':
-            return Response({'error': 'Name is required and cannot be empty'}, status=status.HTTP_400_BAD_REQUEST)
-
-        team_members_invited = data.get('team_members', [])
-        team_members_db = []
-        invited_users = []
-
-        for username in team_members_invited:
-            try:
-                invited_user = User.objects.get(username=username)
-                team_members_db.append({'user': str(invited_user.id), 'accepted': False})
-                invited_users.append(invited_user)
-            except User.DoesNotExist:
-                # Skip invalid usernames
-                continue
-
-        try:
-            project = Project(
-                name=name,
-                description=data.get('description', ''),
-                team_leader=user,
-                project_type=data.get('project_type', 'development'),
-                team_members=team_members_db
-            )
-            project.save()
-            project_id = str(project.id)
-
-            # Send notifications
-            credentials = GoogleCredentials.objects(user=user).first()
-            if credentials:
-                calendar_id = create_project_calendar(credentials, name)
-                project.calendar_id = calendar_id
-                project.save()
-
-
-            try:
-                for invited_user in invited_users:
-                    Notification(
-                        user=invited_user,
-                        message=f"You have been invited to join the project '{name}'.",
-                        link_url=f"/projects/{project_id}"
-                    ).save()
-            except Exception as e:
-                print(f"Error creating notifications: {e}")
-
-            # Send email invitations in the background
-            threading.Thread(target=send_invitations_background, args=([str(u.id) for u in invited_users], name, project_id)).start()
-
-            chat_api_url = "http://localhost:8000/api/chats/create/"
-            chat_payload = {
-                "name" : name,
-                "admin" : str(user.id),
-                "participants" : [str(u.id) for u in invited_users]
-            }
-
-            try:
-                chat_response = requests.post(chat_api_url, json=chat_payload)
-                if chat_response.status_code != 201:
-                    print(f"Failed to create chat for project {name}: {chat_response.text}")
-            except Exception as e:
-                print(f"Error while creating chat for project {name}: {e}")
-            return Response({'message': 'Project created successfully', 'project_id': project_id}, status=status.HTTP_201_CREATED)
-        except MongoValidationError as e:
-            return Response({'error': f'Validation error: {e}'}, status=status.HTTP_400_BAD_REQUEST)
+# The ProjectCreate class that was here has been removed.
