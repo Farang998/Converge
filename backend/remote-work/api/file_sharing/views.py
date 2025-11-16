@@ -1,0 +1,254 @@
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status
+from rest_framework.exceptions import AuthenticationFailed
+from mongoengine.errors import DoesNotExist, ValidationError as MongoValidationError
+import boto3
+from botocore.exceptions import ClientError
+from django.conf import settings
+import os
+import uuid
+from datetime import timedelta
+
+from ..auth.models import User
+from ..projects.models import Project
+from .models import File
+
+# Error constants
+ERROR_AUTH_HEADER_MISSING = 'Authorization header missing'
+ERROR_INVALID_AUTH_HEADER = 'Invalid authorization header format'
+ERROR_INVALID_TOKEN = 'Invalid or expired token'
+MAX_FILE_SIZE = 5 * 1024 * 1024  # 5 MB in bytes
+
+
+def _authenticate_user(request):
+    """Helper to authenticate user from Authorization header."""
+    auth_header = request.headers.get('Authorization')
+    if not auth_header:
+        raise AuthenticationFailed(ERROR_AUTH_HEADER_MISSING)
+    
+    try:
+        # Support both "Token <token>" and "Bearer <token>" formats
+        parts = auth_header.split(' ')
+        if len(parts) != 2:
+            raise AuthenticationFailed(ERROR_INVALID_AUTH_HEADER)
+        token = parts[1]
+    except IndexError:
+        raise AuthenticationFailed(ERROR_INVALID_AUTH_HEADER)
+    
+    user = User.validate_token(token)
+    if not user:
+        raise AuthenticationFailed(ERROR_INVALID_TOKEN)
+    return user
+
+
+def _check_project_access(user, project):
+    """Check if user has access to the project (leader or accepted member)."""
+    # Check if user is the team leader
+    if project.team_leader == user:
+        return True
+    
+    # Check if user is an accepted team member
+    user_id_str = str(user.id)
+    for member in project.team_members:
+        if member.get('user') == user_id_str and member.get('accepted', False):
+            return True
+    
+    return False
+
+
+
+
+class FileUploadView(APIView):
+    """
+    Handle file uploads.
+    POST /api/file_sharing/upload/
+    """
+    
+    def post(self, request):
+        try:
+            user = _authenticate_user(request)
+        except AuthenticationFailed as e:
+            return Response({'error': str(e)}, status=status.HTTP_401_UNAUTHORIZED)
+        
+        # Get project_id from request
+        project_id = request.data.get('project_id')
+        if not project_id:
+            return Response({'error': 'project_id is required'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Get file from request
+        if 'file' not in request.FILES:
+            return Response({'error': 'No file provided'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        uploaded_file = request.FILES['file']
+        
+        # Validate file size (5 MB limit)
+        if uploaded_file.size > MAX_FILE_SIZE:
+            return Response({
+                'error': f'File size exceeds 5 MB limit. File size: {uploaded_file.size / (1024*1024):.2f} MB'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Get project and verify access
+        try:
+            project = Project.objects.get(id=project_id)
+        except (DoesNotExist, MongoValidationError):
+            return Response({'error': 'Project not found'}, status=status.HTTP_404_NOT_FOUND)
+        
+        # Verify user has access to project (can upload)
+        if not _check_project_access(user, project):
+            return Response({
+                'error': 'You do not have access to this project'
+            }, status=status.HTTP_403_FORBIDDEN)
+        
+        # Check if file with same name already exists in this project
+        existing_file = File.objects(project=project, name=uploaded_file.name).first()
+        if existing_file:
+            return Response({
+                'error': f'A file with the name "{uploaded_file.name}" already exists in this project. Please rename the file or delete the existing one.'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Generate unique S3 key
+        file_extension = os.path.splitext(uploaded_file.name)[1]
+        unique_filename = f"{uuid.uuid4()}{file_extension}"
+        s3_key = f"files/{project_id}/{unique_filename}"
+        
+        # Upload to S3
+        try:
+            s3_client = _get_s3_client()
+            bucket_name = settings.AWS_STORAGE_BUCKET_NAME
+            if not bucket_name:
+                return Response({
+                    'error': 'AWS S3 bucket is not configured. Please set AWS_STORAGE_BUCKET_NAME in environment variables.'
+                }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            
+            s3_client.upload_fileobj(
+                uploaded_file,
+                bucket_name,
+                s3_key,
+                ExtraArgs={'ContentType': uploaded_file.content_type or 'application/octet-stream'}
+            )
+        except ValueError as e:
+            # AWS configuration error
+            return Response({
+                'error': f'AWS configuration error: {str(e)}. Please configure AWS credentials in environment variables.'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        except ClientError as e:
+            return Response({
+                'error': f'Failed to upload file to S3: {str(e)}'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        except Exception as e:
+            return Response({
+                'error': f'Unexpected error during file upload: {str(e)}'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+        # Save file metadata to database
+        try:
+            file_obj = File(
+                name=uploaded_file.name,
+                s3_key=s3_key,
+                file_size=uploaded_file.size,
+                content_type=uploaded_file.content_type,
+                uploaded_by=user,
+                project=project
+            )
+            file_obj.save()
+        except Exception as e:
+            # If database save fails, try to delete from S3
+            try:
+                s3_client.delete_object(
+                    Bucket=settings.AWS_STORAGE_BUCKET_NAME,
+                    Key=s3_key
+                )
+            except:
+                pass
+            return Response({
+                'error': f'Failed to save file metadata: {str(e)}'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+        # Get project participants (leader + accepted members)
+        participants = []
+        participants.append({
+            'user_id': str(project.team_leader.id),
+            'username': project.team_leader.username
+        })
+        for member in project.team_members:
+            if member.get('accepted', False):
+                try:
+                    member_user = User.objects.get(id=member['user'])
+                    participants.append({
+                        'user_id': str(member_user.id),
+                        'username': member_user.username
+                    })
+                except User.DoesNotExist:
+                    pass
+        
+        return Response({
+            'message': 'File uploaded successfully',
+            'file_id': str(file_obj.id),
+            'file_name': file_obj.name,
+            'file_size': file_obj.file_size,
+            'uploaded_by': {
+                'user_id': str(user.id),
+                'username': user.username
+            },
+            'project_id': str(project.id),
+            'project_name': project.name,
+            's3_path': s3_key,
+            'participants_with_access': participants,
+            'uploaded_at': file_obj.uploaded_at.isoformat()
+        }, status=status.HTTP_201_CREATED)
+
+
+
+class FileDeleteView(APIView):
+    """
+    Delete a file.
+    DELETE /api/file_sharing/delete/<file_id>/
+    """
+    
+    def delete(self, request, file_id):
+        try:
+            user = _authenticate_user(request)
+        except AuthenticationFailed as e:
+            return Response({'error': str(e)}, status=status.HTTP_401_UNAUTHORIZED)
+        
+        # Get file
+        try:
+            file_obj = File.objects.get(id=file_id)
+        except (DoesNotExist, MongoValidationError):
+            return Response({'error': 'File not found'}, status=status.HTTP_404_NOT_FOUND)
+        
+        # Verify user is the one who uploaded the file
+        if file_obj.uploaded_by != user:
+            return Response({
+                'error': 'You can only delete files that you uploaded'
+            }, status=status.HTTP_403_FORBIDDEN)
+        
+        # Delete from S3
+        try:
+            s3_client = _get_s3_client()
+            bucket_name = settings.AWS_STORAGE_BUCKET_NAME
+            if bucket_name:
+                try:
+                    s3_client.delete_object(
+                        Bucket=bucket_name,
+                        Key=file_obj.s3_key
+                    )
+                except ClientError as e:
+                    # Log error but continue with database deletion
+                    print(f'Warning: Failed to delete file from S3: {str(e)}')
+        except ValueError:
+            # AWS not configured, but still delete from database
+            pass
+        except Exception as e:
+            # Log error but continue with database deletion
+            print(f'Warning: Error deleting from S3: {str(e)}')
+        
+        # Delete from database
+        file_name = file_obj.name
+        file_obj.delete()
+        
+        return Response({
+            'message': f'File "{file_name}" deleted successfully'
+        }, status=status.HTTP_200_OK)
+

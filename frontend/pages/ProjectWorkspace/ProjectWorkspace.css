@@ -554,6 +554,17 @@ body {
 /* file actions (small ghost buttons) */
 .file-card .btn { padding:6px 10px; border-radius:8px; background: var(--bg); border: 1px solid var(--border); color: #475569; }
 .file-card .btn:hover { background: #eef2f6; }
+.file-card .btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+/* Spinner animation */
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+.spinner {
+  animation: spin 1s linear infinite;
+  display: inline-block;
+}
 
 
 /* -------------------------
