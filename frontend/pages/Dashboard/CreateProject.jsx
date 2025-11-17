@@ -111,7 +111,7 @@ const CreateProject = ({ onClose, isModal = false }) => {
 
     // submit to backend
     try {
-      const res = await fetch('http://localhost:8000/api/projects/create/', {
+      const res = await fetch('http://localhost:8000/api/projects/', {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',

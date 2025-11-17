@@ -11,8 +11,6 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
 from pathlib import Path
-from dotenv import load_dotenv
-import os
 import os
 from datetime import timedelta
 import ssl
@@ -25,7 +23,6 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Load .env file from the same directory as settings.py
 env_path = BASE_DIR / '.env'
 load_dotenv(dotenv_path=env_path)
-
 
 
 # Quick-start development settings - unsuitable for production
@@ -165,7 +162,12 @@ AUTHENTICATION_BACKENDS = [
     'api.auth_backend.MongoEngineBackend',
 ]
 
-APP_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD') or os.getenv('APP_PASSWORD')
+# Gmail App Password Configuration
+# IMPORTANT: Gmail App Passwords are ALWAYS exactly 16 characters (no spaces)
+# Generate one at: https://myaccount.google.com/apppasswords
+# Select "Mail" and "Other (Custom name)" -> Enter "Converge App"
+APP_PASSWORD = os.getenv("GMAIL_APP_PASSWORD", "your-16-char-app-password-here")  # Set in .env file for security
+
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
