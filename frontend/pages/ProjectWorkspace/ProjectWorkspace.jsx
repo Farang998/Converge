@@ -196,7 +196,7 @@ export default function ProjectWorkspace() {
           <main className="pw-main">
             {activeView === 'overview' && <OverviewView project={project} tasks={tasks} files={files} activity={activity} onCreateTask={createTask} />}
             {activeView === 'tasks' && <TasksView tasks={tasks} toggleTaskStatus={toggleTaskStatus} selectTask={setSelectedTask} />}
-            {activeView === 'files' && <FilesView files={files} onUpload={uploadFile} />}
+            {activeView === 'files' && <FilesView projectId={projectId} />}
             {activeView === 'activity' && <ActivityView activity={activity} />}
 
             {activeView === 'timeline' && (
