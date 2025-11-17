@@ -13,6 +13,7 @@ import Notifications from './pages/Notifications'
 import Calendar from './pages/Calendar'
 import CreateProject from '../pages/Dashboard/CreateProject'
 import ProjectWorkspace from '../pages/ProjectWorkspace/ProjectWorkspace'
+import FileSharing from './pages/FileSharing/FileSharing'
 import Conversation from './pages/Conversation'
 import IndividualChat from './pages/IndividualChat'
 
@@ -32,6 +33,7 @@ function AppRoutes() {
         <Route path="/dashboard" element={isAuthenticated ? <Dashboard /> : <Navigate to="/login" replace />} />
         <Route path="/projects/create" element={isAuthenticated ? <CreateProject /> : <Navigate to="/login" replace />} />
         <Route path="/projects/:projectId" element={isAuthenticated ? <ProjectWorkspace /> : <Navigate to="/login" replace />} />
+        <Route path="/projects/:projectId/files" element={isAuthenticated ? <FileSharing /> : <Navigate to="/login" replace />} />
         <Route path="/accept-invitation/:projectId" element={<AcceptInvitation />} />
         <Route path="/notifications" element={isAuthenticated ? <Notifications /> : <Navigate to="/login" replace />} />
         <Route path="/calendar" element={isAuthenticated ? <Calendar /> : <Navigate to="/login" replace />} />

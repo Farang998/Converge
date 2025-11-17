@@ -11,7 +11,8 @@ const api = axios.create({
 // Initialize auth header from localStorage if present
 const token = typeof window !== "undefined" ? localStorage.getItem("authToken") : null;
 if (token) {
-  api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+  // Backend accepts both "Token" and "Bearer" format
+  api.defaults.headers.common["Authorization"] = `Token ${token}`;
 }
 
 // Simple request logger and ensure base is used
@@ -43,8 +44,8 @@ api.interceptors.response.use((response) => {
 export function setAuthToken(newToken) {
   if (newToken) {
     localStorage.setItem('authToken', newToken);
-    // backend expects 'Bearer <token>' in Authorization header
-    api.defaults.headers.common['Authorization'] = `Bearer ${newToken}`;
+    // backend expects 'Token <token>' in Authorization header
+    api.defaults.headers.common['Authorization'] = `Token ${newToken}`;
   } else {
     localStorage.removeItem("authToken");
     delete api.defaults.headers.common["Authorization"];
