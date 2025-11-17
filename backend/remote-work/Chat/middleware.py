@@ -1,17 +1,28 @@
 from urllib.parse import parse_qs
-from rest_framework_simplejwt.tokens import AccessToken
 from channels.middleware import BaseMiddleware
-from django.contrib.auth.models import AnonymousUser, User
+from django.contrib.auth.models import AnonymousUser
 from asgiref.sync import sync_to_async
+from api.auth.models import User  # MongoEngine User
 
 @sync_to_async
 def get_user_from_token(token):
+    """
+    Validate JWT token and return MongoEngine User.
+    Uses User.validate_token() which handles JWT validation.
+    """
     try:
-        valid_token = AccessToken(token)
-        user_id = valid_token['user_id']
-        return User.objects.get(id=user_id)
+        if not token:
+            return AnonymousUser()
+        
+        # Use MongoEngine User's validate_token method
+        user = User.validate_token(token)
+        if user:
+            return user
+        else:
+            print(f"JWT Authentication failed: Invalid or expired token")
+            return AnonymousUser()
     except Exception as e:
-        print(f"JWT Authentication failed: {e}")
+        print(f"JWT Authentication error: {e}")
         return AnonymousUser()
 
 class JWTAuthMiddleware(BaseMiddleware):

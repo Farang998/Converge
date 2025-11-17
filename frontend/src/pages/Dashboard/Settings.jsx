@@ -102,7 +102,10 @@ export default function Settings() {
     return (
       <div className="settings-page">
         <div className="settings-card">
-          <p>Loading settings...</p>
+          <div className="loading-state">
+            <div className="loading-spinner"></div>
+            <p>Loading settings...</p>
+          </div>
         </div>
       </div>
     );

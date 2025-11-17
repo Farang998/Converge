@@ -3,14 +3,22 @@ import requests
 from django.conf import settings
 from datetime import datetime, timedelta
 from .models import GoogleCredentials
+import os
+import dotenv
+
+dotenv.load_dotenv()
+
+GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
+GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET")
+
 
 GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
 GOOGLE_CALENDAR_API = "https://www.googleapis.com/calendar/v3"
 
 def refresh_access_token(credentials: GoogleCredentials):
     data = {
-        "client_id": settings.GOOGLE_CLIENT_ID,
-        "client_secret": settings.GOOGLE_CLIENT_SECRET,
+        "client_id": GOOGLE_CLIENT_ID,
+        "client_secret": GOOGLE_CLIENT_SECRET,
         "refresh_token": credentials.refresh_token,
         "grant_type": "refresh_token",
     }

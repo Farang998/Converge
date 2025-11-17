@@ -9,4 +9,5 @@ urlpatterns = [
     path('tasks/', include('api.tasks.urls')),
     path('calendar/', include('api.calendar.urls')),
     path('file_sharing/', include('api.file_sharing.urls')),
+    path('meetings/', include('api.meetings.urls')),
 ]

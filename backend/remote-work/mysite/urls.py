@@ -16,10 +16,18 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
+from django.conf import settings
+from django.conf.urls.static import static
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    # Chat URLs - most specific patterns come first in Chat/urls.py
+    path('api/chats/', include('Chat.urls')),
+    # Other API URLs
     path('api/', include('api.urls')),
-    path('', include('Chat.urls')),
 ]
+
+# Serve media files during development
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 

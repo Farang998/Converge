@@ -11,26 +11,28 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
 from pathlib import Path
+from dotenv import load_dotenv
+import os
 import os
 from datetime import timedelta
 import ssl
 from mongoengine import connect
-from datetime import timedelta
 from dotenv import load_dotenv
-import os
-
-load_dotenv()
-
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Load .env file from the same directory as settings.py
+env_path = BASE_DIR / '.env'
+load_dotenv(dotenv_path=env_path)
+
 
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.getenv("SECRET_KEY")
+SECRET_KEY = "-0(#n6!6okfzb@0idv0brjmcrinhq^4h(g-@39=ohkau3j5pe@"
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -146,7 +148,7 @@ DATABASES = {
 # MongoDB configuration
 # Support a full MongoDB URI via `MONGO_URI` env var (e.g.
 # mongodb://localhost:27017/). If not provided, fall back to host/port.
-MONGO_URI = os.getenv("MONGO_URI")
+MONGO_URI = 'mongodb+srv://convergework23_db_user:DRPxZfsnHQRCHQ58@cluster0.s0y3bgk.mongodb.net/'
 if MONGO_URI:
     # If a full connection URI is provided, use it.
     connect(db='converge_db', host=MONGO_URI, ssl=True, tlsAllowInvalidCertificates=True)
@@ -163,13 +165,37 @@ AUTHENTICATION_BACKENDS = [
     'api.auth_backend.MongoEngineBackend',
 ]
 
-APP_PASSWORD = "mknw oivj issu ecpb"
+APP_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD') or os.getenv('APP_PASSWORD')
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
-EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER")
+
+# EMAIL_HOST_USER must be set in .env file or as environment variable
+# To set it: Create a .env file in backend/remote-work/ with: EMAIL_HOST_USER=your-email@gmail.com
+# Or set environment variable: $env:EMAIL_HOST_USER="your-email@gmail.com" (PowerShell)
+# IMPORTANT: Replace 'your-email@gmail.com' with the Gmail account that matches APP_PASSWORD
+EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "")  # Empty string if not set
 EMAIL_HOST_PASSWORD = APP_PASSWORD
+DEFAULT_FROM_EMAIL = EMAIL_HOST_USER if EMAIL_HOST_USER else "noreply@converge.com"
+
+# Debug: Print email configuration (only first 3 chars of password for security)
+if DEBUG:
+    print(f"[EMAIL CONFIG] User: {EMAIL_HOST_USER}")
+    print(f"[EMAIL CONFIG] Password length: {len(APP_PASSWORD.replace(' ', ''))} chars")
+    print(f"[EMAIL CONFIG] Password preview: {APP_PASSWORD[:3]}...{APP_PASSWORD[-3:] if len(APP_PASSWORD) > 6 else ''}")
+    print(f"[EMAIL CONFIG] .env file path: {env_path}")
+    print(f"[EMAIL CONFIG] .env file exists: {env_path.exists()}")
+
+# Validate app password length
+if APP_PASSWORD and APP_PASSWORD != "your-16-char-app-password-here" and len(APP_PASSWORD.replace(" ", "")) != 16:
+    import warnings
+    warnings.warn(
+        f"WARNING: APP_PASSWORD should be exactly 16 characters (without spaces). "
+        f"Current length: {len(APP_PASSWORD.replace(' ', ''))} characters. "
+        f"Gmail authentication may fail. Generate a new app password at: "
+        f"https://myaccount.google.com/apppasswords"
+    )
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
 
@@ -210,6 +236,15 @@ EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
 STATIC_URL = 'static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+
+# Media files (User uploaded files)
+# https://docs.djangoproject.com/en/5.2/topics/files/
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
+
+# Create media directories if they don't exist
+os.makedirs(MEDIA_ROOT / 'chat_media', exist_ok=True)
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field

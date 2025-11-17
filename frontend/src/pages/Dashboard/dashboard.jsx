@@ -457,16 +457,32 @@ export default function Dashboard() {
                       <strong>Status:</strong>{" "}
                       <span>{proj.membershipDescription}</span>
                     </p>
-                    <button
-                      className="details-btn"
-                      type="button"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        toggleDetails(proj.id);
-                      }}
-                    >
-                      {proj.showDetails ? "Hide Details" : "View Details"}
-                    </button>
+                    <div className="project-actions">
+                      <button
+                        className="details-btn"
+                        type="button"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          toggleDetails(proj.id);
+                        }}
+                      >
+                        {proj.showDetails ? "Hide Details" : "View Details"}
+                      </button>
+                      <button
+                        className="chat-btn"
+                        type="button"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          navigate(`/chat/${proj.id}`);
+                        }}
+                        title="Open project chat"
+                      >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ marginRight: '6px', verticalAlign: 'middle' }}>
+                          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                        </svg>
+                        Chat
+                      </button>
+                    </div>
                   </div>
 
                   {proj.showDetails && (
