@@ -1,11 +1,25 @@
 # Chat/consumers.py
 import json
+import datetime as _dt
 from channels.generic.websocket import AsyncWebsocketConsumer
 from django.utils import timezone
 from asgiref.sync import sync_to_async
 from api.auth.models import User   # MongoEngine User
 from api.projects.models import Project
 from .models import GroupChat, GroupMessage, IndividualChat, IndividualMessage  # use your Mongo MongoEngine models
+
+def _as_utc_z(dt):
+    if not dt:
+        return None
+    try:
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=_dt.timezone.utc)
+        return dt.astimezone(_dt.timezone.utc).isoformat().replace('+00:00', 'Z')
+    except Exception:
+        try:
+            return dt.isoformat()
+        except Exception:
+            return None
 
 class ChatConsumer(AsyncWebsocketConsumer):
     async def connect(self):
@@ -66,7 +80,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 "sender_id": sender_id,
                 "sender_username": user.username,
                 "content": message_text,
-                "timestamp": msg.timestamp.isoformat(),
+                "timestamp": _as_utc_z(msg.timestamp),
                 "message_id": str(msg.id)
             }
         )
@@ -173,7 +187,7 @@ class ProjectChatConsumer(AsyncWebsocketConsumer):
                     "sender_id": sender_id,
                     "sender_username": self.user.username,
                     "content": content,
-                    "timestamp": msg.timestamp.isoformat()
+                    "timestamp": _as_utc_z(msg.timestamp)
                 }
             )
         except Exception as e:
@@ -336,7 +350,7 @@ class IndividualChatConsumer(AsyncWebsocketConsumer):
                     "sender_id": sender_id,
                     "sender_username": self.user.username,
                     "content": content,
-                    "timestamp": msg.timestamp.isoformat()
+                    "timestamp": _as_utc_z(msg.timestamp)
                 }
             )
         except Exception as e:

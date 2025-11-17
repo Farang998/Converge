@@ -3,7 +3,7 @@ from django.utils import timezone
 from api.auth.models import User
 
 class IndividualChat(Document):
-    # store user ids as strings for simplicity
+    project_id = StringField()  
     participants = ListField(StringField(), required=True)  # ["<user_id>", "<user_id>"]
     created_at = DateTimeField(default=timezone.now)
     meta = {'collection': 'individual_chats'}
@@ -21,10 +21,10 @@ class GroupMessage(Document):
     content = StringField(default='')
     timestamp = DateTimeField(default=timezone.now)
     # Media fields
-    file_url = StringField()  # URL/path to the file
-    file_type = StringField()  # 'image', 'video', 'document', 'audio'
-    file_name = StringField()  # Original filename
-    file_size = IntField()  # File size in bytes
+    file_url = StringField()  
+    file_type = StringField()  
+    file_name = StringField()  
+    file_size = IntField()  
     meta = {'collection': 'group_messages'}
 
 class IndividualMessage(Document):
@@ -33,8 +33,8 @@ class IndividualMessage(Document):
     content = StringField(default='')
     timestamp = DateTimeField(default=timezone.now)
     # Media fields
-    file_url = StringField()  # URL/path to the file
-    file_type = StringField()  # 'image', 'video', 'document', 'audio'
-    file_name = StringField()  # Original filename
-    file_size = IntField()  # File size in bytes
+    file_url = StringField() 
+    file_type = StringField()  
+    file_name = StringField() 
+    file_size = IntField()  
     meta = {'collection': 'individual_messages'}

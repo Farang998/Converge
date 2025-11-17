@@ -394,8 +394,7 @@ class ProjectViewSet(viewsets.ViewSet):
 
         project.calendar_id = calendar_id
         project.save()
-
-        # OPTIONAL: Create an initial event marking project creation
+        
         try:
             created_start = project.created_at.isoformat()
             created_end = (project.created_at + timedelta(minutes=30)).isoformat()

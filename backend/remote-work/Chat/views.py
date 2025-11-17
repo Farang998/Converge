@@ -3,6 +3,7 @@ from rest_framework.views import APIView
 from rest_framework import status
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
+import datetime as _dt
 from django.conf import settings
 from django.core.files.storage import default_storage
 from django.core.files.base import ContentFile
@@ -16,6 +17,20 @@ from api.auth.models import User  # your MongoEngine User with validate_token
 from api.projects.models import Project
 from .models import GroupChat, GroupMessage, IndividualChat, IndividualMessage
 from .serializers import group_chat_public, group_message_public, individual_message_public
+
+def _as_utc_z(dt):
+    """Convert datetime to UTC ISO string with Z suffix"""
+    if not dt:
+        return None
+    try:
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=_dt.timezone.utc)
+        return dt.astimezone(_dt.timezone.utc).isoformat().replace('+00:00', 'Z')
+    except Exception:
+        try:
+            return dt.isoformat()
+        except Exception:
+            return None
 
 def _get_user_from_auth(request):
     auth = request.headers.get("Authorization", "")
@@ -209,7 +224,7 @@ class ProjectTeamMembers(APIView):
 class GetOrCreateIndividualChat(APIView):
     def post(self, request, project_id):
         """
-        Get or create an individual chat with another team member.
+        Get or create an individual chat with another team member scoped to a specific project.
         Request body: {"other_user_id": "<user_id>"}
         """
         user, err = _get_user_from_auth(request)
@@ -248,11 +263,17 @@ class GetOrCreateIndividualChat(APIView):
         except DoesNotExist:
             return Response({"error": "Other user not found"}, status=404)
         
-        # Find or create individual chat
-        existing_chats = IndividualChat.objects(participants__all=[uid, oid])
+        # Find or create individual chat scoped to this project
+        existing_chats = IndividualChat.objects(
+            project_id=project_id,
+            participants__all=[uid, oid]
+        )
         chat = existing_chats.first()
         if not chat:
-            chat = IndividualChat(participants=[uid, oid])
+            chat = IndividualChat(
+                project_id=project_id,
+                participants=[uid, oid]
+            )
             chat.save()
         
         return Response({
@@ -260,7 +281,8 @@ class GetOrCreateIndividualChat(APIView):
             "other_user": {
                 "id": oid,
                 "username": other_user.username
-            }
+            },
+            "project_id": project_id
         }, status=200)
 
 class IndividualChatMessages(APIView):
