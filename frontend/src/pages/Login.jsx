@@ -126,78 +126,76 @@ export default function Login() {
     }
   }, [googleLoaded]);
 
-
   return (
-    <div className="container" id="authContainer">
-      <div className="logo">
-        <img src="logo.png" alt="logo" />
-        <span className="brand">
-          <span className="green">C</span>
-          <span className="blue">o</span>
-          <span className="green">n</span>
-          <span className="blue">v</span>
-          <span className="green">e</span>
-          <span className="blue">r</span>
-          <span className="green">g</span>
-          <span className="blue">e</span>
-        </span>
+    <div className="loginpage">
+      <div className="auth-card">
+        <div className="left">
+          <div className="logo">
+            <img src="logo.png" alt="logo" />
+            <span className="brand">
+              <span className="green">C</span>
+              <span className="blue">o</span>
+              <span className="green">n</span>
+              <span className="blue">v</span>
+              <span className="green">e</span>
+              <span className="blue">r</span>
+              <span className="green">g</span>
+              <span className="blue">e</span>
+            </span>
+          </div>
+
+          <p className="subtitle">The all-in-one remote work collaboration platform</p>
+
+          <form id="loginForm" onSubmit={handleSubmit} className="login-form">
+            <div className="form-title">Login to your account</div>
+
+            <label htmlFor="loginIdentifier">Email or Username</label>
+            <input
+              type="text"
+              id="loginIdentifier"
+              name="loginIdentifier"
+              placeholder="you@example.com or Username"
+              value={form.loginIdentifier}
+              onChange={handleChange}
+              required
+            />
+
+            <label htmlFor="loginPassword">Password</label>
+            <input
+              type="password"
+              id="loginPassword"
+              name="loginPassword"
+              value={form.loginPassword}
+              onChange={handleChange}
+              required
+            />
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+              <button type="button" className="forgot-inline" onClick={() => navigate('/forgot-password')}>Forgot password?</button>
+            </div>
+
+            <button type="submit" className="primary-btn">Log In</button>
+
+            <div className="divider"><span>or</span></div>
+
+            <div id="googleSignInButton" className="google-container"></div>
+
+            {error && <div className="msg error">{error}</div>}
+            {success && <div className="msg success">{success}</div>}
+
+            <div className="register-line">
+              <span className="register-text">Don't have an account?</span>
+              <button type="button" className="tab cta" onClick={() => navigate('/register')}>CREATE ONE NOW</button>
+            </div>
+          </form>
+
+          <ToastContainer />
+        </div>
+
+        <div className="right" aria-hidden="true">
+          <div className="art"></div>
+        </div>
       </div>
-      <p className="subtitle">The all-in-one remote work collaboration platform</p>
-      <form id="loginForm" onSubmit={handleSubmit}>
-        <div className="form-title">Login to your account</div>
-        <label htmlFor="loginIdentifier">Email or Username</label>
-        <input
-          type="text"
-          id="loginIdentifier"
-          name="loginIdentifier"
-          placeholder="naitik@example.com or Naitik"
-          value={form.loginIdentifier}
-          onChange={handleChange}
-          required
-        />
-        <label htmlFor="loginPassword">Password</label>
-        <input
-          type="password"
-          id="loginPassword"
-          name="loginPassword"
-          value={form.loginPassword}
-          onChange={handleChange}
-          required
-        />
-        <button type="submit">Login</button>
-        
-        {}
-        <div 
-          id="googleSignInButton" 
-          style={{ 
-            marginTop: '0.75rem', 
-            display: 'flex', 
-            justifyContent: 'center' 
-          }}
-        ></div>
-        
-        {error && <div style={{ color: 'red', marginTop: '1rem' }}>{error}</div>}
-        {success && <div style={{ color: 'green', marginTop: '1rem' }}>{success}</div>}
-      </form>
-      {/* Toast container for login notifications */}
-      <ToastContainer />
-      <button
-        type="button"
-        className="tab"
-        style={{ marginTop: '1rem' }}
-        onClick={() => navigate('/forgot-password')}
-      >
-        Forgot password?
-      </button>
-      <button
-        type="button"
-        className="tab"
-        style={{ marginTop: '1rem' }}
-        onClick={() => navigate('/register')}
-      >
-        If you don't have an account, Register
-      </button>
-      
     </div>
   );
 }
