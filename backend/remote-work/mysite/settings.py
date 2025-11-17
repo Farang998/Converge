@@ -25,6 +25,7 @@ env_path = BASE_DIR / '.env'
 load_dotenv(dotenv_path=env_path)
 
 
+
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
@@ -162,12 +163,7 @@ AUTHENTICATION_BACKENDS = [
     'api.auth_backend.MongoEngineBackend',
 ]
 
-# Gmail App Password Configuration
-# IMPORTANT: Gmail App Passwords are ALWAYS exactly 16 characters (no spaces)
-# Generate one at: https://myaccount.google.com/apppasswords
-# Select "Mail" and "Other (Custom name)" -> Enter "Converge App"
-APP_PASSWORD = os.getenv("GMAIL_APP_PASSWORD", "your-16-char-app-password-here")  # Set in .env file for security
-
+APP_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD') or os.getenv('APP_PASSWORD')
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
@@ -181,11 +177,21 @@ EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "")  # Empty string if not set
 EMAIL_HOST_PASSWORD = APP_PASSWORD
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER if EMAIL_HOST_USER else "noreply@converge.com"
 
-# Debug: Print email configuration (only first 3 chars of password for security)
 if DEBUG:
+    # Avoid calling string methods on None when APP_PASSWORD isn't set
     print(f"[EMAIL CONFIG] User: {EMAIL_HOST_USER}")
-    print(f"[EMAIL CONFIG] Password length: {len(APP_PASSWORD.replace(' ', ''))} chars")
-    print(f"[EMAIL CONFIG] Password preview: {APP_PASSWORD[:3]}...{APP_PASSWORD[-3:] if len(APP_PASSWORD) > 6 else ''}")
+    pwd = APP_PASSWORD or ""
+    pwd_clean = pwd.replace(' ', '') if pwd else ""
+    print(f"[EMAIL CONFIG] Password set: {bool(pwd)}")
+    print(f"[EMAIL CONFIG] Password length: {len(pwd_clean)} chars")
+    if pwd_clean:
+        if len(pwd_clean) > 6:
+            preview = f"{pwd_clean[:3]}...{pwd_clean[-3:]}"
+        else:
+            preview = pwd_clean
+    else:
+        preview = "<not set>"
+    print(f"[EMAIL CONFIG] Password preview: {preview}")
     print(f"[EMAIL CONFIG] .env file path: {env_path}")
     print(f"[EMAIL CONFIG] .env file exists: {env_path.exists()}")
 
@@ -198,6 +204,10 @@ if APP_PASSWORD and APP_PASSWORD != "your-16-char-app-password-here" and len(APP
         f"Gmail authentication may fail. Generate a new app password at: "
         f"https://myaccount.google.com/apppasswords"
     )
+    # If running in development and SMTP creds are missing, default to console backend
+    if DEBUG and (not EMAIL_HOST_USER or not EMAIL_HOST_PASSWORD):
+        print("[EMAIL CONFIG] EMAIL_HOST_USER or EMAIL_HOST_PASSWORD not set — using console email backend for development.")
+        EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
 
@@ -228,14 +238,9 @@ USE_I18N = True
 
 USE_TZ = True
 
-# Development: print emails to console to avoid SMTP errors locally.
-# if DEBUG:
-#     EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
-# else:
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-
-# Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/5.2/howto/static-files/
+# Ensure EMAIL_BACKEND is set (may have been overridden above when DEBUG without creds)
+if 'EMAIL_BACKEND' not in globals() or not EMAIL_BACKEND:
+    EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 
 STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
@@ -283,9 +288,7 @@ GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
 GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET")
 GOOGLE_REDIRECT_URI = os.getenv("GOOGLE_REDIRECT_URI")
 
-# AWS S3 Configuration for File Storage
 AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID")
 AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY")
 AWS_STORAGE_BUCKET_NAME = os.getenv("AWS_STORAGE_BUCKET_NAME")
 AWS_S3_REGION_NAME = os.getenv("AWS_S3_REGION_NAME", "us-east-1")
-

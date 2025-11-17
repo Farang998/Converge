@@ -1,7 +1,12 @@
 import os
+import sys
 import django
 from django.core.asgi import get_asgi_application
 from channels.routing import ProtocolTypeRouter, URLRouter
+from pathlib import Path
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(BASE_DIR))
 
 # 1. Set settings module
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'mysite.settings')
