@@ -126,23 +126,25 @@ export default function Settings() {
               <span>Username</span>
               <input type="text" value={profile.username} disabled />
             </div>
-            <div className="setting-row">
-              <span>First Name</span>
-              <input
-                name="first_name"
-                type="text"
-                value={profile.first_name}
-                onChange={handleChange}
-              />
-            </div>
-            <div className="setting-row">
-              <span>Last Name</span>
-              <input
-                name="last_name"
-                type="text"
-                value={profile.last_name}
-                onChange={handleChange}
-              />
+            <div className="settings-row-group">
+              <div className="setting-row">
+                <span>First Name</span>
+                <input
+                  name="first_name"
+                  type="text"
+                  value={profile.first_name}
+                  onChange={handleChange}
+                />
+              </div>
+              <div className="setting-row">
+                <span>Last Name</span>
+                <input
+                  name="last_name"
+                  type="text"
+                  value={profile.last_name}
+                  onChange={handleChange}
+                />
+              </div>
             </div>
             <div className="setting-row">
               <span>Email</span>
