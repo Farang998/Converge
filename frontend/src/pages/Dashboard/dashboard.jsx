@@ -15,51 +15,22 @@ export default function Dashboard() {
   const [currentUser, setCurrentUser] = useState(null);
   const [loadingUser, setLoadingUser] = useState(true);
   const [userError, setUserError] = useState("");
-  const [userRefreshKey, setUserRefreshKey] = useState(0);
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState(searchTerm);
   const [unreadNotificationsCount, setUnreadNotificationsCount] = useState(0);
 
   const navigate = useNavigate();
-  const { logout } = useAuth();
+  const { logout, user: authUser, loading: authLoading } = useAuth();
 
   useEffect(() => {
-    let active = true;
-
-    async function loadUser() {
-      try {
-        const { data } = await api.get("auth/identify-user/");
-        if (!active) {
-          return;
-        }
-        if (data?.user) {
-          setCurrentUser(data.user);
-          setUserError("");
-        } else {
-          setUserError("Unable to load user profile.");
-        }
-      } catch (err) {
-        if (!active) {
-          return;
-        }
-        if (err?.response?.status === 401) {
-          navigate("/login");
-          return;
-        }
-        setUserError(err?.response?.data?.error || "Failed to load user profile.");
-      } finally {
-        if (active) {
-          setLoadingUser(false);
-        }
-      }
+    if (authUser) {
+      setCurrentUser(authUser);
+      setLoadingUser(false);
+      setUserError("");
+    } else if (!authLoading) {
+      navigate("/login");
     }
-
-    loadUser();
-
-    return () => {
-      active = false;
-    };
-  }, [navigate, userRefreshKey]);
+  }, [authUser, authLoading, navigate]);
 
   useEffect(() => {
     const t = setTimeout(() => setDebouncedSearch(searchTerm.trim()), 400);
@@ -291,18 +262,6 @@ export default function Dashboard() {
     return (
       <div className="dashboard-page loading-state">
         <p className="error-text">{userError}</p>
-        <button
-          className="retry-btn"
-          type="button"
-          onClick={() => {
-            setLoadingUser(true);
-            setUserError("");
-            setCurrentUser(null);
-            setUserRefreshKey((prev) => prev + 1);
-          }}
-        >
-          Try again
-        </button>
       </div>
     );
   }

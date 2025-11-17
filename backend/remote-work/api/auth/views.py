@@ -29,7 +29,7 @@ def _get_authenticated_user(request):
 
     try:
         token_type, token = auth_header.split(' ', 1)
-        if token_type.lower() != 'bearer':
+        if token_type.lower() not in ['bearer', 'token']:
             return None, Response({'error': 'Invalid token type'}, status=status.HTTP_401_UNAUTHORIZED)
     except ValueError:
         return None, Response({'error': 'Invalid authorization'}, status=status.HTTP_401_UNAUTHORIZED)
@@ -96,6 +96,11 @@ class LoginUserView(APIView):
         if not username or not password:
             return Response({'error': 'Username and password are required'}, status=status.HTTP_400_BAD_REQUEST)
 
+        user_exists = User.objects(username=username).first() or User.objects(email=username).first()
+        
+        if not user_exists:
+            return Response({'error': 'User not found. Please register first.'}, status=status.HTTP_404_NOT_FOUND)
+
         user = User.authenticate(username=username, password=password, is_email=False)
         if user is None:
             user = User.authenticate(username, password, is_email=True)
@@ -104,7 +109,7 @@ class LoginUserView(APIView):
             token = User.generate_token(user.id)
             return Response({'message': 'Login successful', 'token': token}, status=status.HTTP_200_OK)
 
-        return Response({'error': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
+        return Response({'error': 'Invalid password'}, status=status.HTTP_401_UNAUTHORIZED)
 
 class LogoutUserView(APIView):
     def post(self, request):
