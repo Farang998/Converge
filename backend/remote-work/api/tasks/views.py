@@ -16,8 +16,10 @@ from rest_framework.decorators import action
 from ..auth.models import User
 from ..projects.models import Project
 from .models import Task
+from ..notifications.models import Notification
 from datetime import datetime
 from mongoengine.errors import DoesNotExist, ValidationError as MongoValidationError
+from ..file_sharing.models import File
 
 ERROR_AUTH_HEADER_MISSING = 'Authorization header missing'
 ERROR_INVALID_AUTH_HEADER = 'Invalid authorization header format'
@@ -69,7 +71,11 @@ class TaskViewSet(viewsets.ViewSet):
             "due_date": task.due_date.isoformat() if task.due_date else None,
             "created_at": task.created_at.isoformat(),
             "dependencies": [str(dep.id) for dep in task.dependencies],
+            "related_files": [str(f.id) for f in task.related_files],
         }
+    
+    def _notify_user(self, user, message, link_url=None):
+        Notification(user=user, message=message, link_url=link_url).save()
 
     # -------------------------------------------------------------
     # LIST TASKS
@@ -168,6 +174,17 @@ class TaskViewSet(viewsets.ViewSet):
             except:
                 return Response({'error': 'Invalid due_date format.'},
                                 status=status.HTTP_400_BAD_REQUEST)
+            
+        file_ids = data.get("related_files", [])
+        files = []
+        for fid in file_ids:
+            try:
+                f = File.objects.get(id=fid)
+                if f.project.id != project.id:
+                    return Response({'error': 'File does not belong to project'}, status=400)
+                files.append(f)
+            except:
+                return Response({'error': f'Invalid file id: {fid}'}, status=400)
 
         # Create task
         try:
@@ -179,6 +196,7 @@ class TaskViewSet(viewsets.ViewSet):
                 due_date=due_date_obj,
                 status='pending'
             )
+            new_task.related_files = files
             new_task.save()
 
             # ---------------------------------------------------------
@@ -234,6 +252,34 @@ class TaskViewSet(viewsets.ViewSet):
         data = request.data
         updated = False
 
+        # ------------------------------
+        # UPDATE RELATED FILES (LEADER ONLY)
+        # ------------------------------
+        if "related_files" in data:
+            file_ids = data.get("related_files", [])
+            new_files = []
+
+            for fid in file_ids:
+                try:
+                    f = File.objects.get(id=fid)
+
+                    if str(f.project.id) != str(task.project.id):
+                        return Response({
+                            'error': 'File does not belong to this project',
+                            'file_id': fid
+                        }, status=400)
+
+                    new_files.append(f)
+
+                except:
+                    return Response({
+                        'error': f'Invalid file id: {fid}'
+                    }, status=400)
+
+            # Replace full list
+            task.related_files = new_files
+            updated = True
+            
         # ---------------------------------------------------------
         # LEADER CAN UPDATE ANYTHING
         # ---------------------------------------------------------
@@ -324,18 +370,42 @@ class TaskViewSet(viewsets.ViewSet):
         # ---------------------------------------------------------
         elif is_assignee:
             if "status" in data:
-                task.status = data["status"]
-                updated = True
-            else:
-                return Response({'error': 'Assignees may only update status.'},
-                                status=status.HTTP_403_FORBIDDEN)
+                new_status = data["status"]
 
+                # assignee is NOT allowed to complete the task
+                if new_status == "completed":
+                    return Response({
+                        "error": "Only team leader can complete tasks. Request approval instead."
+                    }, status=403)
+
+                # assignee can request approval
+                if new_status == "approval_pending":
+                    # store previous status for later rollback if rejected
+                    task._previous_status = task.status  
+                    task.status = "approval_pending"
+                    self._notify_user(
+                        task.project.team_leader,
+                        f"Task '{task.name}' is awaiting your approval.",
+                        link_url=f"/projects/{task.project.id}/tasks/{task.id}"
+                    )
+
+                    updated = True
+
+                # assignee can still move to in_progress
+                if new_status in ["in_progress", "pending"]:
+                    task.status = new_status
+                    updated = True
+
+                return Response({
+                    "error": f"Invalid status for assignee: {new_status}"
+                }, status=400)
+
+        
         # ---------------------------------------------------------
         # NO UPDATE PROVIDED
         # ---------------------------------------------------------
         if not updated:
             return Response({"message": "No changes provided."}, status=200)
-
         task.save()
 
         # ---------------------------------------------------------
@@ -499,4 +569,48 @@ class TaskViewSet(viewsets.ViewSet):
         task.save()
 
         return Response({'message': 'Dependency removed successfully'})
+    
+    @action(detail=True, methods=["post"])
+    def approve(self, request, pk=None):
+        user = self._authenticate_user(request)
+        task = Task.objects.get(id=pk)
 
+        if self._get_user_permission(task.project, user) != "leader":
+            return Response({"error": "Only leader can approve tasks"}, status=403)
+
+        if task.status != "approval_pending":
+            return Response({"error": "Task is not awaiting approval"}, status=400)
+
+        task.status = "completed"
+        self._notify_user(
+            task.assigned_to,
+            f"Your task '{task.name}' has been approved!",
+            link_url=f"/projects/{task.project.id}/tasks/{task.id}"
+        )
+        task.save()
+
+        return Response({"message": "Task approved"} , status=200)
+
+    @action(detail=True, methods=["post"])
+    def reject(self, request, pk=None):
+        user = self._authenticate_user(request)
+        task = Task.objects.get(id=pk)
+
+        if self._get_user_permission(task.project, user) != "leader":
+            return Response({"error": "Only leader can reject tasks"}, status=403)
+
+        if task.status != "approval_pending":
+            return Response({"error": "Task is not awaiting approval"}, status=400)
+
+        # fallback if no stored previous status
+        previous_status = getattr(task, "_previous_status", "in_progress")
+
+        task.status = previous_status
+        self._notify_user(
+            task.assigned_to,
+            f"Your task '{task.name}' was rejected. Please make changes.",
+            link_url=f"/projects/{task.project.id}/tasks/{task.id}"
+        )
+        task.save()
+
+        return Response({"message": "Task sent back for changes"} , status=200)
