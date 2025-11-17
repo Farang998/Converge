@@ -240,6 +240,20 @@ class ProjectChatConsumer(AsyncWebsocketConsumer):
             message_data["file_size"] = event.get("file_size")
         await self.send(text_data=json.dumps(message_data))
 
+    async def thread_created_broadcast(self, event):
+        """
+        Broadcast newly created thread to all connected users in the project group.
+        """
+        await self.send_json({
+            "type": "thread_created",
+            "thread_id": event.get("thread_id"),
+            "creator_id": event.get("creator_id"),
+            "creator_username": event.get("creator_username"),
+            "timestamp": event.get("timestamp"),
+            "message_preview": event.get("message_preview"),   # first message content or None
+        })
+
+
     async def thread_message_broadcast(self, event):
         """
         Broadcasted when a thread message is created.

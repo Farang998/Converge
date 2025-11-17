@@ -773,7 +773,65 @@ class SearchIndividualChatMessages(APIView):
             "total_results": len(messages),
             "messages": messages
         }, status=200)
-    
+
+class CreateThread(APIView):
+    def post(self, request):
+        user, err = _get_user_from_auth(request)
+        if err:
+            return err
+        
+        data = request.data
+
+        parent_id = data.get("parent_message_id")
+        group_id = data.get("group_id")
+        content = data.get("content")
+
+        if not parent_id or not group_id or not content:
+            return Response({"error": "parent_message_id, group_id, and content are required"}, status=400)
+        
+        parent_msg = GroupMessage.objects.filter(id=parent_id, group_id=group_id).first()
+        if not parent_msg:
+            return Response({"error": "Parent message not found"}, status=400)
+        
+        existing_thread = Thread.objects.filter(parent_message=parent_id).first()
+        if existing_thread:
+            return Response({"error": "Thread already exists", "thread_id": str(existing_thread.id)}, status=400)
+        
+        thread = Thread.objects.create(
+            parent_message = parent_id,
+            group_id = group_id
+        )
+
+        tmsg = ThreadMessage.objects.create(
+            thread_id=str(thread.id),
+            sender=str(user.id),
+            content=content,
+        )
+
+        try:
+            channel_layer = get_channel_layer()
+            if channel_layer:
+                group_name = f"project_{parent_msg.project_id}_group_{group_id}"
+
+                async_to_sync(channel_layer.group_send)(
+                    group_name,
+                    {
+                        "type": "thread_created_broadcast",
+                        "thread_id": str(thread.id),
+                        "parent_message_id": parent_id,
+                        "timestamp": tmsg.timestamp.isoformat(),
+                        "message_preview": content,
+                    }
+                )
+        except Exception as e:
+            print(f"[CreateThread] Broadcast failed: {e}")
+
+        return Response({
+            "status": "thread_created",
+            "thread_id": str(thread.id),
+            "first_message_id": str(tmsg.id)
+        }, status=201)
+
 class ListProjectThreads(APIView):
     """
     Returns a list of thread root messages for the group chat 

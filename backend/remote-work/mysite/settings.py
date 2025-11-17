@@ -137,7 +137,7 @@ DATABASES = {
         'HOST': 'convergechat.cfwsyokua33d.eu-north-1.rds.amazonaws.com', 
         'PORT': '5432',
     },
-    'mongodb':{
+    'default':{
         'ENGINE': 'django.db.backends.dummy',
     },
 }
