@@ -1,4 +1,4 @@
-from mongoengine import Document, StringField, DateTimeField, ReferenceField
+from mongoengine import Document, StringField, DateTimeField, ReferenceField, ListField
 from django.utils import timezone
 from ..auth.models import User
 from ..projects.models import Project
@@ -12,5 +12,6 @@ class Task(Document):
     due_date = DateTimeField(null=True)
     created_at = DateTimeField(default=timezone.now)
     calendar_event_id = StringField()
+    dependencies = ListField(ReferenceField('Task'))
 
     meta = {'collection': 'tasks'}
