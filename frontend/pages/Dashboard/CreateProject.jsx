@@ -1,32 +1,28 @@
-// ...existing code...
 import React, { useState, useEffect } from 'react';
 import './createProject.css';
 import { FiUsers, FiX } from 'react-icons/fi';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../src/contexts/AuthContext';
 
 const CreateProject = ({ onClose, isModal = false }) => {
   const navigate = useNavigate();
+  const { user: currentUser } = useAuth();
   const [formData, setFormData] = useState({
     name: '',
     description: '',
-    // store members as objects: { id: '<userId>', username: 'name' }
     teamMembers: []
   });
   const [newMember, setNewMember] = useState('');
-  const [error, setError] = useState(''); // general form error
-  const [memberError, setMemberError] = useState(''); // member-specific error
+  const [error, setError] = useState('');
+  const [memberError, setMemberError] = useState('');
   const [checkingMember, setCheckingMember] = useState(false);
 
-  // Validate username: allow letters, numbers, dots, underscores, hyphens; length 3-30
   const isValidUsername = (name) => {
     if (!name) return false;
     const trimmed = name.trim();
     return /^[A-Za-z0-9._-]{3,30}$/.test(trimmed);
   };
 
-  // Try to fetch user object by username from backend
-  // Tries common endpoints and response shapes to be resilient.
-  // Returns user object (with at least an id/_id and username) or null if not found or error.
   const fetchUserByUsername = async (username) => {
     if (!username) return null;
     const baseUrl = 'http://localhost:8000/api';
@@ -40,39 +36,33 @@ const CreateProject = ({ onClose, isModal = false }) => {
         const res = await fetch(url, { 
           method: url.includes('/api/projects/') ? 'GET' : 'GET',
           headers: {
-            'Authorization': `Bearer ${localStorage.getItem('authToken')}` // assuming token is stored
+            'Authorization': `Bearer ${localStorage.getItem('authToken')}`
           }
         });
         if (!res.ok) {
-          // if 404 continue to next guess, otherwise if 204/empty also continue
           continue;
         }
         const data = await res.json().catch(() => null);
         if (!data) continue;
 
-        // Common response shapes:
-        // { user: { _id, username, name, ... } }
         if (data.user && (data.user._id || data.user.id)) {
           return { id: data.user._id || data.user.id, username: data.user.username || data.user.name || username };
         }
-        // direct user object { _id, username, ... }
+
         if (data._id || data.id) {
           return { id: data._id || data.id, username: data.username || data.name || username };
         }
-        // boolean exists response: { exists: true } or true
+
         if (typeof data === 'boolean' && data === true) {
-          // endpoint doesn't return id — treat as "found" but without id
           return { id: null, username };
         }
         if (data.exists === true) {
           return { id: data._id || data.id || null, username };
         }
-        // fallback: some APIs return { username: 'abc', id: '...' }
         if (data.username) {
           return { id: data._id || data.id || null, username: data.username };
         }
       } catch (err) {
-        // network or parse error — try next endpoint
         console.error('fetchUserByUsername error for', url, err);
         continue;
       }
@@ -84,13 +74,10 @@ const CreateProject = ({ onClose, isModal = false }) => {
     e.preventDefault();
     setError('');
 
-    // required fields
     if (!formData.name.trim() || !formData.description.trim()) {
       setError('Please fill required fields: Project Name and Description.');
       return;
     }
-
-    // ensure all added members have at least a username; ideally they also have id
     for (const m of formData.teamMembers) {
       if (!m || !m.username) {
         setError('One or more team members are invalid.');
@@ -98,9 +85,6 @@ const CreateProject = ({ onClose, isModal = false }) => {
       }
     }
 
-    // Build payload to match database fields:
-    // db expects: name, description, members (array of usernames).
-    // Backend will resolve usernames to users and send emails.
     const membersForPayload = formData.teamMembers.map((m) => m.username);
 
     const payload = {
@@ -109,7 +93,6 @@ const CreateProject = ({ onClose, isModal = false }) => {
       team_members: membersForPayload
     };
 
-    // submit to backend
     try {
       const res = await fetch('http://localhost:8000/api/projects/', {
         method: 'POST',
@@ -120,7 +103,6 @@ const CreateProject = ({ onClose, isModal = false }) => {
         body: JSON.stringify(payload)
       });
       if (res.ok) {
-        // Close modal or navigate back
         if (isModal && onClose) {
           onClose();
         } else {
@@ -128,7 +110,6 @@ const CreateProject = ({ onClose, isModal = false }) => {
         }
       } else {
         const resp = await res.json().catch(() => ({}));
-        // Prefer server-provided `error`, then `message`, otherwise include status code.
         setError(resp.error || resp.message || `Failed to create project. (status ${res.status})`);
         console.debug('Create project failed:', res.status, resp);
       }
@@ -138,9 +119,7 @@ const CreateProject = ({ onClose, isModal = false }) => {
     }
   };
 
-  // Add team member: called on Enter key OR Add button
   const addTeamMember = async (e) => {
-    // if called from keydown, ensure it's Enter or Tab
     if (e && e.type === 'keydown') {
       if (!(e.key === 'Enter' || e.key === 'Tab')) return;
       e.preventDefault();
@@ -153,13 +132,16 @@ const CreateProject = ({ onClose, isModal = false }) => {
       return;
     }
 
-    // validate allowed characters (now numbers allowed)
     if (!isValidUsername(candidate)) {
       setMemberError('Username invalid — use 3-30 chars: letters, numbers, ., _, -');
       return;
     }
 
-    // prevent duplicates (case-insensitive)
+    if (currentUser && (currentUser.username?.toLowerCase() === candidate.toLowerCase() || currentUser.id === candidate)) {
+      setMemberError('You cannot add yourself as a team member. You are already the team leader.');
+      return;
+    }
+
     const existsLocal = formData.teamMembers.some(
       (m) => (m.username || '').toLowerCase() === candidate.toLowerCase()
     );
@@ -177,7 +159,11 @@ const CreateProject = ({ onClose, isModal = false }) => {
       return;
     }
 
-    // user found; if id is null it's still "found" (backend endpoint only confirmed existence).
+    if (currentUser && user.id && currentUser.id === user.id) {
+      setMemberError('You cannot add yourself as a team member. You are already the team leader.');
+      return;
+    }
+
     const memberObj = {
       id: user.id || null,
       username: user.username || candidate
@@ -206,7 +192,6 @@ const CreateProject = ({ onClose, isModal = false }) => {
     }
   };
 
-  // Close modal on Escape key
   useEffect(() => {
     if (!isModal) return;
     
@@ -267,8 +252,6 @@ const CreateProject = ({ onClose, isModal = false }) => {
               required
             />
           </div>
-
-          {/* Only DB-supported fields are sent: name, description, members */}
           <div className="form-group full">
             <label htmlFor="member"><FiUsers className="icon" /> Team Members</label>
 
@@ -330,4 +313,3 @@ const CreateProject = ({ onClose, isModal = false }) => {
 };
 
 export default CreateProject;
-// ...existing code...
