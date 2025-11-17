@@ -6,6 +6,22 @@ import { useAuth } from "../contexts/AuthContext";
 import api from "../services/api";
 import "./Conversation.css";
 
+// Normalize timestamp to ISO string format (same as Conversation.jsx)
+const normalizeTimestamp = (raw) => {
+  if (!raw) return null;
+  try {
+    if (typeof raw === "number") {
+      return new Date(raw > 10000000000 ? raw : raw * 1000).toISOString();
+    }
+    if (typeof raw === "string") {
+      return new Date(raw).toISOString();
+    }
+    return raw;
+  } catch {
+    return null;
+  }
+};
+
 export default function IndividualChat() {
   const { chatId } = useParams();
   const [searchParams] = useSearchParams();
@@ -68,26 +84,32 @@ export default function IndividualChat() {
         if (data.type === "connection_established") {
           console.log("WebSocket connection established:", data.message);
         } else if (data.type === "chat_message") {
+          // Normalize timestamps from incoming WebSocket message
+          const normalizedData = {
+            ...data,
+            timestamp: normalizeTimestamp(data.timestamp),
+            created_at: normalizeTimestamp(data.created_at),
+          };
           setMessages((prev) => {
-            const existsById = prev.some((msg) => msg.id === data.id);
+            const existsById = prev.some((msg) => msg.id === normalizedData.id);
             if (existsById) {
               return prev;
             }
             const isTempDuplicate = prev.some((msg) => 
               msg.temp && 
-              msg.content === data.content && 
-              String(msg.sender?.id) === String(data.sender?.id)
+              msg.content === normalizedData.content && 
+              String(msg.sender?.id) === String(normalizedData.sender?.id)
             );
             if (isTempDuplicate) {
               return prev.map((msg) => 
                 msg.temp && 
-                msg.content === data.content && 
-                String(msg.sender?.id) === String(data.sender?.id)
-                  ? data
+                msg.content === normalizedData.content && 
+                String(msg.sender?.id) === String(normalizedData.sender?.id)
+                  ? normalizedData
                   : msg
               );
             }
-            return [...prev, data];
+            return [...prev, normalizedData];
           });
         } else if (data.type === "message_deleted") {
           setMessages((prev) => prev.filter((msg) => msg.id !== data.message_id));
@@ -129,7 +151,13 @@ export default function IndividualChat() {
       try {
         const { data } = await api.get(`chats/individual/${chatId}/messages/`);
         if (data.messages) {
-          setMessages(data.messages);
+          // Normalize timestamps for all messages
+          const normalizedMessages = data.messages.map((msg) => ({
+            ...msg,
+            timestamp: normalizeTimestamp(msg.timestamp),
+            created_at: normalizeTimestamp(msg.created_at),
+          }));
+          setMessages(normalizedMessages);
           setOtherUser(data.other_user);
         } else {
           setMessages([]);
@@ -347,7 +375,13 @@ export default function IndividualChat() {
       const { data } = await api.get(`chats/individual/${chatId}/search/`, {
         params: { q: term }
       });
-      setSearchResults(data.messages || []);
+      // Normalize timestamps in search results
+      const normalizedResults = (data.messages || []).map((msg) => ({
+        ...msg,
+        timestamp: normalizeTimestamp(msg.timestamp),
+        created_at: normalizeTimestamp(msg.created_at),
+      }));
+      setSearchResults(normalizedResults);
       setShowSearchResults(true);
     } catch (err) {
       console.error("Search failed:", err);

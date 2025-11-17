@@ -54,13 +54,13 @@ const Notifications = () => {
 
   const extractProjectId = (linkUrl) => {
     if (!linkUrl) return null;
-    const match = linkUrl.match(/\/projects\/([^\/]+)/);
+    const match = linkUrl.match(/(?:\/projects\/|\/accept-invitation\/)([^\/]+)/);
     return match ? match[1] : null;
   };
 
   const handleAcceptInvitation = async (notification) => {
     const projectId = extractProjectId(notification.link_url);
-    
+
     if (!projectId) {
       toast.error('Invalid invitation link');
       return;
@@ -70,22 +70,65 @@ const Notifications = () => {
 
     try {
       setProcessingIds(prev => new Set(prev).add(notification.id));
-      
+
       // Accept the invitation
       const acceptResponse = await api.get(`projects/accept-invitation/${projectId}/`);
       toast.success(acceptResponse.data.message || 'Invitation accepted successfully!');
-      
-      // Mark notification as read
-      await markAsRead(notification.id);
-      
-      // Refresh notifications
+
+      // Ensure the notification is marked as read on the server
+      try {
+        await api.post(`notifications/mark-as-read/${notification.id}/`);
+      } catch (e) {
+        console.warn('Failed to mark notification read after accept:', e);
+      }
+
+      // Also mark any other notifications that reference the same link (handle duplicates)
+      try {
+        if (notification.link_url) {
+          await api.post('notifications/mark-by-link/', { link_url: notification.link_url });
+        }
+      } catch (e) {
+        console.warn('Failed to mark notifications by link after accept:', e);
+      }
+
+      // Remove notification from the list
+      setNotifications(prev => prev.filter(n => n.id !== notification.id));
+
       setTimeout(() => {
-        fetchNotifications();
         navigate('/dashboard');
       }, 1000);
     } catch (error) {
       console.error('Error accepting invitation:', error);
       toast.error(error.response?.data?.error || 'Failed to accept invitation');
+    } finally {
+      setProcessingIds(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(notification.id);
+        return newSet;
+      });
+    }
+  };
+
+  const handleDeclineInvitation = async (notification) => {
+    if (processingIds.has(notification.id)) return;
+    try {
+      setProcessingIds(prev => new Set(prev).add(notification.id));
+      await api.post(`notifications/mark-as-read/${notification.id}/`);
+
+      // Also mark duplicates by the same link
+      try {
+        if (notification.link_url) {
+          await api.post('notifications/mark-by-link/', { link_url: notification.link_url });
+        }
+      } catch (e) {
+        console.warn('Failed to mark notifications by link on decline:', e);
+      }
+
+      setNotifications(prev => prev.filter(n => n.id !== notification.id));
+      toast.info('Invitation declined');
+    } catch (error) {
+      console.error('Error declining invitation:', error);
+      toast.error('Failed to decline invitation');
     } finally {
       setProcessingIds(prev => {
         const newSet = new Set(prev);
@@ -194,8 +237,7 @@ const Notifications = () => {
                           className="decline-button"
                           onClick={(e) => {
                             e.stopPropagation();
-                            markAsRead(notification.id);
-                            toast.info('Invitation declined');
+                            handleDeclineInvitation(notification);
                           }}
                           disabled={isProcessing}
                         >

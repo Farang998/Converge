@@ -38,6 +38,28 @@ export default function Conversation() {
 
   // Current user is provided by AuthContext
 
+  // Helper: normalize timestamp values coming from server (ISO, numeric string, or ms)
+  const normalizeTimestamp = (raw) => {
+    if (!raw) return null;
+    try {
+      // If it's already a number, decide ms vs seconds
+      if (typeof raw === 'number') {
+        return raw > 1e12 ? new Date(raw).toISOString() : new Date(raw * 1000).toISOString();
+      }
+      // If it's a numeric string
+      if (typeof raw === 'string' && /^\d+$/.test(raw)) {
+        const n = Number(raw);
+        return n > 1e12 ? new Date(n).toISOString() : new Date(n * 1000).toISOString();
+      }
+      // Try parsing as Date string
+      const d = new Date(raw);
+      if (!isNaN(d.getTime())) return d.toISOString();
+    } catch (e) {
+      console.warn('Failed to normalize timestamp', raw, e);
+    }
+    return null;
+  };
+
   // WebSocket connection function
   const connectWebSocket = () => {
     const token = localStorage.getItem("authToken");
@@ -72,6 +94,16 @@ export default function Conversation() {
             setProjectName(data.project_name);
           }
         } else if (data.type === "chat_message") {
+          // Normalize timestamp coming from WebSocket before storing
+          if (data.timestamp) {
+            const normalized = normalizeTimestamp(data.timestamp);
+            if (normalized) {
+              data.timestamp = normalized;
+              // keep created_at in sync for compatibility
+              data.created_at = normalized;
+            }
+          }
+
           // New message received via WebSocket
           setMessages((prev) => {
             // Check if message already exists (avoid duplicates)
@@ -161,7 +193,14 @@ export default function Conversation() {
       try {
         const { data } = await api.get(`chats/project/${projectId}/messages/`);
         if (data.messages) {
-          setMessages(data.messages);
+          // Normalize timestamps coming from API to a consistent ISO string
+          const normalized = data.messages.map((m) => ({
+            ...m,
+            timestamp: m.timestamp ? normalizeTimestamp(m.timestamp) : null,
+            created_at: m.created_at ? normalizeTimestamp(m.created_at) : null,
+          }));
+
+          setMessages(normalized);
           setProjectName(data.project_name || "Project Chat");
         } else {
           setMessages([]);

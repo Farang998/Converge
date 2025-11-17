@@ -46,6 +46,12 @@ const AcceptInvitation = () => {
       const response = await api.get(`projects/accept-invitation/${projectId}/`);
       toast.success(response.data.message || 'Invitation accepted successfully!');
       setAccepted(true);
+      // Mark any related notifications as read on the server (handle duplicates)
+      try {
+        await api.post('notifications/mark-by-link/', { link_url: `/accept-invitation/${projectId}` });
+      } catch (e) {
+        console.warn('Failed to mark notifications by link after accept:', e);
+      }
       setTimeout(() => navigate('/dashboard'), 2000);
     } catch (error) {
       toast.error(error.response?.data?.error || 'Failed to accept invitation');
@@ -55,7 +61,16 @@ const AcceptInvitation = () => {
   };
 
   const handleDecline = () => {
-    navigate('/dashboard');
+    // Mark any notifications that reference this accept link as read so they don't reappear
+    (async () => {
+      try {
+        await api.post('notifications/mark-by-link/', { link_url: `/accept-invitation/${projectId}` });
+      } catch (e) {
+        console.warn('Failed to mark notifications by link on decline:', e);
+      } finally {
+        navigate('/dashboard');
+      }
+    })();
   };
 
   if (accepted) {
