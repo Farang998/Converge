@@ -1,20 +1,18 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
-import { AuthProvider, useAuth } from './contexts/AuthContext'
-import Login from './pages/Login'
-import Register from './pages/Register'
-import Dashboard from './pages/Dashboard/dashboard'
-import Profile from './pages/Dashboard/Profile'
-import Settings from './pages/Dashboard/Settings'
-import HelpSupport from './pages/Dashboard/HelpSupport'
-import TaskDetails from './pages/Dashboard/TaskDetails'
-import ForgotPassword from './pages/ForgotPassword'
-import AcceptInvitation from './pages/AcceptInvitation'
-import Notifications from './pages/Notifications'
-import Calendar from './pages/Calendar'
-import CreateProject from '../pages/Dashboard/CreateProject'
-import ProjectWorkspace from '../pages/ProjectWorkspace/ProjectWorkspace'
-import Conversation from './pages/Conversation'
-import IndividualChat from './pages/IndividualChat'
+import Login from "./pages/Login";
+import Register from "./pages/Register";
+import Dashboard from "./pages/Dashboard/dashboard";
+import Profile from "./pages/Dashboard/Profile";
+import Settings from "./pages/Dashboard/Settings";
+import HelpSupport from "./pages/Dashboard/HelpSupport";
+// import TaskDetails from "./pages/Dashboard/TaskDetails";
+import ForgotPassword from "./pages/ForgotPassword";
+import AcceptInvitation from "./pages/AcceptInvitation";
+import Notifications from "./pages/Notifications";
+import Calendar from "./pages/Calendar";
+import CreateProject from "./pages/Dashboard/CreateProject";
+import ProjectWorkspace from "./pages/ProjectWorkspace/ProjectWorkspace";
+import Conversation from "./pages/Conversation";
+import IndividualChat from "./pages/IndividualChat";
 
 function AppRoutes() {
   const { isAuthenticated, loading } = useAuth();

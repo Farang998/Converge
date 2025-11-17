@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import { toast } from 'react-toastify';
 import './Notifications.css';
-import { FaBell, FaCheck, FaTimes, FaArrowLeft, FaSync } from 'react-icons/fa';
+import { FaBell, FaCheck, FaTimes, FaArrowLeft } from 'react-icons/fa';
 
 const Notifications = () => {
   const navigate = useNavigate();
@@ -132,7 +132,6 @@ const Notifications = () => {
             )}
           </div>
           <button className="refresh-button" onClick={fetchNotifications} disabled={loading}>
-            <FaSync className={loading ? 'spinning' : ''} />
             {loading ? 'Refreshing...' : 'Refresh'}
           </button>
         </div>
@@ -141,7 +140,6 @@ const Notifications = () => {
       <div className="notifications-container">
         {loading && (
           <div className="loading-state">
-            <div className="loading-spinner"></div>
             <p>Loading notifications...</p>
           </div>
         )}

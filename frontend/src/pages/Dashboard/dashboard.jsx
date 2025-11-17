@@ -1,365 +1,125 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import "./dashboard.css";
-import { FaBell, FaCog, FaUser, FaPlus } from "react-icons/fa";
+import {
+  FaBell,
+  FaCog,
+  FaUser,
+  FaPlus,
+  FaSearch,
+  FaCalendarAlt,
+} from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
-import api from "../../services/api";
-import { useAuth } from "../../contexts/AuthContext";
 
 export default function Dashboard() {
-  const [projects, setProjects] = useState([]);
-  const [tasks, setTasks] = useState([]);
-  const [selectedProjectId, setSelectedProjectId] = useState(null);
-  const [loadingProjects, setLoadingProjects] = useState(false);
-  const [loadingTasks, setLoadingTasks] = useState(false);
-  const [showProfileMenu, setShowProfileMenu] = useState(false);
-  const [currentUser, setCurrentUser] = useState(null);
-  const [loadingUser, setLoadingUser] = useState(true);
-  const [userError, setUserError] = useState("");
-  const [userRefreshKey, setUserRefreshKey] = useState(0);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [debouncedSearch, setDebouncedSearch] = useState(searchTerm);
-  const [unreadNotificationsCount, setUnreadNotificationsCount] = useState(0);
-
   const navigate = useNavigate();
-  const { logout } = useAuth();
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const profileRef = useRef(null);
+
+  const [projects, setProjects] = useState([
+    {
+      id: 1,
+      name: "UI Revamp",
+      progress: 70,
+      deadline: "2025-11-01",
+      description: "Redesigning the main application interface.",
+      members: 5,
+      showDetails: false,
+      tags: ["Design", "Frontend"],
+    },
+    {
+      id: 2,
+      name: "AI Chatbot Integration",
+      progress: 40,
+      deadline: "2025-12-10",
+      description: "Integrating chatbot for automated user assistance.",
+      members: 3,
+      showDetails: false,
+      tags: ["AI", "Backend"],
+    },
+  ]);
 
   useEffect(() => {
-    let active = true;
-
-    async function loadUser() {
-      try {
-        const { data } = await api.get("auth/identify-user/");
-        if (!active) {
-          return;
-        }
-        if (data?.user) {
-          setCurrentUser(data.user);
-          setUserError("");
-        } else {
-          setUserError("Unable to load user profile.");
-        }
-      } catch (err) {
-        if (!active) {
-          return;
-        }
-        if (err?.response?.status === 401) {
-          navigate("/login");
-          return;
-        }
-        setUserError(err?.response?.data?.error || "Failed to load user profile.");
-      } finally {
-        if (active) {
-          setLoadingUser(false);
-        }
+    function handleClickOutside(e) {
+      if (profileRef.current && !profileRef.current.contains(e.target)) {
+        setShowProfileMenu(false);
       }
     }
-
-    loadUser();
-
-    return () => {
-      active = false;
-    };
-  }, [navigate, userRefreshKey]);
-
-  // Debounce the search term to reduce API calls
-  useEffect(() => {
-    const t = setTimeout(() => setDebouncedSearch(searchTerm.trim()), 400);
-    return () => clearTimeout(t);
-  }, [searchTerm]);
-
-  useEffect(() => {
-    if (!currentUser) {
-      setProjects([]);
-      setSelectedProjectId(null);
-      return;
-    }
-
-    let mounted = true;
-
-    async function loadProjects() {
-      setLoadingProjects(true);
-      try {
-        const params = debouncedSearch ? { search: debouncedSearch } : {};
-        const { data } = await api.get("projects/", { params });
-        if (!mounted) return;
-
-        const formatted = (data || []).map((project) => {
-          const members = Array.isArray(project?.team_members)
-            ? project.team_members.map((member) => ({
-                user_id: member.user_id,
-                username: member.username || "Unknown",
-                accepted: Boolean(member.accepted),
-              }))
-            : [];
-
-          const acceptedMembersCount =
-            members.filter((member) => member.accepted).length + 1; // include leader
-          const totalMembers = members.length + 1;
-          const isLeader = project?.team_leader?.user_id === currentUser.id;
-          const membershipEntry = members.find((member) => member.user_id === currentUser.id);
-
-          let membershipLabel = "Collaborator";
-          let membershipDescription = "You have access to this project.";
-          let membershipKey = "collaborator";
-
-          if (isLeader) {
-            membershipLabel = "Team Leader";
-            membershipDescription = "You are leading this project.";
-            membershipKey = "leader";
-          } else if (membershipEntry) {
-            membershipLabel = membershipEntry.accepted ? "Member" : "Invitation Pending";
-            membershipDescription = membershipEntry.accepted
-              ? "You are an accepted member of this project."
-              : "Please accept your invitation to start collaborating.";
-            membershipKey = membershipEntry.accepted ? "member" : "pending";
-          }
-
-          const createdAt = project?.created_at
-            ? new Date(project.created_at).toLocaleDateString()
-            : "Not available";
-
-          const detailedMembers = [
-            {
-              user_id: project?.team_leader?.user_id || "leader",
-              username: project?.team_leader?.username || "Leader",
-              accepted: true,
-              role: "Team Leader",
-            },
-            ...members.map((member) => ({
-              ...member,
-              role: member.accepted ? "Member" : "Invited",
-            })),
-          ];
-
-          return {
-            id: project.id,
-            name: project.name,
-            description: project.description || "No description provided.",
-            projectType: project.project_type || "General",
-            createdAt,
-            acceptedMembers: acceptedMembersCount,
-            totalMembers,
-            membershipLabel,
-            membershipDescription,
-            membershipKey,
-            teamMembers: detailedMembers,
-            showDetails: false,
-          };
-        });
-
-        setProjects(formatted);
-        if (formatted.length > 0) {
-          setSelectedProjectId(formatted[0].id);
-        } else {
-          setSelectedProjectId(null);
-        }
-      } catch (err) {
-        console.error("[dashboard] Failed to load projects", err);
-        if (err?.response?.status === 401) {
-          navigate("/login");
-          return;
-        }
-        setProjects([]);
-        setSelectedProjectId(null);
-      } finally {
-        if (mounted) {
-          setLoadingProjects(false);
-        }
-      }
-    }
-
-    loadProjects();
-    return () => {
-      mounted = false;
-    };
-  }, [currentUser, navigate, debouncedSearch]);
-
-  useEffect(() => {
-    let mounted = true;
-
-    async function loadNotifications() {
-      try {
-        const { data } = await api.get('notifications/');
-        if (mounted) {
-          const unread = (data || []).filter(n => !n.read).length;
-          setUnreadNotificationsCount(unread);
-        }
-      } catch (err) {
-        // Silently fail - notifications are not critical for dashboard
-        if (mounted) {
-          setUnreadNotificationsCount(0);
-        }
-      }
-    }
-
-    if (currentUser) {
-      loadNotifications();
-      // Refresh notifications every 30 seconds
-      const interval = setInterval(loadNotifications, 30000);
-      return () => {
-        mounted = false;
-        clearInterval(interval);
-      };
-    }
-  }, [currentUser]);
-
-  useEffect(() => {
-    let mounted = true;
-
-    if (!currentUser || !selectedProjectId) {
-      setTasks([]);
-      return;
-    }
-
-    async function loadTasks() {
-      setLoadingTasks(true);
-      try {
-        const { data } = await api.get("tasks/", {
-          params: { project_id: selectedProjectId },
-        });
-        if (!mounted) return;
-
-        const formatted = (data || []).map((task) => {
-          const dueDate = task?.due_date
-            ? new Date(task.due_date).toLocaleDateString()
-            : "No due date";
-          const assignedTo = task?.assigned_to?.username || "Unassigned";
-          const status = task?.status || "pending";
-
-          return {
-            id: task.id,
-            name: task.name,
-            due: dueDate,
-            status,
-            assignedTo,
-          };
-        });
-
-        setTasks(formatted);
-      } catch (err) {
-        console.error("[dashboard] Failed to load tasks", err);
-        if (err?.response?.status === 401) {
-          navigate("/login");
-          return;
-        }
-        if (mounted) {
-          setTasks([]);
-        }
-      } finally {
-        if (mounted) {
-          setLoadingTasks(false);
-        }
-      }
-    }
-
-    loadTasks();
-    return () => {
-      mounted = false;
-    };
-  }, [currentUser, selectedProjectId, navigate]);
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   const toggleDetails = (id) => {
-    setProjects(
-      projects.map((proj) =>
+    setProjects((prev) =>
+      prev.map((proj) =>
         proj.id === id ? { ...proj, showDetails: !proj.showDetails } : proj
       )
     );
-    setSelectedProjectId(id);
   };
 
-  const username = useMemo(() => {
-    if (currentUser) {
-      const first = currentUser.first_name?.trim();
-      if (first) {
-        return first;
-      }
-      return currentUser.username;
-    }
-    if (typeof window !== "undefined") {
-      return localStorage.getItem("username") || "User";
-    }
-    return "User";
-  }, [currentUser]);
-
-  const handleLogout = async () => {
-    logout();
-    navigate('/login');
+  const handleLogout = () => {
+    localStorage.removeItem("username");
+    localStorage.removeItem("token");
+    navigate("/login");
   };
 
-  if (loadingUser) {
-    return (
-      <div className="dashboard-page loading-state">
-        <p>Loading your workspace...</p>
-      </div>
-    );
-  }
-
-  if (userError) {
-    return (
-      <div className="dashboard-page loading-state">
-        <p className="error-text">{userError}</p>
-        <button
-          className="retry-btn"
-          type="button"
-          onClick={() => {
-            setLoadingUser(true);
-            setUserError("");
-            setCurrentUser(null);
-            setUserRefreshKey((prev) => prev + 1);
-          }}
-        >
-          Try again
-        </button>
-      </div>
-    );
-  }
-
-  const completedCount = tasks.filter(
-    (task) => task.status?.toLowerCase() === "completed"
-  ).length;
+  const username = (localStorage.getItem("username") || "User").toString();
 
   return (
-    <div className="dashboard-page">
-      {/* Navbar */}
+    <div className="dashboard-page enhanced">
+      {/* Top Navbar */}
       <nav className="navbar">
         <div className="navbar-left">
           <img src="/logo.png" alt="Converge Logo" className="nav-logo" />
-          <h2>Converge</h2>
+          <div className="brand">
+            <h2>Converge</h2>
+            <span className="tagline">Collaborate • Deliver • Scale</span>
+          </div>
         </div>
 
         <div className="navbar-center">
-          <input
-            type="text"
-            placeholder="Search projects, tasks..."
-            className="search-bar"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
+          <div className="search-wrapper">
+            <FaSearch className="search-icon" />
+            <input
+              type="text"
+              placeholder="Search projects, tasks..."
+              className="search-bar"
+            />
+          </div>
         </div>
 
         <div className="navbar-right">
-          <div className="icon" title="Settings" onClick={() => navigate('/settings')}>
+          <div className="icon" title="Settings">
             <FaCog />
           </div>
-          <div className="icon notification-icon-container" title="Notifications" onClick={() => navigate('/notifications')}>
+
+          <div className="icon notification" title="Notifications">
             <FaBell />
-            {unreadNotificationsCount > 0 && (
-              <span className="notification-badge">{unreadNotificationsCount > 99 ? '99+' : unreadNotificationsCount}</span>
-            )}
+            <span className="notif-dot" />
           </div>
 
-          <div className="profile-container">
-            <div
-              className="icon profile-icon"
+          <div className="profile-container" ref={profileRef}>
+            <button
+              className="profile-button"
+              onClick={() => setShowProfileMenu((s) => !s)}
               title="Profile"
-              onClick={() => setShowProfileMenu(!showProfileMenu)}
             >
-              <FaUser />
-            </div>
+              <div className="avatar">
+                <FaUser />
+              </div>
+            </button>
 
             {showProfileMenu && (
               <div className="profile-menu">
-                <p className="profile-name">{username}</p>
+                <div className="profile-head">
+                  <div className="avatar large">
+                    <FaUser />
+                  </div>
+                  <div className="meta">
+                    <div className="name">{username}</div>
+                    <div className="email">you@company.com</div>
+                  </div>
+                </div>
+
                 <ul>
                   <li
                     onClick={() => {
@@ -383,7 +143,7 @@ export default function Dashboard() {
                       navigate("/help");
                     }}
                   >
-                    Help &amp; Support
+                    Help & Support
                   </li>
                   <hr />
                   <li onClick={handleLogout} className="logout">
@@ -396,176 +156,139 @@ export default function Dashboard() {
         </div>
       </nav>
 
-      {/* Main content */}
-      <div className="main-content">
-        {/* Projects Section */}
+      {/* Main Content */}
+      <div className="main-content container-grid">
+        {/* Left Section: Projects */}
         <div className="projects-section">
           <div className="section-header">
-            <h2>Projects</h2>
+            <div>
+              <h2>Projects</h2>
+              <p className="section-sub">Active projects and recent progress</p>
+            </div>
+
             <button
-              className="add-btn"
-              type="button"
-              onClick={() => navigate('/projects/create')}
+              className="add-btn main-add"
+              onClick={() => navigate("/create-project")}
             >
               <FaPlus /> New Project
             </button>
           </div>
 
-          <div className="projects-list">
-            {loadingProjects && (
-              <div className="project-card info-card">Loading projects...</div>
-            )}
-            {!loadingProjects && projects.length === 0 && (
-              <div className="project-card info-card">
-                <p>You are not part of any projects yet.</p>
-                <p className="muted">
-                  Create a project or accept an invitation to see it here.
-                </p>
-              </div>
-            )}
-            {!loadingProjects &&
-              projects.map((proj) => (
-                <div
-                  className={`project-card ${
-                    selectedProjectId === proj.id ? "selected" : ""
-                  }`}
-                  key={proj.id}
-                  onClick={() => setSelectedProjectId(proj.id)}
-                >
-                  <div className="project-card-top">
-                    <div>
-                      <h3>{proj.name}</h3>
-                      <p className="project-type">{proj.projectType}</p>
-                    </div>
-                    <span className={`role-chip ${proj.membershipKey}`}>
-                      {proj.membershipLabel}
-                    </span>
-                  </div>
+          <div className="projects-grid">
+            {projects.map((proj) => (
+  <div
+    className="project-card"
+    key={proj.id}
+    // // optional: make whole card clickable
+    // onClick={() => navigate(`/project/${proj.id}`, { state: { project: proj } })}
+    // style={{ cursor: "pointer" }}
+  >
+    <div className="card-head">
+      <div className="title">
+        {/* keep semantic h3 but stop propagation for inner buttons if needed */}
+        <h3 onClick={() => navigate(`/project/${proj.id}`, { state: { project: proj } })}>
+          {proj.name}
+        </h3>
+        <div className="badges">
+          {proj.tags?.map((t) => (
+            <span className="tag" key={t}>
+              {t}
+            </span>
+          ))}
+        </div>
+      </div>
+      <div className="card-actions">
+        <div className="muted small">{proj.members} members</div>
+      </div>
+    </div>
 
-                  <div className="project-meta">
-                    <span>
-                      <strong>Created:</strong> {proj.createdAt}
-                    </span>
-                    <span>
-                      <strong>Members:</strong> {proj.acceptedMembers} accepted /{" "}
-                      {proj.totalMembers} total
-                    </span>
-                  </div>
+    {/* rest remains unchanged */}
+    <div className="progress-row">
+      <div className="progress-bar">
+        <div
+          className="progress-fill"
+          style={{ width: `${proj.progress}%` }}
+        />
+      </div>
+      <div className="percent">{proj.progress}%</div>
+    </div>
 
-                  <div className="project-footer">
-                    <p className="members">
-                      <strong>Status:</strong>{" "}
-                      <span>{proj.membershipDescription}</span>
-                    </p>
-                    <div className="project-actions">
-                      <button
-                        className="details-btn"
-                        type="button"
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          toggleDetails(proj.id);
-                        }}
-                      >
-                        {proj.showDetails ? "Hide Details" : "View Details"}
-                      </button>
-                      <button
-                        className="chat-btn"
-                        type="button"
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          navigate(`/chat/${proj.id}`);
-                        }}
-                        title="Open project chat"
-                      >
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ marginRight: '6px', verticalAlign: 'middle' }}>
-                          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-                        </svg>
-                        Chat
-                      </button>
-                    </div>
-                  </div>
+    <div className="meta-row">
+      <div className="deadline">
+        <FaCalendarAlt /> <span>Due {proj.deadline}</span>
+      </div>
+      <div className="actions">
+        <button
+          className="details-btn outline"
+          onClick={(e) => {
+            e.stopPropagation(); // prevent card click
+            toggleDetails(proj.id);
+          }}
+        >
+          {proj.showDetails ? "Hide" : "Details"}
+        </button>
+      </div>
+    </div>
 
-                  {proj.showDetails && (
-                    <div className="project-details">
-                      <p>{proj.description}</p>
-                      <h4>Team</h4>
-                      <ul className="member-list">
-                        {proj.teamMembers.map((member) => (
-                          <li key={`${member.user_id}-${member.role}`}>
-                            <span>{member.username}</span>
-                            <span
-                              className={`badge ${member.accepted ? "accepted" : "pending"}`}
-                            >
-                              {member.role}
-                            </span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                </div>
-              ))}
+    {proj.showDetails && (
+      <div className="project-details">
+        <p className="desc">{proj.description}</p>
+        <div className="detail-meta">
+          <span>Team members: {proj.members}</span>
+        </div>
+      </div>
+    )}
+  </div>
+))}
+
           </div>
         </div>
 
-        {/* Tasks Section */}
-        <div className="tasks-section">
+        {/* Right Section: Tasks */}
+        <aside className="tasks-section">
           <div className="section-header">
-            <h2>Tasks</h2>
+            <div>
+              <h2>Tasks</h2>
+              <p className="section-sub">Quick overview</p>
+            </div>
+            <button className="add-btn" onClick={() => navigate("/create-task")}>
+              <FaPlus /> Create Task
+            </button>
           </div>
 
           <div className="task-summary">
             <div className="task-box">
-              <h3>{tasks.length}</h3>
-              <p>Active Tasks</p>
+              <div className="muted">Open</div>
+              <div className="big">8</div>
             </div>
             <div className="task-box completed">
-              <h3>{completedCount}</h3>
-              <p>Completed</p>
+              <div className="muted">Completed</div>
+              <div className="big">12</div>
+            </div>
+            <div className="task-box overdue">
+              <div className="muted">Overdue</div>
+              <div className="big">1</div>
             </div>
           </div>
 
-          <div className="tasks-list">
-            {loadingTasks && <div className="task-card">Loading tasks...</div>}
-            {!loadingTasks && tasks.length === 0 && (
-              <div className="task-card">No tasks found for this project.</div>
-            )}
-            {!loadingTasks &&
-              tasks.map((task) => {
-                const normalizedStatus = task.status || "pending";
-                const statusLabel = normalizedStatus
-                  .replace(/_/g, " ")
-                  .replace(/\b\w/g, (ch) => ch.toUpperCase());
-                const statusClass = normalizedStatus
-                  .toLowerCase()
-                  .replace(/\s+/g, "-");
-                return (
-                  <div
-                    className="task-card"
-                    key={task.id}
-                    role="button"
-                    tabIndex={0}
-                    onClick={() => navigate(`/tasks/${task.id}`)}
-                    onKeyDown={(event) => {
-                      if (event.key === "Enter" || event.key === " ") {
-                        event.preventDefault();
-                        navigate(`/tasks/${task.id}`);
-                      }
-                    }}
-                  >
-                    <div className="task-header">
-                      <h4>{task.name}</h4>
-                      <span className={`priority ${statusClass}`}>
-                        {statusLabel}
-                      </span>
-                    </div>
-                    <p className="due">Due: {task.due}</p>
-                    <p className="assigned">Assigned to: {task.assignedTo}</p>
-                  </div>
-                );
-              })}
+          <div className="task-list">
+            <div className="task-card">
+              <div className="task-header">
+                <h4>Audit accessibility</h4>
+                <div className="priority high">High</div>
+              </div>
+              <div className="due">Due: 2025-11-05</div>
+            </div>
+
+            <div className="task-card">
+              <div className="task-header">
+                <h4>Setup chatbot endpoints</h4>
+                <div className="priority medium">Medium</div>
+              </div>
+              <div className="due">Due: 2025-11-15</div>
+            </div>
           </div>
-        </div>
+        </aside>
       </div>
     </div>
   );
