@@ -150,12 +150,24 @@ class ProjectViewSet(viewsets.ViewSet):
         team_members_invited = data.get('team_members', [])
         team_members_db = []
         invited_users = []
+        user_id_str = str(user.id)
 
         for username in team_members_invited:
             try:
                 invited_user = User.objects.get(username=username)
-                team_members_db.append({'user': str(invited_user.id), 'accepted': False})
-                invited_users.append(invited_user)
+                invited_user_id_str = str(invited_user.id)
+                
+                # Prevent team leader from adding themselves
+                if invited_user_id_str == user_id_str:
+                    return Response(
+                        {'error': f'Cannot add yourself as a team member. You are already the team leader.'},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+                
+                # Prevent duplicates
+                if not any(m['user'] == invited_user_id_str for m in team_members_db):
+                    team_members_db.append({'user': invited_user_id_str, 'accepted': False})
+                    invited_users.append(invited_user)
             except User.DoesNotExist:
                 # Skip invalid usernames
                 continue
@@ -183,7 +195,7 @@ class ProjectViewSet(viewsets.ViewSet):
                     Notification(
                         user=invited_user,
                         message=f"You have been invited to join the project '{name}'.",
-                        link_url=f"/projects/{project_id}"
+                        link_url=f"/accept-invitation/{project_id}"
                     ).save()
             except Exception as e:
                 print(f"Error creating notifications: {e}")
@@ -289,7 +301,7 @@ class ProjectViewSet(viewsets.ViewSet):
                     Notification(
                         user=invited_user,
                         message=f"You have been invited to join the project '{project.name}'.",
-                        link_url=f"/projects/{pk}"
+                        link_url=f"/accept-invitation/{pk}"
                     ).save()
                 except User.DoesNotExist:
                     print(f"Warning: Could not create notification for non-existent user ID {member_id}")
@@ -442,6 +454,19 @@ class AcceptInvitation(APIView):
                 
                 member['accepted'] = True
                 project.save()
+                
+                # Delete or mark related invitation notifications (match by link or message)
+                from api.notifications.models import Notification
+                try:
+                    # Match notifications that reference this project's accept link or mention the project name
+                    Notification.objects((Q(user=user) & Q(link_url__icontains=str(project_id))) | (Q(user=user) & Q(message__icontains=project.name))).update(set__read=True)
+                except Exception:
+                    # Fallback: try a broader mark-as-read if query composition fails
+                    try:
+                        Notification.objects(user=user, message__icontains=project.name).update(set__read=True)
+                    except Exception:
+                        pass
+                
                 return Response({'message': 'Invitation accepted successfully'}, status=status.HTTP_200_OK)
         
         return Response({'error': 'You are not invited to this project'}, status=status.HTTP_403_FORBIDDEN)
