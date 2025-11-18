@@ -2,6 +2,7 @@
 import React, { useState, useMemo, Suspense, useEffect } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import api from '../../src/services/api';
+import { useAuth } from '../../src/contexts/AuthContext';
 import ProjectHeader from './ProjectHeader';
 import StatusStrip from './StatusStrip';
 import ProjectNav from './ProjectNav';
@@ -9,8 +10,6 @@ import OverviewView from './OverviewView';
 import TasksView from './TasksView';
 import FilesView from './FilesView';
 import ActivityView from './ActivityView';
-import RightPanel from './RightPanel';
-import QuickCreate from './parts/QuickCreate';
 import './ProjectWorkspace.css';
 import ProjectDetailsModal from './parts/ProjectDetailsModal';
 
@@ -59,6 +58,7 @@ export default function ProjectWorkspace() {
   const navigate = useNavigate();
   const location = useLocation();
   const { projectId } = useParams();
+  const { user } = useAuth();
 
   // Prefer project from navigation state (fast). Otherwise seed sampleProject while we fetch.
   const initialProject = location?.state?.project ?? sampleProject;
@@ -69,13 +69,14 @@ export default function ProjectWorkspace() {
   const [files, setFiles] = useState(seedFiles);
   const [milestones] = useState(seedMilestones);
   const [activity, setActivity] = useState(seedActivity);
-  const [activeView, setActiveView] = useState('overview'); // overview|tasks|files|timeline|activity
-  const [selectedTask, setSelectedTask] = useState(null);
+  const [activeView, setActiveView] = useState('overview'); // overview|tasks|files|timeline|activity|calendar
+  const [, setSelectedTask] = useState(null);
 
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   // Derived KPIs
   const completedCount = useMemo(() => tasks.filter(t => t.status === 'done').length, [tasks]);
   const progressPct = Math.round((completedCount / Math.max(1, tasks.length)) * 100);
+  const isTeamLeader = Boolean(user && project?.owner?.id && String(project.owner.id) === String(user.id));
 
   const handleSaveProjectDetails = (updatedProject, invitations) => {
     setProject(updatedProject);
@@ -96,7 +97,7 @@ export default function ProjectWorkspace() {
     if (!projectId) return;
 
     // If we already have a project from location state and its id matches, skip fetch.
-    if (project && project.id === projectId) return;
+    if (project?.id === projectId) return;
 
     let cancelled = false;
     (async () => {
@@ -205,13 +206,6 @@ export default function ProjectWorkspace() {
               </Suspense>
             )}
           </main>
-
-          <aside className="pw-right">
-            <RightPanel project={project} members={project?.members ?? []} selectedTask={selectedTask} />
-            <div style={{ marginTop: 12 }}>
-              <QuickCreate onCreate={createTask} />
-            </div>
-          </aside>
         </div>
       </div>
       

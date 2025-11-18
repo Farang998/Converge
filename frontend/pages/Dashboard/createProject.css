@@ -1,13 +1,3 @@
-:root{
-  --bg:#f3f6fa;
-  --card:#fff;
-  --primary:#1a73e8;
-  --accent:#0070d1;
-  --muted:#6b7280;
-  --danger:#e24c4b;
-  --input-bg:#fafbff;
-  --glass: rgba(26,115,232,0.08);
-}
 
 /* Animations */
 @keyframes modalSlideIn {
