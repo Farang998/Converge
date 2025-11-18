@@ -13,6 +13,7 @@ import RightPanel from './RightPanel';
 import QuickCreate from './parts/QuickCreate';
 import './ProjectWorkspace.css';
 import ProjectDetailsModal from './parts/ProjectDetailsModal';
+import GitHubImport from './GitHubImport';
 
 
 const TimelineView = React.lazy(() => import('./TimelineView'));
@@ -73,6 +74,7 @@ export default function ProjectWorkspace() {
   const [selectedTask, setSelectedTask] = useState(null);
 
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+  const [isGitHubImportOpen, setIsGitHubImportOpen] = useState(false);
   // Derived KPIs
   const completedCount = useMemo(() => tasks.filter(t => t.status === 'done').length, [tasks]);
   const progressPct = Math.round((completedCount / Math.max(1, tasks.length)) * 100);
@@ -132,6 +134,18 @@ export default function ProjectWorkspace() {
     })();
     return () => { cancelled = true; };
   }, [projectId, project]);
+
+  useEffect(() => {
+    const handleOpenGitHubImport = () => {
+      setIsGitHubImportOpen(true);
+    };
+    
+    window.addEventListener('openGitHubImport', handleOpenGitHubImport);
+    
+    return () => {
+      window.removeEventListener('openGitHubImport', handleOpenGitHubImport);
+    };
+  }, []);
 
   function createTask(title) {
     const t = { id: 't' + Date.now(), title, status: 'todo', assignee: null, milestone: null, updatedAt: nowIso(), priority: 'Low' };
@@ -222,6 +236,17 @@ export default function ProjectWorkspace() {
         members={project?.members ?? []}
         onSave={handleSaveProjectDetails}
       />
+      
+      {isGitHubImportOpen && (
+        <GitHubImport
+          projectId={projectId}
+          onImportSuccess={(data) => {
+            addActivity(`Imported ${data.total_files} files from ${data.repository.full_name}`);
+            setActiveView('files');
+          }}
+          onClose={() => setIsGitHubImportOpen(false)}
+        />
+      )}
     </div>
   );
 }

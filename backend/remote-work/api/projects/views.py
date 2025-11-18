@@ -10,12 +10,16 @@ from mongoengine.errors import DoesNotExist, ValidationError as MongoValidationE
 import threading
 import requests
 from django.conf import settings
+from django.utils import timezone
+from datetime import timedelta
 
 from .utils import send_invitations_background
 from rest_framework.exceptions import AuthenticationFailed, NotFound
 from ..calendar.models import GoogleCredentials
 from mongoengine.queryset.visitor import Q
-from ..calendar.google_service import create_project_calendar
+from ..calendar.google_service import create_project_calendar, create_event
+from .github_importer import GitHubImporter, GitHubImporterError
+from ..file_sharing.models import File
 
 ERROR_AUTH_HEADER_MISSING = 'Authorization header missing'
 ERROR_INVALID_AUTH_HEADER = 'Invalid authorization header format'
@@ -50,10 +54,7 @@ class ProjectViewSet(viewsets.ViewSet):
 
 
     def list(self, request):
-        """
-        Lists projects where the authenticated user is the leader or an accepted member.
-        Maps to: GET /api/projects/
-        """
+        
         try:
             user = self._authenticate_user(request)
         except AuthenticationFailed as e:
@@ -315,10 +316,7 @@ class ProjectViewSet(viewsets.ViewSet):
 
     @action(detail=True, methods=['post'])
     def remove_members(self, request, pk=None):
-        """
-        Removes members from a project, with a confirmation step.
-        Maps to: POST /api/projects/<project_id>/remove_members/
-        """
+        
         try:
             user = self._authenticate_user(request)
             project = Project.objects.get(id=pk)
@@ -473,6 +471,9 @@ class AcceptInvitation(APIView):
 class searchuser(APIView):
     def post(self, request):
         auth_header = request.headers.get('Authorization')
+class searchuser(APIView):
+    def post(self, request):
+        auth_header = request.headers.get('Authorization')
         if not auth_header:
             return Response({'error': 'Authorization header missing'}, status=status.HTTP_401_UNAUTHORIZED)
 
@@ -494,3 +495,137 @@ class searchuser(APIView):
         for user in matched_users:
             result[str(user.id)] = user.username
         return Response({'results': result}, status=status.HTTP_200_OK)
+
+
+class GitHubImportView(APIView):
+    """
+    Import a GitHub repository into a project.
+    POST /api/projects/<project_id>/import-github/
+    """
+    
+    def post(self, request, project_id):
+        # Authenticate user
+        auth_header = request.headers.get('Authorization')
+        if not auth_header:
+            return Response({'error': ERROR_AUTH_HEADER_MISSING}, status=status.HTTP_401_UNAUTHORIZED)
+        
+        try:
+            token = auth_header.split(' ')[1]
+        except IndexError:
+            return Response({'error': ERROR_INVALID_AUTH_HEADER}, status=status.HTTP_401_UNAUTHORIZED)
+        
+        user = User.validate_token(token)
+        if not user:
+            return Response({'error': ERROR_INVALID_TOKEN}, status=status.HTTP_401_UNAUTHORIZED)
+        
+        # Get project
+        try:
+            project = Project.objects.get(id=project_id)
+        except (DoesNotExist, MongoValidationError):
+            return Response({'error': PROJECT_NOT_FOUND_ERROR}, status=status.HTTP_404_NOT_FOUND)
+        
+        # Check if user has access (team leader or accepted member)
+        user_id_str = str(user.id)
+        has_access = project.team_leader == user
+        if not has_access:
+            for member in project.team_members:
+                if member.get('user') == user_id_str and member.get('accepted', False):
+                    has_access = True
+                    break
+        
+        if not has_access:
+            return Response({'error': 'You do not have access to this project'}, status=status.HTTP_403_FORBIDDEN)
+        
+        # Get GitHub repo URL from request
+        repo_url = request.data.get('repo_url')
+        if not repo_url:
+            return Response({'error': 'repo_url is required'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Optional: GitHub token for private repos
+        github_token = request.data.get('github_token')
+        branch = request.data.get('branch', 'main')
+        
+        # Initialize importer
+        importer = GitHubImporter(github_token=github_token)
+        
+        try:
+            # Import repository
+            result = importer.import_repository(
+                repo_url=repo_url,
+                project_id=project_id,
+                user_id=user_id_str,
+                branch=branch
+            )
+            
+            # Update project with GitHub info
+            project.github_imported = True
+            project.github_repo_url = result['repository']['url']
+            project.github_repo_name = result['repository']['full_name']
+            project.github_import_date = timezone.now()
+            project.github_import_metadata = {
+                'description': result['repository']['description'],
+                'language': result['repository']['language'],
+                'stars': result['repository']['stars'],
+                'forks': result['repository']['forks'],
+                'total_files_imported': result['total_files'],
+                'imported_by': user_id_str,
+                'branch': branch
+            }
+            project.save()
+            
+            # Create File records for tracking
+            for file_info in result['files']:
+                try:
+                    file_record = File(
+                        name=file_info['file_name'],
+                        s3_key=file_info['s3_key'],
+                        url=file_info['url'],
+                        uploaded_by=user,
+                        project=project,
+                        size=file_info['size'],
+                        file_type='github_import'
+                    )
+                    file_record.save()
+                except Exception as e:
+                    print(f"Error creating file record for {file_info['file_name']}: {e}")
+            
+            # Create notification for project members
+            notification_message = f"{user.username} imported GitHub repository '{result['repository']['full_name']}' with {result['total_files']} files to project '{project.name}'"
+            
+            # Notify team leader if not the importer
+            if project.team_leader != user:
+                try:
+                    Notification(
+                        user=project.team_leader,
+                        message=notification_message,
+                        link_url=f"/project/{project_id}/files"
+                    ).save()
+                except Exception as e:
+                    print(f"Error creating notification for team leader: {e}")
+            
+            # Notify accepted team members
+            for member in project.team_members:
+                if member.get('accepted', False) and member.get('user') != user_id_str:
+                    try:
+                        member_user = User.objects.get(id=member['user'])
+                        Notification(
+                            user=member_user,
+                            message=notification_message,
+                            link_url=f"/project/{project_id}/files"
+                        ).save()
+                    except Exception as e:
+                        print(f"Error creating notification for member: {e}")
+            
+            return Response({
+                'success': True,
+                'message': result['message'],
+                'repository': result['repository'],
+                'total_files': result['total_files'],
+                'files_sample': result['files'][:10]  # Return first 10 files as sample
+            }, status=status.HTTP_200_OK)
+            
+        except GitHubImporterError as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            print(f"Unexpected error during GitHub import: {e}")
+            return Response({'error': 'An unexpected error occurred during import'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

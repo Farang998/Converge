@@ -95,6 +95,13 @@ export default function FilesView({ projectId: propProjectId }) {
               disabled={uploading}
             />
           </label>
+          <button 
+            className="btn secondary"
+            onClick={() => window.dispatchEvent(new CustomEvent('openGitHubImport'))}
+            style={{ marginLeft: '10px' }}
+          >
+            Import from GitHub
+          </button>
         </div>
 
         {error && (
