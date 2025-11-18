@@ -7,7 +7,7 @@ export default function ProjectHeader({ project, progressPct, onOpenDetails}) {
       <div className="pw-header-wrapper">
       <div className="pw-header-left">
         <h1 className="pw-title">{project.name}</h1>
-        <div className="pw-owner">Owned by {project.owner.name}</div>
+        <div className="pw-owner">Managed by {project.owner.name}</div>
       </div>
       <div className="pw-header-center">
         {/* optional: search / breadcrumb */}
@@ -16,7 +16,7 @@ export default function ProjectHeader({ project, progressPct, onOpenDetails}) {
       <div className="pw-header-right">
         <div className="pw-header-actions">
           <button className="btn ghost" onClick={onOpenDetails}>
-            Update Details
+            Update Detailsy
           </button>
           <button className="btn primary">Settings</button>
         </div>
