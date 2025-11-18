@@ -7,11 +7,11 @@ import ProjectHeader from './ProjectHeader';
 import StatusStrip from './StatusStrip';
 import ProjectNav from './ProjectNav';
 import OverviewView from './OverviewView';
+import TasksView from './TasksView';
 import FilesView from './FilesView';
 import ActivityView from './ActivityView';
 import './ProjectWorkspace.css';
 import ProjectDetailsModal from './parts/ProjectDetailsModal';
-import Index from './Tasks/Index';
 
 
 const TimelineView = React.lazy(() => import('./TimelineView'));
