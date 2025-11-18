@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import api from '../services/api';
+import api from '../../services/api';
 import { toast } from 'react-toastify';
 import './Calendar.css';
 import { FaCalendarAlt, FaArrowLeft, FaGoogle, FaLink, FaCheckCircle, FaTimesCircle, FaSpinner } from 'react-icons/fa';
