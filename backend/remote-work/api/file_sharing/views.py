@@ -303,7 +303,8 @@ class FileDownloadView(APIView):
                 'get_object',
                 Params={
                     'Bucket': bucket_name,
-                    'Key': file_obj.s3_key
+                    'Key': file_obj.s3_key,
+                    'ResponseContentDisposition': f'attachment; filename="{file_obj.name}"'
                 },
                 ExpiresIn=3600  # 1 hour
             )
@@ -328,6 +329,74 @@ class FileDownloadView(APIView):
             'download_url': presigned_url,
             'expires_in_seconds': 3600
         }, status=status.HTTP_200_OK)
+
+
+class FileDownloadProxyView(APIView):
+    """
+    Proxy download through backend to avoid CORS issues.
+    GET /api/file_sharing/download-proxy/<file_id>/
+    """
+    
+    def get(self, request, file_id):
+        try:
+            user = _authenticate_user(request)
+        except AuthenticationFailed as e:
+            return Response({'error': str(e)}, status=status.HTTP_401_UNAUTHORIZED)
+        
+        # Get file
+        try:
+            file_obj = File.objects.get(id=file_id)
+        except (DoesNotExist, MongoValidationError):
+            return Response({'error': 'File not found'}, status=status.HTTP_404_NOT_FOUND)
+        
+        # Verify user has access to the project
+        project = file_obj.project
+        if not _check_project_access(user, project):
+            return Response({
+                'error': 'You do not have access to this file'
+            }, status=status.HTTP_403_FORBIDDEN)
+        
+        # Generate pre-signed URL and fetch file
+        try:
+            s3_client = _get_s3_client()
+            bucket_name = settings.AWS_STORAGE_BUCKET_NAME
+            if not bucket_name:
+                return Response({
+                    'error': 'AWS S3 bucket is not configured. Please set AWS_STORAGE_BUCKET_NAME in environment variables.'
+                }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            
+            # Get file from S3
+            s3_response = s3_client.get_object(
+                Bucket=bucket_name,
+                Key=file_obj.s3_key
+            )
+            
+            # Stream file content
+            from django.http import StreamingHttpResponse
+            import mimetypes
+            
+            content_type = file_obj.content_type or mimetypes.guess_type(file_obj.name)[0] or 'application/octet-stream'
+            
+            response = StreamingHttpResponse(
+                s3_response['Body'].iter_chunks(chunk_size=8192),
+                content_type=content_type
+            )
+            response['Content-Disposition'] = f'attachment; filename="{file_obj.name}"'
+            response['Content-Length'] = file_obj.file_size
+            
+            return response
+        except ValueError as e:
+            return Response({
+                'error': f'AWS configuration error: {str(e)}. Please configure AWS credentials in environment variables.'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        except ClientError as e:
+            return Response({
+                'error': f'Failed to download file from S3: {str(e)}'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        except Exception as e:
+            return Response({
+                'error': f'Unexpected error downloading file: {str(e)}'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 class FileDeleteView(APIView):
     """

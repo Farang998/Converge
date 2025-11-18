@@ -26,13 +26,34 @@ export default function FileCard({ file, projectId }) {
     setError('');
     
     try {
-      const response = await api.get(`file_sharing/download/${file.file_id}/`);
-      const url = response.data.download_url;
+      // Use proxy endpoint to download through backend (avoids CORS issues)
+      const baseUrl = api.defaults.baseURL || 'http://localhost:8000/api/';
+      const url = `${baseUrl}file_sharing/download-proxy/${file.file_id}/`;
       
-      // Open download URL in new tab
-      window.open(url, '_blank');
+      // Fetch with auth headers and create blob
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Authorization': api.defaults.headers.common['Authorization'] || ''
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error('Download failed');
+      }
+      
+      const blob = await response.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = file.file_name;
+      link.style.display = 'none';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(blobUrl);
     } catch (err) {
-      setError(err.response?.data?.error || 'Failed to get download URL');
+      setError(err.response?.data?.error || 'Failed to download file');
       console.error('Error downloading file:', err);
     } finally {
       setDownloading(false);

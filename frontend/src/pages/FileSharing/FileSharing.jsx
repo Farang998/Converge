@@ -117,21 +117,37 @@ export default function FileSharing() {
     setError('');
     
     try {
-      const response = await api.get(`file_sharing/download/${file.file_id}/`);
-      const url = response.data.download_url;
+      // Use proxy endpoint to download through backend (avoids CORS issues)
+      const url = `${api.defaults.baseURL}file_sharing/download-proxy/${file.file_id}/`;
       
-      // Open download URL in new tab
-      window.open(url, '_blank');
+      // Create a link and trigger download
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = file.file_name;
+      link.style.display = 'none';
       
-      // Alternatively, trigger download
-      // const link = document.createElement('a');
-      // link.href = url;
-      // link.download = file.file_name;
-      // document.body.appendChild(link);
-      // link.click();
-      // document.body.removeChild(link);
+      // Add authorization header by setting it in the link (won't work, so we'll fetch instead)
+      // Better approach: fetch with auth headers and create blob
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Authorization': api.defaults.headers.common['Authorization'] || ''
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error('Download failed');
+      }
+      
+      const blob = await response.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+      link.href = blobUrl;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(blobUrl);
     } catch (err) {
-      setError(err.response?.data?.error || 'Failed to get download URL');
+      setError(err.response?.data?.error || 'Failed to download file');
       console.error('Error downloading file:', err);
     } finally {
       setSelectedFile(null);
