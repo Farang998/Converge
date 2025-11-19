@@ -23,4 +23,9 @@ class Project(Document):
     github_import_date = DateTimeField()
     github_import_metadata = DictField()  # Store repo info, file count, etc.
 
-    meta = {'collection': 'projects'}
+    meta = {
+        'collection': 'projects',
+        # Allow loading documents that contain fields not defined on the model
+        # (some older documents may still have `project_type` or other legacy keys).
+        'strict': False,
+    }
