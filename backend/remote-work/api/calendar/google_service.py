@@ -99,3 +99,18 @@ def delete_event(credentials, calendar_id, event_id):
     url = f"{GOOGLE_CALENDAR_API}/calendars/{calendar_id}/events/{event_id}"
     headers = {"Authorization": f"Bearer {access_token}"}
     requests.delete(url, headers=headers)
+
+def delete_calendar(credentials, calendar_id):
+    """
+    Deletes a calendar by its ID.
+    Returns True on success, False otherwise.
+    """
+    try:
+        access_token = get_valid_access_token(credentials)
+        url = f"{GOOGLE_CALENDAR_API}/calendars/{calendar_id}"
+        headers = {"Authorization": f"Bearer {access_token}"}
+        resp = requests.delete(url, headers=headers)
+        # Google returns 204 on success
+        return resp.status_code in (200, 204)
+    except Exception:
+        return False

@@ -134,7 +134,7 @@ export default function Dashboard() {
             id: project.id,
             name: project.name,
             description: project.description || "No description provided.",
-            projectType: project.project_type || "General",
+            // projectType: project.project_type || "General",
             createdAt,
             acceptedMembers: acceptedMembersCount,
             totalMembers,
@@ -444,7 +444,6 @@ export default function Dashboard() {
                       >
                         {proj.name}
                       </h3>
-                      <p className="project-type">{proj.projectType}</p>
                     </div>
                     <span className={`role-chip ${proj.membershipKey}`}>
                       {proj.membershipLabel}
