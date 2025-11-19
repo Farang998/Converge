@@ -4,7 +4,7 @@ import DAGVisualization from './components/DAGVisualization';
 import TaskForm from './components/TaskForm';
 import EdgeForm from './components/EdgeForm';
 import StatusLegend from './components/StatusLegend';
-import './Tasks.css';
+import './tasks.css';
 
 const Index = ({ projectId }) => {
   const [nodes, setNodes] = useState([]);
