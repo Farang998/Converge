@@ -7,11 +7,11 @@ import ProjectHeader from './ProjectHeader';
 import StatusStrip from './StatusStrip';
 import ProjectNav from './ProjectNav';
 import OverviewView from './OverviewView';
-import TasksView from './TasksView';
 import FilesView from './FilesView';
 import ActivityView from './ActivityView';
 import './ProjectWorkspace.css';
 import ProjectDetailsModal from './parts/ProjectDetailsModal';
+import Index from './Tasks/Index';
 
 
 const TimelineView = React.lazy(() => import('./TimelineView'));
@@ -196,7 +196,7 @@ export default function ProjectWorkspace() {
 
           <main className="pw-main">
             {activeView === 'overview' && <OverviewView project={project} tasks={tasks} files={files} activity={activity} onCreateTask={createTask} />}
-            {activeView === 'tasks' && <TasksView tasks={tasks} toggleTaskStatus={toggleTaskStatus} selectTask={setSelectedTask} />}
+            {activeView === 'tasks' && <Index projectId={projectId} />}
             {activeView === 'files' && <FilesView projectId={projectId} />}
             {activeView === 'activity' && <ActivityView activity={activity} />}
 
