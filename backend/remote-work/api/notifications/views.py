@@ -100,3 +100,26 @@ class SupportFeedbackView(APIView):
         ).save()
 
         return Response({'message': 'Support request submitted successfully.'}, status=status.HTTP_201_CREATED)
+
+
+class MarkNotificationsByLinkView(APIView):
+    """
+    Marks all notifications for the authenticated user that match a provided link_url (or substring) as read.
+    Useful for collapsing duplicate invite notifications that refer to the same project/link.
+    POST payload: { "link_url": "/accept-invitation/<project_id>" }
+    """
+    def post(self, request):
+        user, error_response = _authenticate_user(request)
+        if error_response:
+            return error_response
+
+        link_url = (request.data.get('link_url') or '').strip()
+        if not link_url:
+            return Response({'error': 'link_url is required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            Notification.objects(user=user, link_url__icontains=link_url).update(set__read=True)
+            return Response({'message': 'Notifications marked as read.'}, status=status.HTTP_200_OK)
+        except Exception as e:
+            print(f"Error marking notifications by link: {e}")
+            return Response({'error': 'Failed to mark notifications.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

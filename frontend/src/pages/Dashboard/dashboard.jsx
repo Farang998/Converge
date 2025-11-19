@@ -61,7 +61,6 @@ export default function Dashboard() {
     };
   }, [navigate, userRefreshKey]);
 
-  // Debounce the search term to reduce API calls
   useEffect(() => {
     const t = setTimeout(() => setDebouncedSearch(searchTerm.trim()), 400);
     return () => clearTimeout(t);
@@ -148,11 +147,7 @@ export default function Dashboard() {
         });
 
         setProjects(formatted);
-        if (formatted.length > 0) {
-          setSelectedProjectId(formatted[0].id);
-        } else {
-          setSelectedProjectId(null);
-        }
+        setSelectedProjectId(null);
       } catch (err) {
         console.error("[dashboard] Failed to load projects", err);
         if (err?.response?.status === 401) {
@@ -185,7 +180,6 @@ export default function Dashboard() {
           setUnreadNotificationsCount(unread);
         }
       } catch (err) {
-        // Silently fail - notifications are not critical for dashboard
         if (mounted) {
           setUnreadNotificationsCount(0);
         }
@@ -194,7 +188,6 @@ export default function Dashboard() {
 
     if (currentUser) {
       loadNotifications();
-      // Refresh notifications every 30 seconds
       const interval = setInterval(loadNotifications, 30000);
       return () => {
         mounted = false;
@@ -434,7 +427,23 @@ export default function Dashboard() {
                 >
                   <div className="project-card-top">
                     <div>
-                      <h3>{proj.name}</h3>
+                      <h3
+                        className="project-name"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate(`/projects/${proj.id}`);
+                        }}
+                        role="button"
+                        tabIndex={0}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            navigate(`/projects/${proj.id}`);
+                          }
+                        }}
+                      >
+                        {proj.name}
+                      </h3>
                       <p className="project-type">{proj.projectType}</p>
                     </div>
                     <span className={`role-chip ${proj.membershipKey}`}>

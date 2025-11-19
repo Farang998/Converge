@@ -1,20 +1,21 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
-import Login from './pages/Login'
-import Register from './pages/Register'
+import Login from './pages/Auth/Login'
+import Register from './pages/Auth/Register'
 import Dashboard from './pages/Dashboard/dashboard'
 import Profile from './pages/Dashboard/Profile'
 import Settings from './pages/Dashboard/Settings'
 import HelpSupport from './pages/Dashboard/HelpSupport'
 import TaskDetails from './pages/Dashboard/TaskDetails'
-import ForgotPassword from './pages/ForgotPassword'
-import AcceptInvitation from './pages/AcceptInvitation'
-import Notifications from './pages/Notifications'
-import Calendar from './pages/Calendar'
-import CreateProject from '../pages/Dashboard/CreateProject'
-import ProjectWorkspace from '../pages/ProjectWorkspace/ProjectWorkspace'
-import Conversation from './pages/Conversation'
-import IndividualChat from './pages/IndividualChat'
+import ForgotPassword from './pages/Auth/ForgotPassword'
+import AcceptInvitation from './pages/Auth/AcceptInvitation'
+import Notifications from './pages/Notifications/Notifications'
+import Calendar from './pages/Calendar/Calendar'
+import CreateProject from './pages/Dashboard/CreateProject'
+import ProjectWorkspace from './pages/ProjectWorkspace/ProjectWorkspace'
+import FileSharing from './pages/FileSharing/FileSharing'
+import Conversation from './pages/Chat/Conversation'
+import IndividualChat from './pages/Chat/IndividualChat'
 
 function AppRoutes() {
   const { isAuthenticated, loading } = useAuth();
@@ -32,6 +33,7 @@ function AppRoutes() {
         <Route path="/dashboard" element={isAuthenticated ? <Dashboard /> : <Navigate to="/login" replace />} />
         <Route path="/projects/create" element={isAuthenticated ? <CreateProject /> : <Navigate to="/login" replace />} />
         <Route path="/projects/:projectId" element={isAuthenticated ? <ProjectWorkspace /> : <Navigate to="/login" replace />} />
+        <Route path="/projects/:projectId/files" element={isAuthenticated ? <FileSharing /> : <Navigate to="/login" replace />} />
         <Route path="/accept-invitation/:projectId" element={<AcceptInvitation />} />
         <Route path="/notifications" element={isAuthenticated ? <Notifications /> : <Navigate to="/login" replace />} />
         <Route path="/calendar" element={isAuthenticated ? <Calendar /> : <Navigate to="/login" replace />} />

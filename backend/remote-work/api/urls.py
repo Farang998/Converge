@@ -8,5 +8,6 @@ urlpatterns = [
     path('notifications/', include('api.notifications.urls')),
     path('tasks/', include('api.tasks.urls')),
     path('calendar/', include('api.calendar.urls')),
-    # Chat URLs are included directly in mysite/urls.py under /api/chats/
+    path('file_sharing/', include('api.file_sharing.urls')),
+    path('meetings/', include('api.meetings.urls')),
 ]

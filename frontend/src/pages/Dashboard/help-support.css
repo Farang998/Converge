@@ -85,6 +85,25 @@
   line-height: 1.5;
 }
 
+.section-email {
+  color: #475569;
+  font-size: 14px;
+  font-weight: 500;
+  margin-top: 4px;
+}
+
+.email-link {
+  color: #1a73e8;
+  text-decoration: none;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.email-link:hover {
+  text-decoration: underline;
+  color: #0070d1;
+}
+
 .section-actions {
   margin-top: 8px;
 }

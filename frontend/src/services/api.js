@@ -11,6 +11,7 @@ const api = axios.create({
 // Initialize auth header from localStorage if present
 const token = typeof window !== "undefined" ? localStorage.getItem("authToken") : null;
 if (token) {
+  // Backend expects "Bearer" format
   api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
 }
 
@@ -73,4 +74,3 @@ export async function logout() {
 }
 
 export default api;
-

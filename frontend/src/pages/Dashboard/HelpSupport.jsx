@@ -1,26 +1,20 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FaQuestionCircle, FaEnvelope, FaBook, FaLifeRing } from 'react-icons/fa';
+import { FaEnvelope, FaLifeRing } from 'react-icons/fa';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import api from '../../services/api';
 import './help-support.css';
+
+const SUPPORT_EMAIL = 'convergework23@gmail.com';
 
 export default function HelpSupport() {
   const navigate = useNavigate();
   const [feedback, setFeedback] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
-  const openDocumentation = () => {
-    toast.info('Documentation portal coming soon.');
-  };
-
-  const openFaq = () => {
-    toast.info('FAQs will be published shortly.');
-  };
-
   const sendEmail = () => {
-    window.location.href = 'mailto:convergework23@gmail.com';
+    window.location.href = `mailto:${SUPPORT_EMAIL}`;
   };
 
   const submitFeedback = async () => {
@@ -30,7 +24,7 @@ export default function HelpSupport() {
     }
     setSubmitting(true);
     try {
-      await api.post('notifications/feedback/', {
+      await api.post('feedback/', {
         message: feedback.trim(),
         context_url: window.location.href,
       });
@@ -61,45 +55,15 @@ export default function HelpSupport() {
 
         <div className="help-sections">
           <div className="help-section">
-            <FaBook className="icon" />
-            <div className="section-body">
-              <div className="section-title">Documentation</div>
-              <div className="section-desc">
-                Explore walkthroughs and onboarding material for every module in Converge.
-              </div>
-              <div className="section-actions">
-                <button type="button" className="link-btn" onClick={openDocumentation}>
-                  View Docs
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <div className="help-section">
             <FaEnvelope className="icon" />
             <div className="section-body">
               <div className="section-title">Contact Support</div>
               <div className="section-desc">
-                Reach out to the support desk for personalised help on urgent blockers.
+                Reach out to the support team for personalised help on urgent blockers.
               </div>
               <div className="section-actions">
                 <button type="button" className="link-btn" onClick={sendEmail}>
                   Send Email
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <div className="help-section">
-            <FaQuestionCircle className="icon" />
-            <div className="section-body">
-              <div className="section-title">FAQs</div>
-              <div className="section-desc">
-                Browse answers to the most common questions raised by the community.
-              </div>
-              <div className="section-actions">
-                <button type="button" className="link-btn" onClick={openFaq}>
-                  View FAQs
                 </button>
               </div>
             </div>
