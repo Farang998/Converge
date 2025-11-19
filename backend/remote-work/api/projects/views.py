@@ -15,6 +15,11 @@ from ..tasks.models import Task
 from ..notifications.models import Notification
 from mongoengine.errors import DoesNotExist, ValidationError as MongoValidationError
 import threading
+from ..calendar.models import GoogleCredentials
+
+from mongoengine.errors import DoesNotExist, ValidationError as MongoValidationError, FieldDoesNotExist
+from mongoengine.queryset.visitor import Q
+
 import requests
 from django.conf import settings
 from django.utils import timezone
@@ -82,12 +87,59 @@ class ProjectViewSet(viewsets.ViewSet):
                 leader_projects_qs = Project.objects(team_leader=user)
                 member_projects_qs = Project.objects(team_members__match={"user": user_id})
 
-            leader_projects = list(leader_projects_qs)
-            member_projects = list(member_projects_qs)
+            try:
+                # Try to load as normal Document instances first
+                leader_projects = list(leader_projects_qs)
+                member_projects = list(member_projects_qs)
+            except FieldDoesNotExist:
+                # Some stored documents contain legacy fields (e.g. project_type) not
+                # defined on the current `Project` model. Fall back to loading raw
+                # pymongo documents and convert them to lightweight objects.
+                from types import SimpleNamespace
+
+                def raw_to_obj(raw):
+                    # raw is a dict from pymongo; create an object with the
+                    # attributes the rest of this view expects.
+                    leader = raw.get("team_leader")
+                    # team_leader may be a DBRef or an ObjectId; convert to str id
+                    leader_id = None
+                    if isinstance(leader, dict) and "$id" in leader:
+                        leader_id = str(leader["$id"])  # DBRef representation
+                    elif leader is not None:
+                        leader_id = str(leader)
+
+                    proj = SimpleNamespace(
+                        id=str(raw.get("_id")),
+                        name=raw.get("name"),
+                        description=raw.get("description"),
+                        team_members=raw.get("team_members") or [],
+                        team_leader=SimpleNamespace(id=leader_id, username=None),
+                        created_at=raw.get("created_at"),
+                    )
+                    return proj
+
+                leader_projects = [raw_to_obj(d) for d in leader_projects_qs.as_pymongo()]
+                member_projects = [raw_to_obj(d) for d in member_projects_qs.as_pymongo()]
 
         except Exception:
-            leader_projects = list(Project.objects(team_leader=user))
-            member_projects = list(Project.objects(team_members__match={"user": user_id}))
+            # As a last resort try a simple load of projects without search
+            try:
+                leader_projects = list(Project.objects(team_leader=user))
+                member_projects = list(Project.objects(team_members__match={"user": user_id}))
+            except FieldDoesNotExist:
+                # If that still fails, fall back to raw pymongo scan
+                leader_projects = [
+                    SimpleNamespace(
+                        id=str(d.get("_id")),
+                        name=d.get("name"),
+                        description=d.get("description"),
+                        team_members=d.get("team_members") or [],
+                        team_leader=SimpleNamespace(id=str(d.get("team_leader")), username=None),
+                        created_at=d.get("created_at"),
+                    )
+                    for d in Project.objects.as_pymongo()
+                ]
+                member_projects = []
 
         # merge unique
         combined = {str(p.id): p for p in leader_projects}
@@ -453,9 +505,7 @@ class AcceptInvitation(APIView):
 # -------------------------------------------------------
 # SEARCH USER
 # -------------------------------------------------------
-class searchuser(APIView):
-    def post(self, request):
-        auth_header = request.headers.get('Authorization')
+
 class searchuser(APIView):
     def post(self, request):
         auth_header = request.headers.get('Authorization')
@@ -472,10 +522,8 @@ class searchuser(APIView):
             return Response({"results": {}}, status=200)
 
         matched_users = User.objects.filter(username__icontains=query)[:10]
-        result = {}
-        for user in matched_users:
-            result[str(user.id)] = user.username
-        return Response({'results': result}, status=status.HTTP_200_OK)
+        result = {str(u.id): u.username for u in matched_users}
+        return Response({"results": result}, status=200)
 
 
 class GitHubImportView(APIView):
@@ -610,5 +658,3 @@ class GitHubImportView(APIView):
         except Exception as e:
             print(f"Unexpected error during GitHub import: {e}")
             return Response({'error': 'An unexpected error occurred during import'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-        matched = User.objects.filter(username__icontains=query)[:10]
-        return Response({"results": serialize_basic_users(matched)}, status=200)
