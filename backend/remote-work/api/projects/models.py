@@ -6,7 +6,7 @@ class Project(Document):
     name = StringField(required=True)
     description = StringField()
     team_leader = ReferenceField(User, required=True)
-    project_type = StringField(default='development')
+    # project_type = StringField(default='development')
     team_members = ListField(DictField())
     github_imported = BooleanField(default=False)
     github_import_date = DateTimeField()

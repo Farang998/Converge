@@ -6,8 +6,12 @@ from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import AuthenticationFailed
 
+from botocore.exceptions import ClientError
+from django.conf import settings
+
 from ..auth.models import User
 from .models import Project
+from ..tasks.models import Task
 from ..notifications.models import Notification
 from mongoengine.errors import DoesNotExist, ValidationError as MongoValidationError
 import threading
@@ -20,6 +24,10 @@ from .utils import send_invitations_background
 from rest_framework.exceptions import AuthenticationFailed, NotFound
 from ..calendar.models import GoogleCredentials
 from ..calendar.google_service import create_event
+from ..calendar.google_service import delete_calendar
+from ..file_sharing.models import File
+from ..file_sharing.views import _get_s3_client
+
 from mongoengine.errors import DoesNotExist, ValidationError as MongoValidationError
 from mongoengine.queryset.visitor import Q
 from ..calendar.google_service import create_project_calendar, create_event
@@ -110,7 +118,7 @@ class ProjectViewSet(viewsets.ViewSet):
                 "id": str(project.id),
                 "name": project.name,
                 "description": project.description,
-                "project_type": project.project_type,
+                # "project_type": project.project_type,
                 "team_leader": {
                     "user_id": str(project.team_leader.id),
                     "username": getattr(project.team_leader, "username", None),
@@ -148,7 +156,7 @@ class ProjectViewSet(viewsets.ViewSet):
                 name=name,
                 description=data.get("description", ""),
                 team_leader=user,
-                project_type=data.get("project_type", "development"),
+                # project_type=data.get("project_type", "development"),
                 team_members=team_members_db,
             )
             project.save()
@@ -317,7 +325,97 @@ class ProjectViewSet(viewsets.ViewSet):
             "message": "Calendar created",
             "calendar_id": calendar_id
         }, status=201)
+    
+    # ------------------------
+    # DELETE PROJECT
+    # ------------------------
+    def destroy(self, request, pk=None):
+        try:
+            user = authenticate_user_from_request(request)
+        except AuthenticationFailed as e:
+            return Response({"error": str(e)}, status=401)
 
+        # Fetch project
+        try:
+            project = Project.objects.get(id=pk)
+        except Project.DoesNotExist:
+            return Response({"error": "Project not found"}, status=404)
+
+        # Only leader can delete
+        if project.team_leader != user:
+            return Response({"error": "Only team leader can delete this project"}, status=403)
+
+        project_id = str(project.id)
+
+        # ---------------------------------------------------------
+        # 1. Notify all members (accepted + invited + leader)
+        # ---------------------------------------------------------
+        all_user_ids = {m["user"] for m in project.team_members}
+        all_user_ids.add(str(project.team_leader.id))
+
+        all_users = User.objects(id__in=list(all_user_ids))
+
+        for u in all_users:
+            Notification(
+                user=u,
+                message=f"The project '{project.name}' has been deleted by the team leader.",
+                link_url=None
+            ).save()
+
+        # ---------------------------------------------------------
+        # 2. Delete all tasks for this project
+        # ---------------------------------------------------------
+        try:
+            Task.objects(project=project_id).delete()
+        except Exception:
+            pass
+
+        # ---------------------------------------------------------
+        # 3. Delete ALL FILES for this project (S3 + Mongo)
+        # ---------------------------------------------------------
+        try:
+            # Fetch all files under this project
+            files = File.objects(project=project)
+
+            # Delete S3 objects
+            s3_client = _get_s3_client()
+            bucket = settings.AWS_STORAGE_BUCKET_NAME
+
+            for f in files:
+                try:
+                    s3_client.delete_object(Bucket=bucket, Key=f.s3_key)
+                except ClientError as e:
+                    print(f"Warning: Failed to delete S3 file {f.s3_key}: {e}")
+
+            # Delete MongoDB file metadata
+            files.delete()
+
+        except Exception as e:
+            print(f"Warning: Error deleting files for project {project_id}: {e}")
+
+
+        # ---------------------------------------------------------
+        # 3. Delete Google Calendar for this project
+        # ---------------------------------------------------------
+        if getattr(project, "calendar_id", None):
+            creds = GoogleCredentials.objects(user=user).first()
+            if creds:
+                try:
+                    delete_calendar(creds, project.calendar_id)
+                except Exception:
+                    pass
+
+        # ---------------------------------------------------------
+        # 4. Delete Chat group for this project
+        # ---------------------------------------------------------
+        # We need to create this endpoint in chat service to handle deletion
+
+        # ---------------------------------------------------------
+        # 5. Delete project
+        # ---------------------------------------------------------
+        project.delete()
+
+        return Response({"message": "Project deleted successfully"}, status=200)
 
 # -------------------------------------------------------
 # ACCEPT INVITATION
