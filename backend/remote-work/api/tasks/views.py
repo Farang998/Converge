@@ -21,27 +21,10 @@ from datetime import datetime
 from mongoengine.errors import DoesNotExist, ValidationError as MongoValidationError
 from ..file_sharing.models import File
 
-ERROR_AUTH_HEADER_MISSING = 'Authorization header missing'
-ERROR_INVALID_AUTH_HEADER = 'Invalid authorization header format'
-ERROR_INVALID_TOKEN = 'Invalid or expired token'
+from ..utils import ERROR_AUTH_HEADER_MISSING, ERROR_INVALID_AUTH_HEADER, ERROR_INVALID_TOKEN
+from ..utils import authenticate_user_from_request
 
 class TaskViewSet(viewsets.ViewSet):
-
-    def _authenticate_user(self, request):
-        auth_header = request.headers.get('Authorization')
-        if not auth_header:
-            raise Exception(ERROR_AUTH_HEADER_MISSING, status.HTTP_401_UNAUTHORIZED)
-
-        try:
-            token = auth_header.split(' ')[1]
-        except IndexError:
-            raise Exception(ERROR_INVALID_AUTH_HEADER, status.HTTP_401_UNAUTHORIZED)
-
-        user = User.validate_token(token)
-        if not user:
-            raise Exception(ERROR_INVALID_TOKEN, status.HTTP_401_UNAUTHORIZED)
-
-        return user
 
     def _get_user_permission(self, project, user):
         """
@@ -82,7 +65,7 @@ class TaskViewSet(viewsets.ViewSet):
     # -------------------------------------------------------------
     def list(self, request):
         try:
-            user = self._authenticate_user(request)
+            user = self.authenticate_user_from_request(request)
         except Exception as e:
             return Response({'error': str(e.args[0])}, status=e.args[1])
 
@@ -110,7 +93,7 @@ class TaskViewSet(viewsets.ViewSet):
     # -------------------------------------------------------------
     def retrieve(self, request, pk=None):
         try:
-            user = self._authenticate_user(request)
+            user = self.authenticate_user_from_request(request)
             task = Task.objects.get(id=pk)
         except Exception as e:
             return Response({'error': str(e.args[0])}, status=e.args[1])
@@ -129,7 +112,7 @@ class TaskViewSet(viewsets.ViewSet):
     # -------------------------------------------------------------
     def create(self, request):
         try:
-            user = self._authenticate_user(request)
+            user = self.authenticate_user_from_request(request)
         except Exception as e:
             return Response({'error': str(e.args[0])}, status=e.args[1])
 
@@ -235,7 +218,7 @@ class TaskViewSet(viewsets.ViewSet):
         # AUTH + FETCH
         # ---------------------------------------------------------
         try:
-            user = self._authenticate_user(request)
+            user = self.authenticate_user_from_request(request)
             task = Task.objects.get(id=pk)
         except Exception as e:
             return Response({'error': str(e.args[0])}, status=e.args[1])
@@ -436,7 +419,7 @@ class TaskViewSet(viewsets.ViewSet):
     # -------------------------------------------------------------
     def destroy(self, request, pk=None):
         try:
-            user = self._authenticate_user(request)
+            user = self.authenticate_user_from_request(request)
             task = Task.objects.get(id=pk)
         except Exception as e:
             return Response({'error': str(e.args[0])}, status=e.args[1])
@@ -493,7 +476,7 @@ class TaskViewSet(viewsets.ViewSet):
     def add_dependency(self, request, pk=None):
         # Authenticate
         try:
-            user = self._authenticate_user(request)
+            user = self.authenticate_user_from_request(request)
             task = Task.objects.get(id=pk)
         except Exception as e:
             return Response({'error': str(e.args[0])}, status=e.args[1])
@@ -544,7 +527,7 @@ class TaskViewSet(viewsets.ViewSet):
     def remove_dependency(self, request, pk=None):
         # Authenticate
         try:
-            user = self._authenticate_user(request)
+            user = self.authenticate_user_from_request(request)
             task = Task.objects.get(id=pk)
         except Exception as e:
             return Response({'error': str(e.args[0])}, status=e.args[1])
@@ -572,7 +555,7 @@ class TaskViewSet(viewsets.ViewSet):
     
     @action(detail=True, methods=["post"])
     def approve(self, request, pk=None):
-        user = self._authenticate_user(request)
+        user = self.authenticate_user_from_request(request)
         task = Task.objects.get(id=pk)
 
         if self._get_user_permission(task.project, user) != "leader":
@@ -593,7 +576,7 @@ class TaskViewSet(viewsets.ViewSet):
 
     @action(detail=True, methods=["post"])
     def reject(self, request, pk=None):
-        user = self._authenticate_user(request)
+        user = self.authenticate_user_from_request(request)
         task = Task.objects.get(id=pk)
 
         if self._get_user_permission(task.project, user) != "leader":
