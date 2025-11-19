@@ -19,6 +19,7 @@ class GroupChat(Document):
 class GroupMessage(Document):
     chat = ReferenceField(GroupChat, required=True, reverse_delete_rule=2)  # CASCADE
     sender = StringField(required=True)  # user id
+    # sender_name = StringField() ;
     content = StringField(default='')
     timestamp = DateTimeField(default=timezone.now)
     # Media fields

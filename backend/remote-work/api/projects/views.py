@@ -345,6 +345,11 @@ class ProjectViewSet(viewsets.ViewSet):
         project.team_members = [m for m in project.team_members if m['user'] not in members_to_remove]
         project.save()
 
+        from Chat.handler import handle_user_removed_from_project
+
+        for member_id in members_to_remove:
+            handle_user_removed_from_project(member_id, pk)
+
         return Response({'message': f'Successfully removed {len(members_to_remove)} member(s).'}, status=status.HTTP_200_OK)
 
     from rest_framework.decorators import action
