@@ -2,7 +2,7 @@
 import React, { useState, useMemo, Suspense, useEffect } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import api from '../../services/api';
-//import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '../../contexts/AuthContext';
 import ProjectHeader from './ProjectHeader';
 import StatusStrip from './StatusStrip';
 import ProjectNav from './ProjectNav';
