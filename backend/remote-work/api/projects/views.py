@@ -605,18 +605,19 @@ class GitHubImportView(APIView):
             # Create File records for tracking
             for file_info in result['files']:
                 try:
+                    # Map importer file info into our File model fields
                     file_record = File(
-                        name=file_info['file_name'],
-                        s3_key=file_info['s3_key'],
-                        url=file_info['url'],
+                        name=file_info.get('file_name'),
+                        s3_key=file_info.get('s3_key'),
+                        file_size=int(file_info.get('size', 0)),
+                        content_type=file_info.get('content_type') or None,
                         uploaded_by=user,
                         project=project,
-                        size=file_info['size'],
-                        file_type='github_import'
                     )
                     file_record.save()
                 except Exception as e:
-                    print(f"Error creating file record for {file_info['file_name']}: {e}")
+                    # Log and continue; importer already uploaded files to S3 so we don't fail whole import
+                    print(f"Error creating file record for {file_info.get('file_name')}: {e}")
             
             # Create notification for project members
             notification_message = f"{user.username} imported GitHub repository '{result['repository']['full_name']}' with {result['total_files']} files to project '{project.name}'"
