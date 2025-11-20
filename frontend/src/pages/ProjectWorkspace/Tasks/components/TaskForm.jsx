@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 
-const TaskForm = ({ task = null, projectMembers = [], onSave, onCancel }) => {
+import { useNavigate } from 'react-router-dom';
+
+const TaskForm = ({ task = null, projectMembers = [], onSave, onCancel, projectName, projectId }) => {
   console.log('[TaskForm] Component rendered with task:', task);
   console.log('[TaskForm] Received projectMembers:', projectMembers);
 
@@ -56,6 +58,8 @@ const TaskForm = ({ task = null, projectMembers = [], onSave, onCancel }) => {
     console.log('[TaskForm] Submitting taskData:', taskData);
     onSave(taskData);
   };
+
+  const navigate = useNavigate();
 
   return (
     <div
@@ -191,7 +195,7 @@ const TaskForm = ({ task = null, projectMembers = [], onSave, onCancel }) => {
           </div>
 
           {/* Buttons */}
-          <div style={{ display: 'flex', gap: '12px', marginTop: '16px' }}>
+          <div style={{ display: 'flex', flexWrap:'wrap', gap: '12px', marginTop: '16px' }}>
             <button
               type="submit"
               style={{
@@ -226,6 +230,36 @@ const TaskForm = ({ task = null, projectMembers = [], onSave, onCancel }) => {
             >
               Cancel
             </button>
+
+            {task && projectId && (
+              <button
+                type="button"
+                onClick={() => {
+                  const aiTaskPayload = {
+                    name: task.name,
+                    description: task.description,
+                    status: task.status,
+                    due_date: task.due_date,
+                    assigned_to: (task.assigned_to || []).map(u => (typeof u === 'string' ? u : u.username)),
+                    dependencies: task.dependencies || [],
+                  };
+                  navigate(`/projects/${projectId}/tasks/${task.id}/ai-agent`, { state: { projectName } });
+                }}
+                style={{
+                  flex: 1,
+                  padding: '8px 16px',
+                  border: 'none',
+                  borderRadius: '6px',
+                  fontSize: '14px',
+                  fontWeight: 500,
+                  cursor: 'pointer',
+                  backgroundColor: '#03003b',
+                  color: '#fff'
+                }}
+              >
+                AI Agent (Coming Soon)
+              </button>
+            )}
           </div>
 
         </form>

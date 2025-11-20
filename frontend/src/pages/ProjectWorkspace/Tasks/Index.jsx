@@ -374,6 +374,8 @@ const Index = ({ projectId }) => {
             <TaskForm
               task={modal.task}
               projectMembers={projectData?.team_members?.filter(m => m.accepted) || []}
+              projectName={projectData?.name}
+              projectId={projectId}
               onSave={handleSaveTask}
               onCancel={closeModal}
             />,
