@@ -14,8 +14,7 @@ from .models import Project
 from ..tasks.models import Task
 from ..notifications.models import Notification
 from ..calendar.models import GoogleCredentials
-from ..calendar.google_service import create_event
-from ..calendar.google_service import delete_calendar
+from ..calendar.google_service import create_event, create_project_calendar, delete_calendar
 from ..file_sharing.models import File
 from ..file_sharing.views import _get_s3_client
 
