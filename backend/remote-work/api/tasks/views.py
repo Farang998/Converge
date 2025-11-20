@@ -134,8 +134,11 @@ class TaskViewSet(viewsets.ViewSet):
             return Response({'error': str(e.args[0])}, status=e.args[1])
 
         data = request.data
+        print(f"[DEBUG] Task create received data: {data}")  # Debug log
         project_id = data.get('project_id')
         name = data.get('name')
+        status_from_request = data.get('status', 'pending')
+        print(f"[DEBUG] Status from request: {status_from_request}")  # Debug log
 
         if not project_id or not name:
             return Response({'error': 'project_id and name are required.'},
@@ -151,18 +154,42 @@ class TaskViewSet(viewsets.ViewSet):
         if not permission:
             return Response({'error': 'You are not an accepted member of this project.'},
                             status=status.HTTP_403_FORBIDDEN)
+        
+        # Only team leader can create tasks
+        if project.team_leader != user:
+            return Response({'error': 'Only the team leader can create tasks.'},
+                            status=status.HTTP_403_FORBIDDEN)
 
         # Assignee validation
         assignee = None
         assigned_to_id = data.get('assigned_to')
-        if assigned_to_id:
+        if assigned_to_id and assigned_to_id.strip():  # Only process if not empty
             try:
-                assignee = User.objects.get(id=assigned_to_id)
-                if not self._get_user_permission(project, assignee):
-                    return Response({'error': 'Assigned user is not a member of this project.'},
+                # Try to find user by ID first, then by username
+                assignee = None
+                try:
+                    assignee = User.objects.get(id=assigned_to_id)
+                except:
+                    pass
+                
+                if not assignee:
+                    # Try by username
+                    try:
+                        assignee = User.objects.get(username=assigned_to_id)
+                    except:
+                        pass
+                
+                if not assignee:
+                    return Response({'error': f'User "{assigned_to_id}" not found.'},
                                     status=status.HTTP_400_BAD_REQUEST)
-            except:
-                return Response({'error': 'Assigned user not found.'},
+                
+                # Check if user is an accepted member of the project
+                permission = self._get_user_permission(project, assignee)
+                if not permission:
+                    return Response({'error': 'User must be an accepted member of the project to be assigned tasks.'},
+                                    status=status.HTTP_400_BAD_REQUEST)
+            except Exception as e:
+                return Response({'error': f'Error validating assignee: {str(e)}'},
                                 status=status.HTTP_400_BAD_REQUEST)
 
         # Parse due date
@@ -194,7 +221,7 @@ class TaskViewSet(viewsets.ViewSet):
                 description=data.get('description', ''),
                 assigned_to=assignee,
                 due_date=due_date_obj,
-                status='pending'
+                status=data.get('status', 'pending')
             )
             new_task.related_files = files
             new_task.save()
@@ -238,9 +265,11 @@ class TaskViewSet(viewsets.ViewSet):
             user = self._authenticate_user(request)
             task = Task.objects.get(id=pk)
         except Exception as e:
-            return Response({'error': str(e.args[0])}, status=e.args[1])
-        except:
-            return Response({'error': 'Task not found.'}, status=status.HTTP_404_NOT_FOUND)
+            # Check if exception has status code in args (from _authenticate_user)
+            if len(e.args) >= 2:
+                return Response({'error': str(e.args[0])}, status=e.args[1])
+            else:
+                return Response({'error': 'Task not found.'}, status=status.HTTP_404_NOT_FOUND)
 
         permission = self._get_user_permission(task.project, user)
         is_assignee = (task.assigned_to == user)
@@ -314,7 +343,12 @@ class TaskViewSet(viewsets.ViewSet):
 
                 if new_assignee_id:
                     try:
-                        new_assignee = User.objects.get(id=new_assignee_id)
+                        # Try to find user by ID first, then by username
+                        try:
+                            new_assignee = User.objects.get(id=new_assignee_id)
+                        except:
+                            new_assignee = User.objects.get(username=new_assignee_id)
+                        
                         if not self._get_user_permission(task.project, new_assignee):
                             return Response({'error': 'User not in project.'}, status=400)
                         task.assigned_to = new_assignee
@@ -428,7 +462,7 @@ class TaskViewSet(viewsets.ViewSet):
         return Response({
             "message": "Task updated successfully.",
             "task": self._serialize_task(task)
-    }, status=200)
+        }, status=200)
 
 
     # -------------------------------------------------------------
