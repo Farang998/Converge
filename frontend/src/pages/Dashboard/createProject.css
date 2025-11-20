@@ -141,7 +141,7 @@ label {
 .add-member-btn {
   padding: 10px 14px;
   border-radius: 10px;
-  background: linear-gradient(135deg, var(--primary), var(--accent));
+  background: var(--primary);
   color: white;
   border: none;
   cursor: pointer;
@@ -155,7 +155,9 @@ label {
 }
 
 /* member tags */
-.member-list { display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
+.member-list { 
+  display:flex; flex-wrap:wrap; margin-top:10px;
+}
 .member-tag {
   background: #e8f0fe;
   color: var(--primary);
@@ -186,7 +188,7 @@ label {
 /* submit */
 .create-btn {
   width: 100%;
-  background: linear-gradient(135deg, var(--primary), var(--accent));
+  background: var(--primary);
   color: #fff;
   border: none;
   padding: 14px 20px;

@@ -119,7 +119,6 @@ export default function Login() {
         { 
           theme: 'outline', 
           size: 'large',
-          width: 300,
           text: 'continue_with'
         }
       );

@@ -105,7 +105,7 @@ class ProjectViewSet(viewsets.ViewSet):
                 "id": str(project.id),
                 "name": project.name,
                 "description": project.description,
-                # "project_type": project.project_type,
+                "project_type": project.project_type,
                 "team_leader": {
                     "user_id": str(project.team_leader.id),
                     "username": getattr(project.team_leader, "username", None),
@@ -143,7 +143,7 @@ class ProjectViewSet(viewsets.ViewSet):
                 name=name,
                 description=data.get("description", ""),
                 team_leader=user,
-                # project_type=data.get("project_type", "development"),
+                project_type=data.get("project_type", "development"),
                 team_members=team_members_db,
             )
             project.save()
