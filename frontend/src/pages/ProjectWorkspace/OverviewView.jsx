@@ -31,14 +31,7 @@ export default function OverviewView({ project, tasks, files, activity, onCreate
         <h3>Recent activity</h3>
         <ActivityView activity={activity.slice(0, 5)} />
       </section>
-
-      <section className="card mt">
-        <h3>Quick task</h3>
-        <div className="muted">Create a small task quickly for teammates.</div>
-        <div style={{ marginTop: 8 }}>
-          <button className="btn primary" onClick={() => onCreateTask('Quick follow-up')}>Create sample task</button>
-        </div>
-      </section>
+      
     </div>
   </main>
   );

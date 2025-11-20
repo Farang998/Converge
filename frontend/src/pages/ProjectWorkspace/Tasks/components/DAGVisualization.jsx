@@ -9,7 +9,7 @@ import ReactFlow, {
   BackgroundVariant,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
-import dagre from 'dagre';
+import * as dagre from 'dagre';
 import TaskNode from './TaskNode';
 
 const nodeTypes = {
@@ -45,7 +45,7 @@ const getLayoutedElements = (nodes, edges) => {
   return { nodes: layoutedNodes, edges };
 };
 
-const DAGVisualization = ({ nodes: taskNodes, edges: taskEdges, onEdgesChange: onTaskEdgesChange, onNodeEdit, onNodeDelete, onAddEdge, onRemoveEdge, isTeamLeader, pendingEdges = [], onNotification }) => {
+const DAGVisualization = ({ nodes: taskNodes, edges: taskEdges, onEdgesChange: onTaskEdgesChange, onNodeEdit, onNodeDelete }) => {
   const [hoveredNodeId, setHoveredNodeId] = useState(null);
 
   const initialNodes = useMemo(
@@ -81,19 +81,11 @@ const DAGVisualization = ({ nodes: taskNodes, edges: taskEdges, onEdgesChange: o
         
         const isIncoming = incomingEdges.some(e => e.from === edge.from && e.to === edge.to);
         const isOutgoing = outgoingEdges.some(e => e.from === edge.from && e.to === edge.to);
-        
-        // Check if this edge is pending
-        const isPending = pendingEdges.some(pe => pe.from === edge.from && pe.to === edge.to);
 
         let edgeColor = '#00fffb';
         let edgeWidth = 2;
-        let animated = false;
 
-        if (isPending) {
-          edgeColor = '#ff9800'; // Orange for pending
-          edgeWidth = 3;
-          animated = true;
-        } else if (hoveredNodeId) {
+        if (hoveredNodeId) {
           if (isOutgoing) {
             edgeColor = '#2fff00'; // Dependents (outgoing)
             edgeWidth = 3;
@@ -111,7 +103,7 @@ const DAGVisualization = ({ nodes: taskNodes, edges: taskEdges, onEdgesChange: o
           source: edge.from,
           target: edge.to,
           type: 'smoothstep',
-          animated,
+          animated: false,
           style: { stroke: edgeColor, strokeWidth: edgeWidth },
           markerEnd: {
             type: MarkerType.ArrowClosed,
@@ -121,7 +113,7 @@ const DAGVisualization = ({ nodes: taskNodes, edges: taskEdges, onEdgesChange: o
           },
         };
       }),
-    [taskEdges, hoveredNodeId, getConnectedEdges, pendingEdges]
+    [taskEdges, hoveredNodeId, getConnectedEdges]
   );
 
   const { nodes: layoutedNodes, edges: layoutedEdges } = useMemo(
@@ -154,36 +146,13 @@ const DAGVisualization = ({ nodes: taskNodes, edges: taskEdges, onEdgesChange: o
     setHoveredNodeId(null);
   }, []);
 
-  const onEdgeClick = useCallback((event, edge) => {
-    // Allow removing pending edges by clicking them
-    const edgeData = {
-      from: edge.source,
-      to: edge.target,
-    };
-    
-    if (pendingEdges.some(pe => pe.from === edgeData.from && pe.to === edgeData.to)) {
-      onRemoveEdge(edgeData);
-    }
-  }, [pendingEdges, onRemoveEdge]);
-
   const onConnect = useCallback((params) => {
-    if (!isTeamLeader) {
-      if (onNotification) {
-        onNotification({
-          type: 'error',
-          title: 'Permission Denied',
-          message: 'Only the team leader can create dependencies. Please contact your team leader to add dependencies.',
-        });
-      }
-      return;
-    }
-    
     const newEdge = {
       from: params.source,
       to: params.target,
     };
-    onAddEdge(newEdge);
-  }, [taskEdges, onAddEdge, isTeamLeader, onNotification]);
+    onTaskEdgesChange([...taskEdges, newEdge]);
+  }, [taskEdges, onTaskEdgesChange]);
 
   return (
     <div className="dag-container">
@@ -195,7 +164,6 @@ const DAGVisualization = ({ nodes: taskNodes, edges: taskEdges, onEdgesChange: o
         onNodeMouseEnter={onNodeMouseEnter}
         onNodeMouseLeave={onNodeMouseLeave}
         onConnect={onConnect}
-        onEdgeClick={onEdgeClick}
         nodeTypes={nodeTypes}
         fitView
         minZoom={0.1}

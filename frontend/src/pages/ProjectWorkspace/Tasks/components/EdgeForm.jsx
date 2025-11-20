@@ -18,47 +18,21 @@ const EdgeForm = ({ nodes, onSave, onCancel, existingEdge = null }) => {
   const toOptions = nodes.filter(node => node.id !== formData.from);
 
   return (
-    <div 
-      style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        width: '100%',
-        height: '100%',
-        backgroundColor: 'rgba(0, 0, 0, 0.7)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 99999
-      }}
-      onClick={onCancel}
-    >
-      <div 
-        style={{
-          backgroundColor: 'white',
-          borderRadius: '8px',
-          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
-          padding: '24px',
-          width: '90%',
-          maxWidth: '450px',
-          maxHeight: '90vh',
-          overflow: 'auto'
-        }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <h2 style={{ marginBottom: '16px', fontSize: '20px', fontWeight: 700 }}>
+    <div className="modal-overlay">
+      <div className="modal-content">
+        <h2>
           {existingEdge ? 'Edit Dependency' : 'Create Dependency'}
         </h2>
         
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-            <label style={{ fontSize: '14px', fontWeight: 500, color: '#444' }}>
+        <form onSubmit={handleSubmit} className="form-container">
+          <div className="form-group">
+            <label className="form-label">
               From (Dependency Task) *
             </label>
             <select
               value={formData.from}
               onChange={(e) => setFormData({ ...formData, from: e.target.value })}
-              style={{ width: '100%', padding: '8px 12px', border: '1px solid #ccc', borderRadius: '6px', fontSize: '14px' }}
+              className="form-select"
               required
               disabled={!!existingEdge}
             >
@@ -71,14 +45,14 @@ const EdgeForm = ({ nodes, onSave, onCancel, existingEdge = null }) => {
             </select>
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-            <label style={{ fontSize: '14px', fontWeight: 500, color: '#444' }}>
+          <div className="form-group">
+            <label className="form-label">
               To (Dependent Task) *
             </label>
             <select
               value={formData.to}
               onChange={(e) => setFormData({ ...formData, to: e.target.value })}
-              style={{ width: '100%', padding: '8px 12px', border: '1px solid #ccc', borderRadius: '6px', fontSize: '14px' }}
+              className="form-select"
               required
               disabled={!!existingEdge}
             >
@@ -92,23 +66,13 @@ const EdgeForm = ({ nodes, onSave, onCancel, existingEdge = null }) => {
           </div>
 
           {formData.from && formData.to && formData.from === formData.to && (
-            <p style={{ fontSize: '12px', color: '#e53e3e' }}>Cannot create dependency to itself</p>
+            <p className="form-error">Cannot create dependency to itself</p>
           )}
 
-          <div style={{ display: 'flex', gap: '12px', marginTop: '16px' }}>
+          <div className="form-button-group">
             <button
               type="submit"
-              style={{
-                flex: 1,
-                padding: '8px 16px',
-                border: 'none',
-                borderRadius: '6px',
-                fontSize: '14px',
-                fontWeight: 500,
-                cursor: 'pointer',
-                backgroundColor: '#03003b',
-                color: 'white'
-              }}
+              className="button button-primary"
               disabled={!formData.from || !formData.to || formData.from === formData.to}
             >
               {existingEdge ? 'Update' : 'Create'}
@@ -116,17 +80,7 @@ const EdgeForm = ({ nodes, onSave, onCancel, existingEdge = null }) => {
             <button
               type="button"
               onClick={onCancel}
-              style={{
-                flex: 1,
-                padding: '8px 16px',
-                border: 'none',
-                borderRadius: '6px',
-                fontSize: '14px',
-                fontWeight: 500,
-                cursor: 'pointer',
-                backgroundColor: '#e0e0e0',
-                color: '#333'
-              }}
+              className="button button-secondary"
             >
               Cancel
             </button>

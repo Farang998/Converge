@@ -17,7 +17,7 @@ export default function ProjectNav({ active, setActive, project }) {
       <NavItem label="Tasks" active={active === 'tasks'} onClick={() => setActive('tasks')} />
       <NavItem label="Files" active={active === 'files'} onClick={() => setActive('files')} />
       <NavItem label="Timeline" active={active === 'timeline'} onClick={() => setActive('timeline')} />
-      <NavItem label="Activity" active={active === 'activity'} onClick={() => setActive('activity')} />
+      <NavItem label="Calendar" active={active === 'calendar'} onClick={() => setActive('calendar')} />
       <div className="nav-footer">Members: {project.members.length}</div>
     </nav>
   );

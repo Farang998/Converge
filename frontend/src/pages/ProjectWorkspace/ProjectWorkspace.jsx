@@ -2,7 +2,7 @@
 import React, { useState, useMemo, Suspense, useEffect } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import api from '../../services/api';
-import { useAuth } from '../../contexts/AuthContext';
+//import { useAuth } from '../../contexts/AuthContext';
 import ProjectHeader from './ProjectHeader';
 import StatusStrip from './StatusStrip';
 import ProjectNav from './ProjectNav';
@@ -12,6 +12,7 @@ import ActivityView from './ActivityView';
 import './ProjectWorkspace.css';
 import ProjectDetailsModal from './parts/ProjectDetailsModal';
 import Index from './Tasks/Index';
+import CalendarView from './Calendar/CalendarView';
 
 
 const TimelineView = React.lazy(() => import('./TimelineView'));
@@ -58,7 +59,9 @@ export default function ProjectWorkspace() {
   const navigate = useNavigate();
   const location = useLocation();
   const { projectId } = useParams();
-  const { user } = useAuth();
+  // `AuthContext` is not present in this workspace for some environments
+  // so fall back to a null user to avoid unresolved import errors during dev.
+  const user = null;
 
   // Prefer project from navigation state (fast). Otherwise seed sampleProject while we fetch.
   const initialProject = location?.state?.project ?? sampleProject;
@@ -164,18 +167,11 @@ export default function ProjectWorkspace() {
         project={project} 
         progressPct={progressPct} 
         onOpenDetails={() => setIsDetailsModalOpen(true)}
-      />
+      > 
+      </ProjectHeader>
 
-      {/* small toolbar under header */}
       <div className="pw-inner">
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '8px 0' }}>
-          <button onClick={() => navigate(-1)} className="pw-back-btn">← Back</button>
-          <div style={{ fontSize: 14, color: '#555' }}>
-            {project ? `${project.name}` : 'Project'}
-            {projectId ? <span style={{ marginLeft: 8, color: '#888' }}>• {projectId}</span> : null}
-          </div>
-        </div>
-
+        {/* StatusStrip and content remains inside pw-inner */}
         <StatusStrip progress={progressPct} nextMilestone={milestones.find(m => m.state === 'in_progress')} lastActivity={activity[0]} />
 
         <div className="pw-content">
@@ -189,6 +185,7 @@ export default function ProjectWorkspace() {
                 { id: 'tasks', label: 'Tasks', icon: 'CheckSquare' },
                 { id: 'files', label: 'Files', icon: 'Folder' },
                 { id: 'timeline', label: 'Timeline', icon: 'Clock' },
+                { id: 'calendar', label: 'Calendar', icon: 'Calendar' },
                 { id: 'activity', label: 'Activity', icon: 'Activity' }
               ]}
             />
@@ -199,12 +196,14 @@ export default function ProjectWorkspace() {
             {activeView === 'tasks' && <Index projectId={projectId} />}
             {activeView === 'files' && <FilesView projectId={projectId} />}
             {activeView === 'activity' && <ActivityView activity={activity} />}
+            {activeView === 'calendar' && <CalendarView />}
 
             {activeView === 'timeline' && (
               <Suspense fallback={<div className="skeleton">Loading timeline…</div>}>
                 <TimelineView milestones={milestones} tasks={tasks} />
               </Suspense>
             )}
+             
           </main>
         </div>
       </div>
