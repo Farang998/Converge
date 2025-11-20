@@ -65,9 +65,15 @@ const Index = ({ projectId }) => {
           name: t.name,
           status: t.status,
           due_date: t.due_date,
-          assigned_to: t.assigned_to?.username || null,
+          assigned_to: t.assigned_to?.map(a => a.username) || [],
+          description: t.description,
+          created_at: t.created_at,
+          dependencies: t.dependencies,
+          related_files: t.related_files,
+          calendar_event_id: t.calendar_event_id
         }))
       );
+
 
       setEdges(
         tasks.flatMap(t =>
@@ -330,7 +336,7 @@ const Index = ({ projectId }) => {
                   <button
                     className="button"
                     onClick={handleSaveAllDependencies}
-                    style={{ backgroundColor: '#2fff00', color: '#000' }}
+                    style={{ backgroundColor: 'var(--primary)', color: '#000' }}
                   >
                     Save Dependencies ({pendingEdges.length})
                   </button>

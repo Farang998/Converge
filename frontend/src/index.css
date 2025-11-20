@@ -7,11 +7,15 @@ body {
 }
 
 :root {
-  --primary: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  --primary: linear-gradient(135deg, #3b82f6 0%, #2528eb 100%);
   --muted: #6b7280;
   --surface: #ffffff;
   --bg: #f5f8fa;
   --accent: #00b894;
+  --primary-darker: #0a085f;
+  --accent-darker: #037711;
+  --accent-brighter: #57ff84;
+  --primary-brighter: #57f7ff;
 }
 
 #modal-root {

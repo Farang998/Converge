@@ -57,6 +57,7 @@ const DAGVisualization = ({ nodes: taskNodes, edges: taskEdges, onEdgesChange: o
           ...task,
           onEdit: onNodeEdit,
           onDelete: onNodeDelete,
+          tasksList: taskNodes, // provide full list for dependency name mapping
         },
         position: { x: 0, y: 0 },
       })),
@@ -95,10 +96,10 @@ const DAGVisualization = ({ nodes: taskNodes, edges: taskEdges, onEdgesChange: o
           animated = true;
         } else if (hoveredNodeId) {
           if (isOutgoing) {
-            edgeColor = 'var(--primary)'; // Dependents (outgoing)
+            edgeColor = 'var(--primary-darker)'; // Dependents (outgoing)
             edgeWidth = 3;
           } else if (isIncoming) {
-            edgeColor = 'var(--accent)'; // Priors (incoming)
+            edgeColor = 'var(--accent-darker)'; // Priors (incoming)
             edgeWidth = 3;
           } else {
             edgeColor = '#cccccc'; // Dimmed

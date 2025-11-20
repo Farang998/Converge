@@ -105,7 +105,6 @@
   gap: 12px;
   margin: 0 auto;
   box-sizing: border-box;
-  padding: 16px var(--gutter);
 }
 
 /* Header FIX: Header is now full width and content is controlled */
@@ -283,7 +282,6 @@
 .pw-content {
   display: grid;
   grid-template-columns: auto 1fr;
-  gap: var(--gutter); 
   padding: 0; 
   width: 100%;
   box-sizing: border-box;
@@ -295,8 +293,7 @@
 .pw-left, .pw-main, .pw-right {
   min-height: 0;
   /* Added margin top/bottom to nav/right cards for visual lift */
-  margin-top: 4px; 
-  margin-bottom: 4px;
+  margin-right: 14px;
 }
 
 .pw-left {
@@ -307,7 +304,7 @@
 /* main center area scrolls independently */
 .pw-main {
   /* overflow-y: auto; */
-  padding-bottom: 20px;
+  /* padding-bottom: 20px; */
   flex-grow: 1;
 }
 /* Ensure the views fill available space without causing re-layout on switch */
@@ -339,9 +336,8 @@
 .pw-nav {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
   padding: 16px 12px;
-  max-height: calc(100vh - var(--header-height) - 70px); /* Adjusted max-height */
+  max-height: 100%; /* Adjusted max-height */
   overflow: auto;
   box-shadow: var(--card-shadow);
   width: 240px;
