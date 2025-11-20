@@ -158,8 +158,6 @@ const Index = ({ projectId }) => {
   };
 
   const checkDueDateConflict = (fromTaskId, toTaskId) => {
-    // fromTask is the dependency, toTask is the dependent
-    // toTask's due date should be >= fromTask's due date
     const fromTask = nodes.find(n => n.id === fromTaskId);
     const toTask = nodes.find(n => n.id === toTaskId);
 
@@ -325,7 +323,7 @@ const Index = ({ projectId }) => {
                     setModal({ type: 'edge' });
                   }}
                 >
-                  + Add Dependency (Modal)
+                  + Add Dependency
                 </button>
 
                 {pendingEdges.length > 0 && (

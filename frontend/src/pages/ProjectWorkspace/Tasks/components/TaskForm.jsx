@@ -105,22 +105,6 @@ const TaskForm = ({ task = null, projectMembers = [], onSave, onCancel }) => {
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
             <label style={{ fontSize: '14px', fontWeight: 500, color: '#444' }}>
-              Status *
-            </label>
-            <select
-              value={formData.status}
-              onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-              style={{ width: '100%', padding: '8px 12px', border: '1px solid #ccc', borderRadius: '6px', fontSize: '14px' }}
-            >
-              <option value="pending">Pending</option>
-              <option value="in_progress">In Progress</option>
-              <option value="approval_pending">Approval Pending</option>
-              <option value="completed">Completed</option>
-            </select>
-          </div>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-            <label style={{ fontSize: '14px', fontWeight: 500, color: '#444' }}>
               Due Date
             </label>
             <input

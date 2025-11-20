@@ -1,24 +1,18 @@
 from rest_framework import viewsets, status
 from rest_framework.response import Response
-from ..auth.models import User
-from ..projects.models import Project
-from .models import Task
-from datetime import datetime
+from rest_framework.decorators import action
+
 from mongoengine.errors import DoesNotExist, ValidationError as MongoValidationError
 from mongoengine.queryset.visitor import Q
 
 from ..calendar.models import GoogleCredentials
 from ..calendar.google_service import delete_event
 
-from rest_framework import viewsets, status
-from rest_framework.response import Response
-from rest_framework.decorators import action
+from ..notifications.models import Notification
+from datetime import datetime, timezone
 from ..auth.models import User
 from ..projects.models import Project
 from .models import Task
-from ..notifications.models import Notification
-from datetime import datetime
-from mongoengine.errors import DoesNotExist, ValidationError as MongoValidationError
 from ..file_sharing.models import File
 
 from ..utils import ERROR_AUTH_HEADER_MISSING, ERROR_INVALID_AUTH_HEADER, ERROR_INVALID_TOKEN
@@ -181,6 +175,13 @@ class TaskViewSet(viewsets.ViewSet):
         if due_date_str:
             try:
                 due_date_obj = datetime.fromisoformat(due_date_str.replace('Z', '+00:00'))
+                now = datetime.now(timezone.utc)
+                print("due:", due_date_obj, "tzinfo:", due_date_obj.tzinfo)
+                if due_date_obj < now:
+                    return Response(
+                        {'error': 'Due date cannot be earlier than the current time.'},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
             except:
                 return Response({'error': 'Invalid due_date format.'},
                                 status=status.HTTP_400_BAD_REQUEST)
@@ -351,6 +352,12 @@ class TaskViewSet(viewsets.ViewSet):
                 if due_date_str:
                     try:
                         new_due_date = datetime.fromisoformat(due_date_str.replace("Z", "+00:00"))
+                        now = datetime.now(timezone.utc)
+                        if new_due_date < now:
+                            return Response(
+                                {"error": "Due date cannot be earlier than the current time."},
+                                status=400
+                            )
                     except:
                         return Response({"error": "Invalid due_date format."}, status=400)
 
