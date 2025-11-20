@@ -4,6 +4,7 @@ import { useParams } from 'react-router-dom';
 import api from '../../services/api';
 import FileCard from './parts/FileCard';
 import { FaSpinner, FaExclamationCircle } from 'react-icons/fa';
+import GitHubImport from './GitHubImport';
 
 export default function FilesView({ projectId: propProjectId }) {
   const { projectId: paramProjectId } = useParams();
@@ -13,6 +14,7 @@ export default function FilesView({ projectId: propProjectId }) {
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');
+  const [isGitHubImportOpen, setIsGitHubImportOpen] = useState(false);
 
   useEffect(() => {
     if (projectId) {
@@ -95,6 +97,15 @@ export default function FilesView({ projectId: propProjectId }) {
               disabled={uploading}
             />
           </label>
+          <button
+            type="button"
+            className={`btn secondary ${uploading ? 'disabled' : ''}`}
+            onClick={() => setIsGitHubImportOpen(true)}
+            disabled={uploading}
+            style={{ marginLeft: 8 }}
+          >
+            Import from GitHub
+          </button>
         </div>
 
         {error && (
@@ -134,6 +145,13 @@ export default function FilesView({ projectId: propProjectId }) {
           </div>
         )}
       </div>
+      {isGitHubImportOpen && (
+        <GitHubImport
+          projectId={projectId}
+          onImportSuccess={async () => { await fetchFiles(); setIsGitHubImportOpen(false); }}
+          onClose={() => setIsGitHubImportOpen(false)}
+        />
+      )}
     </main>
   );
 }
