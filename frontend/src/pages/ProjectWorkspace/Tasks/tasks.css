@@ -1,33 +1,9 @@
-/* === GLOBAL RESET & BASE === */
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
-
-body {
-  margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  background-color: #f8f9fa;
-  color: #333;
-}
-
-#root {
-  width: 100%;
-  height: 100vh;
-  display: flex;
-  flex-direction: column;
-}
-
 /* === PAGE LAYOUT === */
 .page-container {
   width: 100%;
   height: 100vh;
   position: relative;
+  background-color: #d1fceb;
 }
 
 .not-found-page {

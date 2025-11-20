@@ -16,7 +16,7 @@ export default function ProjectHeader({ project, progressPct, onOpenDetails}) {
       <div className="pw-header-right">
         <div className="pw-header-actions">
           <button className="btn ghost" onClick={onOpenDetails}>
-            Update Detailsy
+            Update Details
           </button>
           <button className="btn primary">Settings</button>
         </div>
