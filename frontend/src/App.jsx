@@ -10,7 +10,6 @@ import TaskDetails from './pages/Dashboard/TaskDetails'
 import ForgotPassword from './pages/Auth/ForgotPassword'
 import AcceptInvitation from './pages/Auth/AcceptInvitation'
 import Notifications from './pages/Notifications/Notifications'
-import Calendar from './pages/Calendar/Calendar'
 import CreateProject from './pages/Dashboard/CreateProject'
 import ProjectWorkspace from './pages/ProjectWorkspace/ProjectWorkspace'
 import FileSharing from './pages/FileSharing/FileSharing'
@@ -36,7 +35,6 @@ function AppRoutes() {
         <Route path="/projects/:projectId/files" element={isAuthenticated ? <FileSharing /> : <Navigate to="/login" replace />} />
         <Route path="/accept-invitation/:projectId" element={<AcceptInvitation />} />
         <Route path="/notifications" element={isAuthenticated ? <Notifications /> : <Navigate to="/login" replace />} />
-        <Route path="/calendar" element={isAuthenticated ? <Calendar /> : <Navigate to="/login" replace />} />
         <Route path="/profile" element={isAuthenticated ? <Profile /> : <Navigate to="/login" replace />} />
         <Route path="/settings" element={isAuthenticated ? <Settings /> : <Navigate to="/login" replace />} />
         <Route path="/help" element={isAuthenticated ? <HelpSupport /> : <Navigate to="/login" replace />} />
