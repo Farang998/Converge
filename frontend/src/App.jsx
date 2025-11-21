@@ -16,6 +16,7 @@ import ProjectWorkspace from './pages/ProjectWorkspace/ProjectWorkspace'
 import FileSharing from './pages/FileSharing/FileSharing'
 import Conversation from './pages/Chat/Conversation'
 import IndividualChat from './pages/Chat/IndividualChat'
+import ProjectAnalytics from "./pages/Dashboard/analytics";
 
 function AppRoutes() {
   const { isAuthenticated, loading } = useAuth();
@@ -42,6 +43,7 @@ function AppRoutes() {
         <Route path="/help" element={isAuthenticated ? <HelpSupport /> : <Navigate to="/login" replace />} />
         <Route path="/chat/:projectId" element={isAuthenticated ? <Conversation /> : <Navigate to="/login" replace />} />
         <Route path="/chat/individual/:chatId" element={isAuthenticated ? <IndividualChat /> : <Navigate to="/login" replace />} />
+        <Route path="/projects/:id/analytics" element={isAuthenticated ? <ProjectAnalytics /> : <Navigate to="/login" replace />} />
         <Route path="*" element={<Navigate to={isAuthenticated ? "/dashboard" : "/login"} replace />} />
       </Routes>
     </BrowserRouter>
