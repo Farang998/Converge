@@ -1,0 +1,10 @@
+.ai-agent-page { display:flex; height:100vh; background:#f5f7fb; }
+.ai-agent-sidepanel { width:340px; background:#ffffff; border-right:1px solid #e0e4ea; padding:1.5rem; overflow-y:auto; }
+.ai-agent-sidepanel h2 { margin-top:0; font-size:1.25rem; }
+.ai-agent-sidepanel .detail { font-size:0.85rem; margin:0.35rem 0; line-height:1.2; }
+.ai-agent-main { flex:1; display:flex; align-items:center; justify-content:center; padding:2rem; }
+.coming-soon-box { background:#ffffff; border:1px solid #d9dee5; border-radius:12px; padding:2rem 2.5rem; max-width:520px; box-shadow:0 4px 16px rgba(0,0,0,0.08); }
+.coming-soon-box h1 { margin-top:0; font-size:2rem; }
+.coming-soon-box ul { margin:0.75rem 0 0 1.25rem; padding:0; font-size:0.95rem; }
+.button { background:#03003b; color:#fff; border:none; padding:0.55rem 1rem; border-radius:6px; cursor:pointer; font-size:0.85rem; }
+.button:hover { background:#121169; }

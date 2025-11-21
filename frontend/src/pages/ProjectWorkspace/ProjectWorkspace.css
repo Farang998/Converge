@@ -105,7 +105,6 @@
   gap: 12px;
   margin: 0 auto;
   box-sizing: border-box;
-  padding: 16px var(--gutter);
 }
 
 /* Header FIX: Header is now full width and content is controlled */
@@ -282,28 +281,30 @@
 
 .pw-content {
   display: grid;
-  grid-template-columns: 240px 1fr;
-  gap: var(--gutter); 
+  grid-template-columns: auto 1fr;
   padding: 0; 
   width: 100%;
   box-sizing: border-box;
   flex: 1;
   min-height: 0;
-  overflow: hidden;
 }
 
 /* left, main, right must be able to shrink so their internal overflow works */
 .pw-left, .pw-main, .pw-right {
   min-height: 0;
   /* Added margin top/bottom to nav/right cards for visual lift */
-  margin-top: 4px; 
-  margin-bottom: 4px;
+  margin-right: 14px;
+}
+
+.pw-left {
+  position: sticky;
+  top: 0;
 }
 
 /* main center area scrolls independently */
 .pw-main {
-  overflow-y: auto;
-  padding-bottom: 20px;
+  /* overflow-y: auto; */
+  /* padding-bottom: 20px; */
   flex-grow: 1;
 }
 /* Ensure the views fill available space without causing re-layout on switch */
@@ -335,11 +336,19 @@
 .pw-nav {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
   padding: 16px 12px;
-  max-height: calc(100vh - var(--header-height) - 70px); /* Adjusted max-height */
+  max-height: 100%; /* Adjusted max-height */
   overflow: auto;
   box-shadow: var(--card-shadow);
+  width: 240px;
+  transition: width 0.5s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.pw-nav.collapsed {
+  width: 70px;
 }
 
 /* nav items */
@@ -350,7 +359,7 @@
   gap: 10px; 
   width:100%;
   text-align:left;
-  padding:12px;
+  padding:8px;
   border-radius: 8px;
   background: transparent;
   border: none;
@@ -359,6 +368,7 @@
   margin-bottom:4px;
   cursor:pointer;
   transition: all 0.2s ease;
+  /* transition: background 0.2s; */
 }
 .nav-item:hover { background: rgba(59, 130, 246, 0.06); } 
 .nav-item.active {
@@ -369,6 +379,32 @@
   font-weight: 700;
 }
 
+.pw-nav.collapsed .nav-item {
+  justify-content: center;
+}
+.nav-icon {
+  font-size: 1.2rem;
+}
+.nav-label {
+  transition: opacity 0.2s ease;
+}
+
+.pw-nav.collapsed .nav-label {
+  opacity: 0;
+  pointer-events: none;
+}
+.collapse-toggle {
+  align-self: flex-end;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1.3rem;
+  margin-bottom: 1rem;
+}
+
+.pw-nav.collapsed .collapse-toggle {
+  align-self: center;
+}
 /* nav footer */
 .nav-footer { margin-top: 12px; color: var(--muted); font-size:13px; padding: 0 12px; }
 

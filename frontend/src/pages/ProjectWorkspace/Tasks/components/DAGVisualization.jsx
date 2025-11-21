@@ -57,6 +57,7 @@ const DAGVisualization = ({ nodes: taskNodes, edges: taskEdges, onEdgesChange: o
           ...task,
           onEdit: onNodeEdit,
           onDelete: onNodeDelete,
+          tasksList: taskNodes, // provide full list for dependency name mapping
         },
         position: { x: 0, y: 0 },
       })),
@@ -85,7 +86,7 @@ const DAGVisualization = ({ nodes: taskNodes, edges: taskEdges, onEdgesChange: o
         // Check if this edge is pending
         const isPending = pendingEdges.some(pe => pe.from === edge.from && pe.to === edge.to);
 
-        let edgeColor = '#00fffb';
+        let edgeColor = '#687272ff';
         let edgeWidth = 2;
         let animated = false;
 
@@ -95,10 +96,10 @@ const DAGVisualization = ({ nodes: taskNodes, edges: taskEdges, onEdgesChange: o
           animated = true;
         } else if (hoveredNodeId) {
           if (isOutgoing) {
-            edgeColor = '#2fff00'; // Dependents (outgoing)
+            edgeColor = 'var(--primary-darker)'; // Dependents (outgoing)
             edgeWidth = 3;
           } else if (isIncoming) {
-            edgeColor = '#ff6b00'; // Priors (incoming)
+            edgeColor = 'var(--accent-darker)'; // Priors (incoming)
             edgeWidth = 3;
           } else {
             edgeColor = '#cccccc'; // Dimmed
@@ -202,7 +203,7 @@ const DAGVisualization = ({ nodes: taskNodes, edges: taskEdges, onEdgesChange: o
         maxZoom={1.5}
         defaultViewport={{ x: 0, y: 0, zoom: 0.8 }}
         proOptions={{ hideAttribution: true }}
-        connectionLineStyle={{ stroke: '#00fffb', strokeWidth: 2 }}
+        connectionLineStyle={{ stroke: '#000000ff', strokeWidth: 2 }}
         connectionLineType="smoothstep"
       >
         <Background
@@ -215,8 +216,8 @@ const DAGVisualization = ({ nodes: taskNodes, edges: taskEdges, onEdgesChange: o
         <MiniMap
           nodeColor={(node) => {
             const status = node.data.status;
-            if (status === 'completed') return '#2fff00';
-            if (status === 'in_progress') return '#00fffb';
+            if (status === 'completed') return 'var(--accent)';
+            if (status === 'in_progress') return 'var(--primary)';
             return '#808080';
           }}
           className="dag-minimap"

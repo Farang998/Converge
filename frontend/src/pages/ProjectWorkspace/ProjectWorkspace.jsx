@@ -172,7 +172,7 @@ export default function ProjectWorkspace() {
 
       <div className="pw-inner">
         {/* StatusStrip and content remains inside pw-inner */}
-        <StatusStrip progress={progressPct} nextMilestone={milestones.find(m => m.state === 'in_progress')} lastActivity={activity[0]} />
+        {/* <StatusStrip progress={progressPct} nextMilestone={milestones.find(m => m.state === 'in_progress')} lastActivity={activity[0]} /> */}
 
         <div className="pw-content">
           <aside className="pw-left">
