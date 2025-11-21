@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import api from '../../services/api';
+import './GitHubImport.css';
 
 // Modal to import a GitHub repository into project storage (S3) and then
 // call the ingest API with the list of S3 URIs returned by the importer.
@@ -68,7 +69,7 @@ export default function GitHubImport({ projectId, onImportSuccess, onClose }) {
   };
 
   return (
-    <div className="modal-backdrop">
+    <div className="modal-backdrop theme-light" data-theme="light">
       <div className="modal-card" style={{ maxWidth: 720 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <h3>Import from GitHub</h3>

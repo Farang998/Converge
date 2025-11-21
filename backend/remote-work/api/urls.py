@@ -1,8 +1,9 @@
 from django.urls import path, include
-from .views import hello_world
+from .views import hello_world, ai_query
 
 urlpatterns = [
     path('hello/', hello_world),
+    path('ai/query/', ai_query),
     path('auth/', include('api.auth.urls')),
     path('projects/', include('api.projects.urls')),
     path('notifications/', include('api.notifications.urls')),
