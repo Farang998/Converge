@@ -820,14 +820,15 @@ class CreateThread(APIView):
             return Response({"error": "Thread already exists", "thread_id": str(existing_thread.id)}, status=400)
         
         thread = Thread.objects.create(
-            parent_message = parent_id,
-            group_id = group_id
+            parent_message = parent_msg,
+            # group_id = group_id,
+            chat = parent_msg.chat
         )
 
         tmsg = ThreadMessage.objects.create(
-            thread_id=str(thread.id),
-            sender=str(user.id),
-            content=content,
+            thread = thread,
+            sender = str(user.id),
+            content = content,
         )
 
         try:
