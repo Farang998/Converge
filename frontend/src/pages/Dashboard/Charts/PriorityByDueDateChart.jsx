@@ -7,18 +7,12 @@ import {
   Tooltip,
   ResponsiveContainer,
   CartesianGrid,
-  LabelList,
 } from "recharts";
 
-export default function WorkloadChart({ data = [] }) {
-  // Convert backend format → recharts format
-  const chartData = (data || []).map((d) => ({
-    name: d.name || "Unassigned",
-    value: d.value || 0,
-  }));
-
+export default function PriorityByDueDateChart({ data }) {
   const themeBlue = "#3b82f6";
 
+  // Custom Tooltip — show days_remaining
   const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
       return (
@@ -33,7 +27,7 @@ export default function WorkloadChart({ data = [] }) {
           }}
         >
           <div><strong>{label}</strong></div>
-          <div>tasks: {payload[0].value}</div>
+          <div>days_remaining: {30 - payload[0].value}</div>
         </div>
       );
     }
@@ -43,18 +37,15 @@ export default function WorkloadChart({ data = [] }) {
   return (
     <div style={{ width: "100%", height: 280 }}>
       <ResponsiveContainer>
-        <BarChart data={chartData} margin={{ top: 20, right: 25, left: 0, bottom: 10 }}>
+        <BarChart data={data} margin={{ top: 20, right: 25, left: 0, bottom: 10 }}>
           <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
-
           <XAxis dataKey="name" tick={{ fontSize: 12 }} interval={0} angle={20} textAnchor="front" />
           <YAxis allowDecimals={false} tick={{ fontSize: 12 }} />
 
           <Tooltip content={<CustomTooltip />} />
 
-          <Bar dataKey="value" fill={themeBlue} radius={[6, 6, 0, 0]}>
-            {/* bar labels on top */}
-            <LabelList dataKey="value" position="top" />
-          </Bar>
+          {/* Removed LabelList (this removes the numbers on top of bars) */}
+          <Bar dataKey="value" fill={themeBlue} radius={[6, 6, 0, 0]} />
         </BarChart>
       </ResponsiveContainer>
     </div>

@@ -1,157 +1,131 @@
-# backend/remote-work/projects/dashboard_views.py
-
+from datetime import datetime, timezone
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework import status
 from rest_framework.exceptions import AuthenticationFailed
-from mongoengine.queryset.visitor import Q
-from datetime import datetime
 
 from ..utils import authenticate_user_from_request
-from ..projects.models import Project
 from ..tasks.models import Task
-from ..auth.models import User
-from ..file_sharing.models import File  # <-- Valid and correct import now
+from ..projects.models import Project
+from mongoengine.errors import DoesNotExist
 
 
 class ProjectDashboardView(APIView):
-    """
-    Dashboard API that returns aggregated project analytics.
-    Used by: /projects/dashboard/<project_id>/overview/
-    """
 
     def get(self, request, project_id):
-        # Authenticate
+
+        # --- AUTH FIX ---
         try:
             user = authenticate_user_from_request(request)
-        except AuthenticationFailed as e:
-            return Response({"error": str(e)}, status=401)
+        except AuthenticationFailed:
+            return Response({"error": "Authentication failed"}, status=401)
 
-        # Fetch project
+        # --- PROJECT ---
         try:
             project = Project.objects.get(id=project_id)
-        except Exception:
+        except DoesNotExist:
             return Response({"error": "Project not found"}, status=404)
 
-        # Permission: leader or accepted member
-        user_id_str = str(user.id)
+        # --- CHECK USER IS MEMBER OR LEADER ---
+        user_id = str(user.id)
         is_leader = project.team_leader == user
-        is_member = any(m.get("user") == user_id_str and m.get("accepted") for m in project.team_members)
+        is_member = any(
+            m.get("user") == user_id and m.get("accepted")
+            for m in project.team_members
+        )
 
         if not (is_leader or is_member):
-            return Response({"error": "You are not a member of this project."}, status=403)
+            return Response({"error": "Not authorized"}, status=403)
 
-        # -----------------------
-        # FETCH ALL TASKS
-        # -----------------------
-        try:
-            tasks = list(Task.objects(project=project))
-        except Exception:
-            tasks = []
+        # --- TASKS ---
+        tasks = list(Task.objects.filter(project=project))
 
-        # -----------------------
+        # --------------------
         # TASK STATUS COUNTS
-        # -----------------------
-        status_counts = {}
+        # --------------------
+        status_counts = {
+            "pending": 0,
+            "in_progress": 0,
+            "approval_pending": 0,
+            "completed": 0,
+        }
+
         for t in tasks:
-            st = getattr(t, "status", "pending") or "pending"
-            status_counts[st] = status_counts.get(st, 0) + 1
+            if t.status in status_counts:
+                status_counts[t.status] += 1
 
-        # -----------------------
-        # PRIORITY COUNTS (*your model has no priority, so return empty)
-        # -----------------------
-        priority_counts = {}  # future-ready if you add priority field
-
-        # -----------------------
+        # --------------------
         # WORKLOAD PER MEMBER
-        # -----------------------
+        # --------------------
         tasks_per_member = {}
 
         for t in tasks:
-            assignee = getattr(t, "assigned_to", None)
-            if assignee:
-                username = getattr(assignee, "username", "Unknown")
-            else:
-                username = "Unassigned"
+            assignee = t.assigned_to.name if t.assigned_to else "Unassigned"
+            tasks_per_member[assignee] = tasks_per_member.get(assignee, 0) + 1
 
-            tasks_per_member[username] = tasks_per_member.get(username, 0) + 1
-
-        tasks_per_member_list = [
-            {"username": u, "count": c} for u, c in tasks_per_member.items()
+        workload_data = [
+            {"name": k, "value": v} for k, v in tasks_per_member.items()
         ]
 
-        # -----------------------
+        # --------------------
         # UPCOMING DEADLINES
-        # -----------------------
+        # --------------------
+        now = datetime.now(timezone.utc)
+
         upcoming = []
         for t in tasks:
-            dd = getattr(t, "due_date", None)
-            if dd:
+            if t.due_date:
+                due = (
+                    t.due_date.replace(tzinfo=timezone.utc)
+                    if t.due_date.tzinfo is None
+                    else t.due_date
+                )
+
                 upcoming.append({
                     "id": str(t.id),
                     "name": t.name,
-                    "due": dd.isoformat()
+                    "due": due.isoformat()
                 })
 
-        upcoming = sorted(upcoming, key=lambda x: x["due"])[:10]
+        upcoming = sorted(upcoming, key=lambda x: x["due"])[:5]
 
-        # -----------------------
-        # PROJECT PROGRESS
-        # -----------------------
-        total_tasks = len(tasks)
-        completed = sum(1 for t in tasks if getattr(t, "status", "").lower() == "completed")
-        progress = int((completed / total_tasks) * 100) if total_tasks > 0 else 0
+        # --------------------
+        # PRIORITY BY DEPENDENCIES
+        # --------------------
+        priority_by_dependencies = [
+            {"name": t.name, "value": len(t.dependencies or [])}
+            for t in tasks
+        ]
 
-        # -----------------------
-        # RECENT ACTIVITY (TASKS + FILE UPLOADS)
-        # -----------------------
-        recent_activity = []
+        # --------------------
+        # PRIORITY BY DUE DATE
+        # --------------------
+        priority_by_due_date = []
+        now = datetime.now(timezone.utc)
 
-        # TASK activity
-        try:
-            recent_tasks = sorted(
-                tasks,
-                key=lambda x: getattr(x, "created_at", datetime.min),
-                reverse=True
-            )[:10]
+        for t in tasks:
+            if t.due_date:
+                due = (
+                    t.due_date.replace(tzinfo=timezone.utc)
+                    if t.due_date.tzinfo is None
+                    else t.due_date
+                )
+                days_left = (due - now).days
+                priority_score = max(0, 30 - days_left)
+            else:
+                priority_score = 0
 
-            for t in recent_tasks:
-                created_at = getattr(t, "created_at", None)
-                recent_activity.append({
-                    "type": "task",
-                    "message": f"Task '{t.name}' created (status: {t.status})",
-                    "time": created_at.isoformat() if created_at else None
-                })
-        except Exception:
-            pass
+            priority_by_due_date.append({
+                "name": t.name,
+                "value": priority_score
+            })
 
-        # FILE activity (now correct for your File model)
-        try:
-            recent_files = list(File.objects(project=project).order_by("-uploaded_at")[:10])
-
-            for f in recent_files:
-                uploader = getattr(f.uploaded_by, "username", "Someone")
-                time = f.uploaded_at.isoformat() if f.uploaded_at else None
-                recent_activity.append({
-                    "type": "file",
-                    "message": f"File '{f.name}' uploaded by {uploader}",
-                    "time": time
-                })
-        except Exception:
-            pass
-
-        # Sort activity latest → oldest
-        recent_activity = sorted(recent_activity, key=lambda x: x.get("time") or "", reverse=True)[:12]
-
-        resp = {
+        # --------------------
+        # RETURN FINAL JSON
+        # --------------------
+        return Response({
             "task_status_counts": status_counts,
-            "priority_counts": priority_counts,
-            "tasks_per_member": tasks_per_member_list,
+            "tasks_per_member": workload_data,
             "upcoming_deadlines": upcoming,
-            "project_progress": progress,
-            "recent_activity": recent_activity,
-            "total_tasks": total_tasks,
-            "completed_tasks": completed,
-        }
-
-        return Response(resp, status=200)
+            "priority_by_dependencies": priority_by_dependencies,
+            "priority_by_due_date": priority_by_due_date,
+        }, status=200)

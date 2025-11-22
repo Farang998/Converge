@@ -4,9 +4,9 @@ import api from "../../services/api";
 import "./analytics.css";
 import "./charts.css";
 import TaskStatusChart from "./Charts/TaskStatusChart";
-import PriorityChart from "./Charts/PriorityChart";
 import WorkloadChart from "./Charts/WorkloadChart";
-import ProjectProgressChart from "./Charts/ProjectProgressChart";
+import PriorityByDependenciesChart from "./Charts/PriorityByDependenciesChart";
+import PriorityByDueDateChart from "./Charts/PriorityByDueDateChart";
 
 export default function ProjectAnalytics() {
   const { id: projectId } = useParams();
@@ -17,7 +17,9 @@ export default function ProjectAnalytics() {
   useEffect(() => {
     async function load() {
       try {
-        const { data } = await api.get(`projects/dashboard/${projectId}/overview/`);
+        const { data } = await api.get(
+          `projects/dashboard/${projectId}/overview/`
+        );
         setOverview(data);
       } finally {
         setLoading(false);
@@ -28,6 +30,8 @@ export default function ProjectAnalytics() {
 
   return (
     <div className="analytics-page">
+
+      {/* HEADER */}
       <div className="analytics-header">
         <h2 className="analytics-title">📊 Project Analytics</h2>
 
@@ -42,38 +46,17 @@ export default function ProjectAnalytics() {
       {!loading && overview && (
         <div className="analytics-grid">
 
-          {/* LEFT SIDE */}
-          <div>
-            <div className="chart-card">
-              <ProjectProgressChart progress={overview.project_progress} />
-            </div>
-
-            <div className="chart-card" style={{ marginTop: 16 }}>
-              <div className="chart-title">Upcoming Deadlines</div>
-
-              {overview.upcoming_deadlines?.length ? (
-                <table className="upcoming-table">
-                  <thead>
-                    <tr><th>Task</th><th>Due</th></tr>
-                  </thead>
-                  <tbody>
-                    {overview.upcoming_deadlines.map((t) => (
-                      <tr key={t.id}>
-                        <td>{t.name}</td>
-                        <td>{t.due ? new Date(t.due).toLocaleDateString() : "-"}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              ) : (
-                <p>No upcoming deadlines.</p>
-              )}
-            </div>
-          </div>
-
-          {/* RIGHT SIDE */}
-          <div className="charts-grid"
-            style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}
+          {/* =======================
+              ROW 1 — (2 Charts)
+          =========================*/}
+          <div
+            className="charts-grid"
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr",
+              gap: 16,
+              width: "100%",
+            }}
           >
             <div className="chart-card">
               <div className="chart-title">Task Status</div>
@@ -81,40 +64,73 @@ export default function ProjectAnalytics() {
             </div>
 
             <div className="chart-card">
-              <div className="chart-title">Task Priority</div>
-              <PriorityChart data={overview.priority_counts} />
-            </div>
-
-            <div className="chart-card">
               <div className="chart-title">Workload</div>
               <WorkloadChart data={overview.tasks_per_member} />
             </div>
+          </div>
 
+          {/* =======================
+              ROW 2 — (2 Charts)
+          =========================*/}
+          <div
+            className="charts-grid"
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr",
+              gap: 16,
+              marginTop: 20,
+              width: "100%",
+            }}
+          >
             <div className="chart-card">
-              <div className="chart-title">Totals</div>
-              <p>Total tasks: <strong>{overview.total_tasks}</strong></p>
-              <p>Completed: <strong>{overview.completed_tasks}</strong></p>
+              <div className="chart-title">Priority By Dependencies</div>
+              <PriorityByDependenciesChart
+                data={overview.priority_by_dependencies}
+              />
             </div>
 
-            <div className="chart-card" style={{ gridColumn: "1 / span 2" }}>
-              <div className="chart-title">Recent Activity</div>
-              <div className="recent-activity">
-                {overview.recent_activity?.length ? (
-                  overview.recent_activity.map((act, i) => (
-                    <div className="recent-item" key={i}>
-                      <div>{act.message}</div>
-                      <div style={{ fontSize: "0.8rem", color: "#6b7280" }}>
-                        {new Date(act.time).toLocaleString()}
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <p>No recent activity.</p>
-                )}
-              </div>
+            <div className="chart-card">
+              <div className="chart-title">Priority By Due Date</div>
+              <PriorityByDueDateChart data={overview.priority_by_due_date} />
             </div>
           </div>
 
+          {/* =======================
+              ROW 3 — Full Width 
+              Upcoming Deadlines
+          =========================*/}
+          <div
+            className="chart-card"
+            style={{
+              width: "100%",
+              marginTop: 24,
+            }}
+          >
+            <div className="chart-title">Upcoming Deadlines</div>
+
+            {overview.upcoming_deadlines?.length ? (
+              <table className="upcoming-table">
+                <thead>
+                  <tr>
+                    <th>Task</th>
+                    <th>Due</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {overview.upcoming_deadlines.map((t) => (
+                    <tr key={t.id}>
+                      <td>{t.name}</td>
+                      <td>
+                        {t.due ? new Date(t.due).toLocaleDateString() : "-"}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : (
+              <p>No upcoming deadlines.</p>
+            )}
+          </div>
         </div>
       )}
     </div>
