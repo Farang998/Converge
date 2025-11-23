@@ -517,7 +517,8 @@ class SendProjectMessage(APIView):
             chat = GroupChat(
                 name=project.name,
                 admin=str(project.team_leader.id),
-                participants=participants
+                participants=participants,
+                project_id=project.id
             )
             chat.save()
             print(f"[DEBUG] Created chat '{project.name}' with participants: {participants}")
@@ -860,6 +861,7 @@ class ListProjectThreads(APIView):
     Returns a list of thread root messages for the group chat 
     """
     def get(self, request, project_id):
+        print(f"[DEBUG] ListProjectThreads called with project_id={project_id}")
         user, err = _get_user_from_auth(request)
         if err:
             return err
@@ -867,20 +869,36 @@ class ListProjectThreads(APIView):
         # verifying if the project exists
         try:
             project = Project.objects.get(id=project_id)
+            print(f"[DEBUG] Project found: {project.name}")
         except DoesNotExist:
+            print(f"[DEBUG] Project not found for id={project_id}")
             return Response({"error": "Project not found"}, status=404)
         
         uid = str(user.id)
         is_leader = str(project.team_leader.id) == uid
-        is_member = any(str(member.get('user')) == uid for member in (project.team_member or []))
+        is_member = any(str(member.get('user')) == uid for member in (project.team_members or []))
         if not is_leader and not is_member:
+            print(f"[DEBUG] User {uid} not a member of project")
             return Response({"error": "You are not a member of this project"}, status=403)
         
         chat = GroupChat.objects(project_id=project.id).first()
+        print(f"[DEBUG] Looking for chat with project_id={project.id}, found={chat is not None}")
+        
+        # Fallback: if no chat found by project_id, try by project name (for existing chats)
+        if not chat:
+            print(f"[DEBUG] Fallback: looking for chat by project name={project.name}")
+            chat = GroupChat.objects(name=project.name).first()
+            if chat:
+                print(f"[DEBUG] Found chat by name, updating with project_id={project.id}")
+                chat.project_id = project.id
+                chat.save()
+        
         if not chat: # corresponding group chat doesn't exist
+            print(f"[DEBUG] No chat found for project_id={project.id}")
             return Response({"error": "Chat not found"}, status=404)
         
         threads = Thread.objects(chat=chat).order_by("-created_at")[:50]
+        print(f"[DEBUG] Found {len(threads)} threads")
         return Response({
             "project_id": str(project.id),
             "project_name": project.name,
@@ -893,30 +911,53 @@ class GetThreadMessages(APIView):
     Returns the root and the thread messages
     """
     def get(self, request, project_id, thread_id):
+        print(f"[DEBUG] GetThreadMessages called with project_id={project_id}, thread_id={thread_id}")
         user, err = _get_user_from_auth(request)
         if err:
             return err
         try:
             project = Project.objects.get(id=project_id)
+            print(f"[DEBUG] Project found: {project.name}")
         except DoesNotExist:
+            print(f"[DEBUG] Project not found for id={project_id}")
             return Response({"error": "Project not found"}, status=404)
         
         uid = str(user.id)
         is_leader = str(project.team_leader.id) == uid
         is_member = any(str(m.get('user')) == uid for m in (project.team_members or []))
         if not is_leader and not is_member:
+            print(f"[DEBUG] User {uid} not a member of project")
             return Response({"error": "You are not a member of this project"}, status=403)
 
         chat = GroupChat.objects(project_id=project.id).first()
+        print(f"[DEBUG] Looking for chat with project_id={project.id}, found={chat is not None}")
+        
+        # Fallback: if no chat found by project_id, try by project name (for existing chats)
         if not chat:
+            print(f"[DEBUG] Fallback: looking for chat by project name={project.name}")
+            chat = GroupChat.objects(name=project.name).first()
+            if chat:
+                print(f"[DEBUG] Found chat by name, updating with project_id={project.id}")
+                chat.project_id = project.id
+                chat.save()
+        
+        if not chat:
+            print(f"[DEBUG] No chat found for project_id={project.id}")
             return Response({"error": "Chat not found"}, status=404)
 
         try:
             thread = Thread.objects.get(id=thread_id, chat=chat)
+            print(f"[DEBUG] Thread found: {thread.id}")
         except DoesNotExist:
+            print(f"[DEBUG] Thread not found for id={thread_id} in chat {chat.id}")
             return Response({"error": "Thread not found in this chat"}, status=404)
 
         parent = thread.parent_message
+        if not parent:
+            print(f"[DEBUG] No parent message for thread {thread.id}")
+            return Response({"error": "Parent message not found"}, status=404)
+        
+        print(f"[DEBUG] GetThreadMessages returning successfully")
         replies = ThreadMessage.objects(thread=thread).order_by("timestamp")
         sender_ids = list({parent.sender} | {r.sender for r in replies})
         users = {str(u.id): u for u in User.objects(id__in=sender_ids)}
