@@ -2,7 +2,7 @@
 import React from "react";
 import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from "recharts";
 
-const COLORS = ["#4CAF50", "#FF9800", "#2196F3", "#F44336", "#9E9E9E"];
+const COLORS = ["#ff1100ff", "#FF9800", "#2196F3", "#4CAF50", "#9E9E9E"];
 
 export default function TaskStatusChart({ data = {} }) {
   // data is object like { pending: 3, in_progress: 4, completed: 2 }
