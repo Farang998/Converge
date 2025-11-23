@@ -42,7 +42,9 @@ const ChatToAI = () => {
     const fetchChats = async () => {
       setLoadingChats(true);
       try {
-        const res = await api.get('ai/chats/');
+        const params = {};
+        if (projectId) params.project_id = projectId;
+        const res = await api.get('ai/chats/', { params });
         const raw = (res.data && res.data.chats) ? res.data.chats : [];
         const normalized = (raw || []).map((c) => ({
           ...c,
@@ -63,7 +65,9 @@ const ChatToAI = () => {
 
   const handleCreateChat = async () => {
     try {
-      const res = await api.post('ai/chats/', { title: 'New Chat', project_id: projectId || 'my_project' });
+      const payload = { title: 'New Chat' };
+      if (projectId) payload.project_id = projectId;
+      const res = await api.post('ai/chats/', payload);
       const created = res.data || {};
       // normalize created chat to match list shape
       const createdNormalized = {
@@ -112,10 +116,11 @@ const ChatToAI = () => {
     setError('');
 
     let cid = activeChatId;
-    // auto-create a chat for the user if none selected
     if (!cid) {
       try {
-        const resCreate = await api.post('ai/chats/', { title: safeText(userMessage.content).slice(0, 64) || 'New Chat', project_id: projectId || 'my_project' });
+        const payload = { title: safeText(userMessage.content).slice(0, 64) || 'New Chat' };
+        if (projectId) payload.project_id = projectId;
+        const resCreate = await api.post('ai/chats/', payload);
         const created = resCreate.data || {};
         const createdNormalized = {
           id: safeText(created.id || created._id || created.uid) || null,

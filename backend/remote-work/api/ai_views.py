@@ -29,7 +29,11 @@ def ai_chats(request):
         return Response({'error': 'Authentication required'}, status=status.HTTP_401_UNAUTHORIZED)
 
     if request.method == 'GET':
-        chats = AIChat.objects(user=str(user.id))
+        project_id = request.GET.get('project_id')
+        if project_id:
+            chats = AIChat.objects(user=str(user.id), project_id=str(project_id))
+        else:
+            chats = AIChat.objects(user=str(user.id))
         out = []
         for c in chats:
             out.append({
