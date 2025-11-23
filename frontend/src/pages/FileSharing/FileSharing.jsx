@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import api from '../../services/api';
+import { ingestS3Uris } from '../../services/ingest';
 import { useAuth } from '../../contexts/AuthContext';
 import './FileSharing.css';
 import { FaUpload, FaDownload, FaFile, FaUsers, FaSpinner, FaExclamationCircle, FaCheckCircle, FaEllipsisV, FaTrash } from 'react-icons/fa';
@@ -99,6 +100,18 @@ export default function FileSharing() {
       });
 
       setSuccess(`File "${file.name}" uploaded successfully!`);
+
+      try {
+        const s3Uri = response?.data?.s3_uri || null;
+        if (s3Uri) {
+          ingestS3Uris([s3Uri], projectId)
+            .then(() => console.debug('Ingest started for', s3Uri))
+            .catch((e) => console.warn('Ingest call failed', e));
+        }
+      } catch (e) {
+        console.warn('Failed to start ingest after upload', e);
+      }
+
       // Refresh file list
       await fetchFiles();
       // Clear file input
