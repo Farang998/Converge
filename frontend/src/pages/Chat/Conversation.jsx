@@ -69,6 +69,10 @@ export default function Conversation() {
     return null;
   };
 
+  useEffect(() => {
+    activeThreadRef.current = activeThread;
+  }, [activeThread]);
+
   // WebSocket connection function
   const connectWebSocket = () => {
     const token = localStorage.getItem("authToken");
