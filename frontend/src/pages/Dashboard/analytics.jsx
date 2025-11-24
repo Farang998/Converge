@@ -6,7 +6,8 @@ import "./charts.css";
 import "../../components/accordion.css"; 
 import AccordionSection from "../../components/AccordionSection";
 import TaskWorkflowManagement from "./TaskWorkflowManagement";
-
+import TeamActivityDashboard from "./TeamActivityDashboard";
+import FileActivityDashboard from "./FileActivityDashboard"; 
 // charts ( existing chart components)
 import TaskStatusChart from "./Charts/TaskStatusChart";
 import WorkloadChart from "./Charts/WorkloadChart";
@@ -149,11 +150,11 @@ export default function ProjectAnalytics() {
       </AccordionSection>
 
       <AccordionSection title="Team Activity Dashboard" defaultOpen={false}>
-       {/* <TeamActivityDashboard projectId={projectId} /> */}
+       <TeamActivityDashboard projectId={projectId} />
       </AccordionSection>
 
       <AccordionSection title="File Storage & File Activity Dashboard" defaultOpen={false}>
-        {/* <FileActivityDashboard projectId={projectId} /> */}
+        <FileActivityDashboard projectId={projectId} />
       </AccordionSection>
     </div>
   );
