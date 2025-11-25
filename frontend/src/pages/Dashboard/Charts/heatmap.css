@@ -1,0 +1,14 @@
+/* src/pages/Dashboard/Charts/heatmap.css */
+.heatmap-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.heatmap-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.heatmap-cell {
+  box-shadow: none;
+}

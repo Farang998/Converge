@@ -732,3 +732,29 @@
     width: 100%;
   }
 }
+
+/* for analytics button  */
+
+.analytics-btn {
+  background: #eef6ff;
+  color: #1e40af;
+  border: 1px solid #bfdbfe;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  flex: 1;
+}
+
+.analytics-btn:hover {
+  background: #dbeafe;
+  border-color: #2563eb;
+  color: #2563eb;
+  transform: translateY(-2px);
+}
+
+.analytics-btn:active {
+  transform: scale(0.97);
+}

@@ -1,0 +1,70 @@
+/* ================================
+   WORKFLOW HEALTH GAUGE STYLES
+================================ */
+
+/* Wrapper for centering */
+.gauge-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+}
+
+/* Outer ring background */
+.gauge-outer {
+  width: 160px;
+  height: 160px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.07); /* Glassy white */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+
+/* Actual gauge ring */
+.gauge-circle {
+  width: 130px;
+  height: 130px;
+  border-radius: 50%;
+  position: relative;
+  background: conic-gradient(
+    #3f51b5 var(--percent),     /* theme blue fill */
+    rgba(255, 255, 255, 0.15) 0deg
+  );
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  transition: background 0.4s ease;
+}
+
+/* Inner white circle */
+.gauge-inner {
+  width: 90px;
+  height: 90px;
+  background: #f8fafc; /* soft dashboard white */
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.12);
+}
+
+/* Percentage text */
+.gauge-value {
+  font-size: 20px;
+  font-weight: 700;
+  color: #1e293b; /* deep gray/navy */
+}
+
+/* Subtitle under gauge */
+.gauge-label {
+  margin-top: 10px;
+  font-size: 14px;
+  color: #475569; /* soft slate gray */
+}

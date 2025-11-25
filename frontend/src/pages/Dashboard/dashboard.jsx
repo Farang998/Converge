@@ -466,6 +466,19 @@ export default function Dashboard() {
                       <span>{proj.membershipDescription}</span>
                     </p>
                     <div className="project-actions">
+
+                      <button
+                        className="analytics-btn"
+                        type="button"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          navigate(`/projects/${proj.id}/analytics`);
+                        }}
+                        title="Open project analytics"
+                      >
+                        Analytics
+                      </button>
+
                       <button
                         className="details-btn"
                         type="button"

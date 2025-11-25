@@ -1,0 +1,55 @@
+/* accordion.css (updated) */
+
+.accordion-section {
+  width: 100%;
+  margin: 0 auto;
+  margin-top: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+/* header */
+.accordion-header {
+  background: #f8fafc;
+  padding: 16px 20px;
+  border-radius: 14px;
+  font-size: 18px;
+  font-weight: 700;
+  cursor: pointer;
+  color: #1e293b;
+  border: none;
+  box-shadow: 0px 6px 14px rgba(6, 11, 28, 0.06);
+  transition: background 0.16s ease, transform 0.12s ease;
+}
+.accordion-header:hover { background: #eef2f7; transform: translateY(-1px); }
+
+/* animated content */
+.accordion-content {
+  overflow: hidden;
+  max-height: 0;
+  transition: max-height 360ms cubic-bezier(.2,.9,.2,1), opacity 280ms ease;
+  opacity: 0;
+  background: #f1f5f9;
+  border-radius: 12px;
+  padding: 0 20px;
+}
+
+/* when open, class 'open' should be toggled by JS — we also set inline max-height */
+.accordion-content.open {
+  opacity: 1;
+  padding-top: 16px;
+  padding-bottom: 18px;
+}
+
+/* inner visuals */
+.accordion-content .chart-card {
+  background: transparent;
+  box-shadow: none;
+  padding: 0;
+}
+
+/* responsive */
+@media (max-width: 768px) {
+  .accordion-header { font-size: 16px; padding: 14px; }
+}
