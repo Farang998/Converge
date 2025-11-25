@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import ChatToAI from "./ChatToAI";
 import { useParams, useNavigate } from "react-router-dom";
 import MessageBubble from "./MessageBubble";
 import DeleteConfirmationModal from "../../components/DeleteConfirmationModal";
@@ -11,6 +12,8 @@ export default function Conversation() {
   const { projectId } = useParams();
   const navigate = useNavigate();
   const [messages, setMessages] = useState([]);
+  const [showAIChat, setShowAIChat] = useState(false);
+  const [activeSection, setActiveSection] = useState('group');
   const [input, setInput] = useState("");
   const [projectName, setProjectName] = useState("");
   const { user: currentUser } = useAuth();
@@ -759,10 +762,49 @@ export default function Conversation() {
           
           <div className="chat-header-info">
             <h2 className="chat-title">{projectName}</h2>
-            <p className="chat-subtitle">Group Chat</p>
+            <p className="chat-subtitle">{activeSection === 'group' ? 'Group Chat' : 'AI Assistant'}</p>
           </div>
 
-          {/* Search Bar */}
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button
+              style={{
+                background: activeSection === 'group' ? '#667eea' : '#f3f4f6',
+                color: activeSection === 'group' ? '#fff' : '#374151',
+                border: 'none',
+                borderRadius: 8,
+                padding: '8px 16px',
+                fontWeight: 600,
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+              }}
+              onClick={() => setActiveSection('group')}
+            >
+              Group Chat
+            </button>
+            <button
+              style={{
+                background: activeSection === 'ai' ? '#667eea' : '#f3f4f6',
+                color: activeSection === 'ai' ? '#fff' : '#374151',
+                border: 'none',
+                borderRadius: 8,
+                padding: '8px 16px',
+                fontWeight: 600,
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+              }}
+              onClick={() => setActiveSection('ai')}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="12" cy="12" r="10" />
+                <path d="M8 15h8M9 9h6" />
+              </svg>
+              AI Chat
+            </button>
+          </div>
+          {/* Search Bar (moved inside header) */}
           <div className="chat-search-container">
             <div className="chat-search-wrapper">
               <svg className="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -793,7 +835,6 @@ export default function Conversation() {
                 <div className="search-spinner"></div>
               )}
             </div>
-
             {/* Search Results Dropdown */}
             {showSearchResults && searchResults.length > 0 && (
               <div className="search-results-dropdown">
@@ -860,13 +901,20 @@ export default function Conversation() {
         </div>
 
       {/* Error Banner */}
-      {error && (
+      {error && activeSection === 'group' && (
         <div className="chat-error-banner">
           <span className="error-icon-small">⚠️</span>
           <span>{error}</span>
         </div>
       )}
 
+      {}
+      {activeSection === 'ai' ? (
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+          <ChatToAI />
+        </div>
+      ) : (
+        <>
       {/* Messages Area */}
       <div className="chat-messages" ref={messagesContainerRef}>
         {messages.length === 0 ? (
@@ -979,6 +1027,10 @@ export default function Conversation() {
           </button>
         </div>
       </div>
+      </>
+      )}
+
+      {/* Close chat-main */}
       </div>
 
       {activeThread && (

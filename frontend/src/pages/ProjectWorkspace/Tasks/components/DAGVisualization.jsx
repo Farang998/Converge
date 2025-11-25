@@ -45,7 +45,7 @@ const getLayoutedElements = (nodes, edges) => {
   return { nodes: layoutedNodes, edges };
 };
 
-const DAGVisualization = ({ nodes: taskNodes, edges: taskEdges, onEdgesChange: onTaskEdgesChange, onNodeEdit, onNodeDelete }) => {
+const DAGVisualization = ({ nodes: taskNodes, edges: taskEdges, onEdgesChange: onTaskEdgesChange, onNodeEdit, onNodeDelete, onAddEdge, onRemoveEdge, isTeamLeader, pendingEdges = [], onNotification }) => {
   const [hoveredNodeId, setHoveredNodeId] = useState(null);
 
   const initialNodes = useMemo(
@@ -57,6 +57,7 @@ const DAGVisualization = ({ nodes: taskNodes, edges: taskEdges, onEdgesChange: o
           ...task,
           onEdit: onNodeEdit,
           onDelete: onNodeDelete,
+          tasksList: taskNodes, // provide full list for dependency name mapping
         },
         position: { x: 0, y: 0 },
       })),
@@ -78,19 +79,27 @@ const DAGVisualization = ({ nodes: taskNodes, edges: taskEdges, onEdgesChange: o
         const { incomingEdges, outgoingEdges } = hoveredNodeId 
           ? getConnectedEdges(hoveredNodeId)
           : { incomingEdges: [], outgoingEdges: [] };
-        
+
         const isIncoming = incomingEdges.some(e => e.from === edge.from && e.to === edge.to);
         const isOutgoing = outgoingEdges.some(e => e.from === edge.from && e.to === edge.to);
+        
+        // Check if this edge is pending
+        const isPending = pendingEdges.some(pe => pe.from === edge.from && pe.to === edge.to);
 
-        let edgeColor = '#00fffb';
+        let edgeColor = '#687272ff';
         let edgeWidth = 2;
+        let animated = false;
 
-        if (hoveredNodeId) {
+        if (isPending) {
+          edgeColor = '#ff9800'; // Orange for pending
+          edgeWidth = 3;
+          animated = true;
+        } else if (hoveredNodeId) {
           if (isOutgoing) {
-            edgeColor = '#2fff00'; // Dependents (outgoing)
+            edgeColor = 'var(--primary-darker)'; // Dependents (outgoing)
             edgeWidth = 3;
           } else if (isIncoming) {
-            edgeColor = '#ff6b00'; // Priors (incoming)
+            edgeColor = 'var(--accent-darker)'; // Priors (incoming)
             edgeWidth = 3;
           } else {
             edgeColor = '#cccccc'; // Dimmed
@@ -103,7 +112,7 @@ const DAGVisualization = ({ nodes: taskNodes, edges: taskEdges, onEdgesChange: o
           source: edge.from,
           target: edge.to,
           type: 'smoothstep',
-          animated: false,
+          animated,
           style: { stroke: edgeColor, strokeWidth: edgeWidth },
           markerEnd: {
             type: MarkerType.ArrowClosed,
@@ -113,7 +122,7 @@ const DAGVisualization = ({ nodes: taskNodes, edges: taskEdges, onEdgesChange: o
           },
         };
       }),
-    [taskEdges, hoveredNodeId, getConnectedEdges]
+    [taskEdges, hoveredNodeId, getConnectedEdges, pendingEdges]
   );
 
   const { nodes: layoutedNodes, edges: layoutedEdges } = useMemo(
@@ -146,13 +155,36 @@ const DAGVisualization = ({ nodes: taskNodes, edges: taskEdges, onEdgesChange: o
     setHoveredNodeId(null);
   }, []);
 
+  const onEdgeClick = useCallback((event, edge) => {
+    // Allow removing pending edges by clicking them
+    const edgeData = {
+      from: edge.source,
+      to: edge.target,
+    };
+    
+    if (pendingEdges.some(pe => pe.from === edgeData.from && pe.to === edgeData.to)) {
+      onRemoveEdge(edgeData);
+    }
+  }, [pendingEdges, onRemoveEdge]);
+
   const onConnect = useCallback((params) => {
+    if (!isTeamLeader) {
+      if (onNotification) {
+        onNotification({
+          type: 'error',
+          title: 'Permission Denied',
+          message: 'Only the team leader can create dependencies. Please contact your team leader to add dependencies.',
+        });
+      }
+      return;
+    }
+    
     const newEdge = {
       from: params.source,
       to: params.target,
     };
-    onTaskEdgesChange([...taskEdges, newEdge]);
-  }, [taskEdges, onTaskEdgesChange]);
+    onAddEdge(newEdge);
+  }, [taskEdges, onAddEdge, isTeamLeader, onNotification]);
 
   return (
     <div className="dag-container">
@@ -164,13 +196,14 @@ const DAGVisualization = ({ nodes: taskNodes, edges: taskEdges, onEdgesChange: o
         onNodeMouseEnter={onNodeMouseEnter}
         onNodeMouseLeave={onNodeMouseLeave}
         onConnect={onConnect}
+        onEdgeClick={onEdgeClick}
         nodeTypes={nodeTypes}
         fitView
         minZoom={0.1}
         maxZoom={1.5}
         defaultViewport={{ x: 0, y: 0, zoom: 0.8 }}
         proOptions={{ hideAttribution: true }}
-        connectionLineStyle={{ stroke: '#00fffb', strokeWidth: 2 }}
+        connectionLineStyle={{ stroke: '#000000ff', strokeWidth: 2 }}
         connectionLineType="smoothstep"
       >
         <Background
@@ -183,8 +216,8 @@ const DAGVisualization = ({ nodes: taskNodes, edges: taskEdges, onEdgesChange: o
         <MiniMap
           nodeColor={(node) => {
             const status = node.data.status;
-            if (status === 'completed') return '#2fff00';
-            if (status === 'in_progress') return '#00fffb';
+            if (status === 'completed') return 'var(--accent)';
+            if (status === 'in_progress') return 'var(--primary)';
             return '#808080';
           }}
           className="dag-minimap"
@@ -194,5 +227,4 @@ const DAGVisualization = ({ nodes: taskNodes, edges: taskEdges, onEdgesChange: o
     </div>
   );
 };
-
 export default DAGVisualization;

@@ -1,33 +1,11 @@
-/* === GLOBAL RESET & BASE === */
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
-
-body {
-  margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  background-color: #f8f9fa;
-  color: #333;
-}
-
-#root {
-  width: 100%;
-  height: 100vh;
-  display: flex;
-  flex-direction: column;
-}
-
 /* === PAGE LAYOUT === */
 .page-container {
   width: 100%;
   height: 100vh;
   position: relative;
+  background-color: rgb(243, 243, 253);
+  border-radius: 8px;
+  border: 1px solid #e0e0e0;
 }
 
 .not-found-page {
@@ -58,7 +36,7 @@ body {
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s ease;
-  background-color: #03003b;
+  background-color: var(--accent);
   color: white;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
@@ -98,7 +76,8 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 50;
+  z-index: 9999;
+  pointer-events: auto;
 }
 
 .modal-content {
@@ -212,12 +191,15 @@ body {
 
 .legend-swatch-line {
   width: 24px;
-  height: 2px;
+  height: 4px;
 }
 
 /* Legend Colors */
 .status-completed {
-  background-color: #2fff00;
+  background-color: var(--accent-brighter);
+}
+.status-in_progress {
+  background-color: var(--primary-brighter);
   box-shadow: 0 0 10px rgba(47, 255, 0, 0.5);
 }
 .status-in-progress {
@@ -228,11 +210,11 @@ body {
   background-color: #808080;
 }
 .edge-outgoing {
-  background-color: #052a00;
+  background-color: var(--primary-darker);
   
 }
 .edge-incoming {
-  background-color: #ff6b00;
+  background-color: var(--accent-darker );
 }
 
 /* === DAG VISUALIZATION === */
@@ -245,27 +227,71 @@ body {
   background-color: white;
   border: 1px solid #e0e0e0;
   border-radius: 8px;
+  position: absolute !important;
+  left: 10px !important;
+  border: 1px solid #ddd;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  padding: 12px;
 }
 
 .dag-minimap {
   background-color: white;
   border: 1px solid #e0e0e0;
   border-radius: 8px;
+
+  position: absolute !important;
+  right: 20px !important;
+  border: 1px solid #ddd;
+  padding: 12px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
 }
 
+
 /* === TASK NODE === */
+.task-node-overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0,0,0,0.45);
+  z-index: 30;
+}
+
+
 .task-node {
   padding: 16px 24px;
   border-radius: 8px;
   border: 2px solid;
   min-width: 250px;
   background-color: white;
-  transition: all 0.3s ease;
   position: relative;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+  max-height: 60vh;
+  overflow: hidden;
+  z-index: 31;
 }
 
 .task-node:hover {
-  transform: scale(1.05);
+  border-color: var(--bg);
+  box-shadow: 0 0 4px var(--primary-darker, 0.7),
+              0 0 6px var(--primary-darker, 0.7);
+  cursor: pointer;
+}
+
+.task-node--selected {
+  box-shadow: 0 0 14px rgba(0, 150, 255, 0.7);
+  z-index: 32;
+  background-color: #ffffff !important;
+}
+
+.task-node-expanded {
+  margin-top: 12px;
+  background: #f4f8ff;
+  padding: 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: #444;
+  max-height: 20vh;
+  overflow-y:scroll;
 }
 
 .task-node-controls {
@@ -373,7 +399,7 @@ body {
 }
 
 .task-node--completed {
-  border-color: #2fff00;
+  border-color: var(--accent);
   background-color: rgba(47, 255, 0, 0.1);
   box-shadow: 0 0 20px rgba(47, 255, 0, 0.5);
 }
@@ -393,4 +419,115 @@ body {
   background-color: #00fffb;
   border: 2px solid white;
   box-shadow: 0 0 5px rgba(0,0,0,0.2);
+}
+
+/* === TASK DETAILS MODAL === */
+.task-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.55);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 60px 24px 24px;
+  z-index: 1000;
+}
+  /* Improved modal layout */
+  .task-modal-titleblock { display:flex; flex-direction:column; gap:6px; width:100%; }
+  .task-modal-badges { display:flex; gap:8px; flex-wrap:wrap; }
+  .task-modal-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:16px; margin-bottom:12px; }
+  .task-modal-cell { display:flex; flex-direction:column; gap:4px; font-size:13px; }
+  .task-modal-cell label { font-size:11px; font-weight:600; letter-spacing:.5px; text-transform:uppercase; color:#555; }
+  .task-modal-section { display:flex; flex-direction:column; gap:8px; margin-bottom:12px; }
+  .task-modal-section label { font-size:11px; font-weight:600; letter-spacing:.5px; text-transform:uppercase; color:#555; }
+  .task-modal-taglist { display:flex; flex-wrap:wrap; gap:8px; }
+  .task-modal-tag { background:#f0f4ff; color:#103654; padding:6px 10px; border-radius:20px; font-size:12px; font-weight:500; border:1px solid #d2e2ff; box-shadow:0 1px 2px rgba(0,0,0,0.06); }
+  .task-modal-tag--file { background:#f9f9f9; color:#333; border-color:#e2e2e2; }
+  .task-modal-tag:hover { background:#e2eeff; }
+
+.task-modal {
+  width: 100%;
+  max-width: 600px;
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 8px 28px rgba(0,0,0,0.25);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: taskModalFade 160ms ease-out;
+  border: 2px solid var(--primary-darker, #00fffb);
+}
+
+@keyframes taskModalFade {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.task-modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 20px 24px 12px;
+  border-bottom: 1px solid #eee;
+}
+
+.task-modal-header h2 {
+  margin: 0;
+  font-size: 20px;
+  line-height: 1.2;
+  font-weight: 600;
+  color: #111;
+  flex: 1;
+}
+
+.task-modal-body {
+  padding: 12px 24px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: 55vh;
+  overflow-y: auto;
+}
+
+.task-modal-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 14px;
+  color: #333;
+}
+
+.task-modal-row strong { color: #444; }
+
+.task-modal-section p {
+  margin: 4px 0 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #222;
+  white-space: pre-wrap;
+}
+
+.task-modal-actions {
+  padding: 12px 24px 20px;
+  display: flex;
+  justify-content: flex-end;
+  border-top: 1px solid #eee;
+  gap: 12px;
+}
+
+.task-modal-close {
+  background: var(--primary-darker, #03003b);
+  color: #fff;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.18s ease;
+}
+
+.task-modal-close:hover {
+  background: #02122e;
 }

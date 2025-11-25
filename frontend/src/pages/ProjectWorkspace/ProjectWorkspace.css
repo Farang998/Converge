@@ -1,9 +1,9 @@
-
 .card {
+  /* Updated card style */
   background: var(--surface);
   border-radius: var(--radius);
   padding: 18px;
-  border: 1px solid rgba(11,20,32,0.04);
+  border: 1.4px solid var(--border-subtle);
   box-shadow: var(--card-shadow);
   min-height: 60px;
   box-sizing: border-box;
@@ -21,23 +21,23 @@
  background: #fff;
  box-sizing: border-box; /* Crucial for inputs to fit width:100% */
 }
-.input:focus { outline: none; box-shadow: 0 0 0 4px var(--focus-ring); }
+.input:focus { outline: none; box-shadow: 0 0 0 4px var(--focus-ring); border-color: var(--primary-700); }
 /* Ensure input style is applied to textarea */
 .input.textarea {
  min-height: 80px;
  resize: vertical;
 }
 
-/* Button Base */
+/* Button Base - general styling kept, but colors updated */
 .btn {
  border: 1px solid transparent;
  padding: 8px 14px;
- border-radius: 10px;
+ border-radius: 8px; /* Slightly smaller radius */
  cursor: pointer;
  font-weight: 600;
  font-size: 14px;
  background: transparent;
- transition: all 150ms ease;
+ transition: all 0.2s ease; /* Faster transition */
 }
 .btn:focus { outline: none; box-shadow: 0 0 0 4px var(--focus-ring); }
 
@@ -45,16 +45,16 @@
  background: var(--primary);
  color: white;
  border-color: var(--primary);
- box-shadow: 0 8px 20px rgba(1,142,197,0.18);
+ box-shadow: var(--primary-shadow); /* New shadow */
 }
-.btn.primary:hover { background: var(--primary-700); border-color: var(--primary-700); }
-.btn.primary:active { transform: translateY(1px); }
+.btn.primary:hover { background: var(--primary-700); border-color: var(--primary-700); transform: translateY(-1px); }
+.btn.primary:active { transform: translateY(0); }
 
 .btn.ghost {
  background: var(--surface);
  color: var(--primary-700);
  border: 1px solid var(--border);
- box-shadow: 0 2px 4px rgba(11,20,32,0.03);
+ box-shadow: none; /* Removed subtle shadow */
 }
 .btn.ghost:hover { background: var(--bg); }
 /* -------------------------
@@ -68,20 +68,27 @@
   overflow-x: hidden; 
   height: 100%;
   margin: 0;
-  background: var(--bg);
-  color: #0b1220;
+  background: var(--bg); /* Use new background */
+  color: #0f172a; /* Use new dark text color */
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
   -webkit-font-smoothing:antialiased;
   -moz-osx-font-smoothing:grayscale;
   box-sizing: border-box;
-  --primary: rgb(1,142,197);
-  --primary-700: rgb(0,114,158);
-  --accent: #00b894; 
-  --muted: #6c7385; 
+
+  /* --- NEW DESIGN TOKENS (based on your snippet) --- */
+  --primary: #3b82f6;
+  --primary-700: #2563eb;
+  --accent: #16a34a; /* Used for complete/success */
+  --muted: #6b7280; 
   --surface: #ffffff;
-  --bg: #f8f9fc;
-  --border: #e6eef6;
-  --radius: 12px;
+  --bg: #eef3f8; /* Light blue/grey background */
+  --border: #e5e7eb; /* Subtle light grey border */
+  --border-subtle: rgba(59, 130, 246, 0.15); /* New subtle border for cards */
+  --radius: 10px;
+  --focus-ring: rgba(59, 130, 246, 0.3);
+  --card-shadow: 0 4px 16px rgba(59, 130, 246, 0.08); /* Updated card shadow */
+  --primary-shadow: 0 4px 12px rgba(59, 130, 246, 0.3); /* Primary button shadow */
+  /* --- Keep layout variables --- */
   --max-height: 100vh;
   --header-height: 72px;
   --status-height: 48px;
@@ -98,7 +105,6 @@
   gap: 12px;
   margin: 0 auto;
   box-sizing: border-box;
-  padding: 16px var(--gutter);
 }
 
 /* Header FIX: Header is now full width and content is controlled */
@@ -114,7 +120,7 @@
   top: 0;
   z-index: 10;
   border-bottom: 1px solid var(--border);
-  box-shadow: 0 2px 4px rgba(11,20,32,0.02);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08); /* Subtle shadow */
 }
 
 /* FIX: Added internal wrapper for header content to respect max-width */
@@ -138,7 +144,7 @@
   margin: 0;
   font-size: 20px;
   font-weight: 800;
-  color: var(--primary-700);
+  color: var(--primary-700); /* Use dark primary for title */
   line-height: 1.05;
   white-space: nowrap;
   overflow: hidden;
@@ -160,8 +166,8 @@
 
 /* Header right actions */
 .pw-header-right {
-  display:grid;
-  grid-auto-flow: column;
+  /* Use flexbox to align the new back button (passed as child) and other actions */
+  display: flex;
   gap: 10px;
   align-items:center;
 }
@@ -170,12 +176,12 @@
 .btn {
   border: 1px solid transparent;
   padding: 8px 14px;
-  border-radius: 10px;
+  border-radius: 8px; /* Changed from 10px */
   cursor: pointer;
   font-weight: 600;
   font-size: 14px;
   background: transparent;
-  transition: all 150ms ease;
+  transition: all 0.2s ease; /* Changed from 150ms */
   margin: 10px;
   min-width: 200px;
 }
@@ -186,10 +192,10 @@
   background: var(--primary);
   color: white;
   border-color: var(--primary);
-  box-shadow: 0 8px 20px rgba(1,142,197,0.18);
+  box-shadow: var(--primary-shadow); /* Updated shadow */
 }
-.btn.primary:hover { background: var(--primary-700); border-color: var(--primary-700); }
-.btn.primary:active { transform: translateY(1px); }
+.btn.primary:hover { background: var(--primary-700); border-color: var(--primary-700); transform: translateY(-1px); } /* Added transform */
+.btn.primary:active { transform: translateY(0); } /* Updated from translateY(1px) */
 
 /* ghost button - subtle surface */
 .btn.ghost {
@@ -205,22 +211,48 @@
 }
 
 /* -------------------------
-   Status strip below header
+   Back Button style
+   ------------------------- */
+.pw-back-btn {
+  padding: 8px 10px; /* Adjusted padding to be cleaner */
+  border-radius: 8px; /* Consistent radius */
+  background: var(--surface);
+  color: var(--muted);
+  border: 1px solid var(--border);
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+  width: auto; 
+  min-width: 0;
+}
+.pw-back-btn:hover {
+  background: var(--bg);
+  color: #111827;
+  transform: translateY(-1px);
+}
+.pw-back-btn:focus { outline: none; box-shadow: 0 0 0 3px var(--focus-ring); }
+
+/* -------------------------
+   Status strip below header - UPDATED to look like a card
    ------------------------- */
 .pw-status-strip {
   display:flex;
   gap: 24px;
+  justify-content: space-between; /* Spread items out */
   align-items:center;
-  padding:12px 0;
-  background: transparent;
+  padding:12px 18px; /* Added horizontal padding */
+  background: var(--surface); /* White background */
+  border: 1px solid var(--border); /* Subtle border */
+  border-radius: var(--radius); /* Rounded corners */
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05); /* Subtle strip shadow */
   color: #2f3b45;
   width: 100%;
+  box-sizing: border-box;
 }
 .pw-status-strip strong { font-weight: 600; }
 
-/* ----------------------------------
-   NEW PROGRESS BAR STYLES (for StatusStrip)
-   ---------------------------------- */
 .progress-container {
   display: flex;
   align-items: center;
@@ -230,7 +262,7 @@
   flex: 1; 
   width: 160px; /* fixed width for progress bar for visual stability */
   height: 6px;
-  background: rgba(0, 0, 0, 0.08); /* Darker track for contrast */
+  background: #f3f4f6; /* Lighter track */
   border-radius: 3px;
   overflow: hidden;
 }
@@ -249,28 +281,30 @@
 
 .pw-content {
   display: grid;
-  grid-template-columns: 240px 1fr;
-  gap: var(--gutter); 
+  grid-template-columns: auto 1fr;
   padding: 0; 
   width: 100%;
   box-sizing: border-box;
   flex: 1;
   min-height: 0;
-  overflow: hidden;
 }
 
 /* left, main, right must be able to shrink so their internal overflow works */
 .pw-left, .pw-main, .pw-right {
   min-height: 0;
   /* Added margin top/bottom to nav/right cards for visual lift */
-  margin-top: 4px; 
-  margin-bottom: 4px;
+  margin-right: 14px;
+}
+
+.pw-left {
+  position: sticky;
+  top: 0;
 }
 
 /* main center area scrolls independently */
 .pw-main {
-  overflow-y: auto;
-  padding-bottom: 20px;
+  /* overflow-y: auto; */
+  /* padding-bottom: 20px; */
   flex-grow: 1;
 }
 /* Ensure the views fill available space without causing re-layout on switch */
@@ -302,11 +336,19 @@
 .pw-nav {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
   padding: 16px 12px;
-  max-height: calc(100vh - var(--header-height) - var(--status-height) - 80px);
+  max-height: 100%; /* Adjusted max-height */
   overflow: auto;
   box-shadow: var(--card-shadow);
+  width: 240px;
+  transition: width 0.5s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.pw-nav.collapsed {
+  width: 70px;
 }
 
 /* nav items */
@@ -317,25 +359,52 @@
   gap: 10px; 
   width:100%;
   text-align:left;
-  padding:12px;
+  padding:8px;
   border-radius: 8px;
   background: transparent;
   border: none;
-  color: #0b1220;
+  color: #0f172a;
   font-weight:600;
   margin-bottom:4px;
   cursor:pointer;
-  transition: background 150ms ease;
+  transition: all 0.2s ease;
+  /* transition: background 0.2s; */
 }
-.nav-item:hover { background: rgba(1,142,197,0.06); } 
+.nav-item:hover { background: rgba(59, 130, 246, 0.06); } 
 .nav-item.active {
-  background: rgba(1,142,197,0.08);
+  background: rgba(59, 130, 246, 0.08);
   border-left: none; 
   box-shadow: none;
   color: var(--primary-700);
   font-weight: 700;
 }
 
+.pw-nav.collapsed .nav-item {
+  justify-content: center;
+}
+.nav-icon {
+  font-size: 1.2rem;
+}
+.nav-label {
+  transition: opacity 0.2s ease;
+}
+
+.pw-nav.collapsed .nav-label {
+  opacity: 0;
+  pointer-events: none;
+}
+.collapse-toggle {
+  align-self: flex-end;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1.3rem;
+  margin-bottom: 1rem;
+}
+
+.pw-nav.collapsed .collapse-toggle {
+  align-self: center;
+}
 /* nav footer */
 .nav-footer { margin-top: 12px; color: var(--muted); font-size:13px; padding: 0 12px; }
 
@@ -346,7 +415,7 @@
   background: var(--surface);
   border-radius: var(--radius);
   padding: 18px;
-  border: 1px solid rgba(11,20,32,0.04);
+  border: 1.4px solid var(--border-subtle);
   box-shadow: var(--card-shadow);
   min-height: 60px;
   box-sizing: border-box;
@@ -363,148 +432,17 @@
    Overview / KPIs
    ------------------------- */
 .kpi-row { display:flex; gap:16px; align-items:center; margin-top:12px; }
-.kpi { width:100%; padding:14px; border-radius:10px; border:1px solid var(--border); text-align:center; flex:1; }
+.kpi { 
+  width:100%; 
+  padding:14px; 
+  border-radius:10px; 
+  border:1px solid var(--border); 
+  text-align:center; 
+  flex:1; 
+  background: #f9fafb;
+}
 .kpi-title { font-size: 13px; color:var(--muted); }
 .kpi-value { font-size:22px; font-weight:800; color:var(--primary); }
-
-/* -------------------------
-   Tasks styles
-   ------------------------- */
-.tasks-header { display:flex; gap:12px; align-items:center; margin-bottom:12px; }
-.input {
-  width:100%;
-  padding:10px 12px;
-  border-radius: 8px;
-  border: 1px solid var(--border);
-  background: #fff;
-}
-.input:focus { outline: none; box-shadow: 0 0 0 4px var(--focus-ring); }
-
-/* Task card */
-.task-card {
-  display:flex;
-  align-items:center;
-  gap:16px;
-  padding:16px;
-  border-radius: 10px;
-  border: 1px solid var(--border);
-  background: var(--surface);
-  cursor: pointer;
-  transition: all 120ms ease;
-  box-shadow: 0 2px 5px rgba(11, 20, 32, 0.02);
-}
-.task-card:hover { 
-  transform: translateY(-1px);
-  box-shadow: 0 4px 8px rgba(11, 20, 32, 0.04);
-}
-.task-title { font-weight:600; color: #121c29; }
-/* -------------------------
-   Tasks Improvements
-   ------------------------- */
-.tasks-toolbar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 16px;
-  margin-bottom: 20px;
-}
-.search-filter-group {
-  display: flex;
-  gap: 12px;
-  flex-grow: 1;
-}
-.filter-btn {
-  padding: 8px 12px;
-  border-radius: 8px;
-  border: 1px solid var(--border);
-  background: var(--surface);
-  cursor: pointer;
-  font-size: 14px;
-  color: var(--muted);
-}
-.filter-btn:hover {
-  background: var(--bg);
-}
-
-/* Task Card Details */
-.task-card-body {
-  flex-grow: 1;
-  display: flex;
-  flex-direction: column;
-}
-.task-metadata {
-  display: flex;
-  gap: 16px;
-  font-size: 12px;
-  color: var(--muted);
-  margin-top: 4px;
-  align-items: center;
-}
-.task-metadata .user-display {
-  font-weight: 600;
-  color: #475569;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-.task-card.selected {
-  background: rgba(1,142,197,0.1); /* Highlight selected task */
-  border-color: var(--primary);
-}
-
-/* Priority Tags */
-.priority-tag {
-  font-size: 11px;
-  font-weight: 700;
-  padding: 3px 8px;
-  border-radius: 6px;
-  text-transform: uppercase;
-  /* Ensures consistent placement */
-  flex-shrink: 0; 
-}
-.priority-high {
-  background: rgba(220, 38, 38, 0.1); /* Red background */
-  color: rgb(220, 38, 38);
-}
-.priority-medium {
-  background: rgba(234, 179, 8, 0.1); /* Yellow background */
-  color: rgb(234, 179, 8);
-}
-.priority-low {
-  background: rgba(16, 185, 129, 0.1); /* Green background */
-  color: rgb(16, 185, 129);
-}
-/* User Avatar (simple circle) */
-.user-avatar {
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  background: var(--primary-700);
-  color: white;
-  font-size: 11px;
-  font-weight: 600;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
-/* Make the Create button visible and consistent */
-.btn-create {
-  display:inline-block;
-  width: 100%;
-  padding: 14px 16px;
-  border-radius: 10px;
-  background: var(--primary);
-  color: white;
-  border: 1px solid var(--primary-700);
-  font-weight: 700;
-  font-size: 16px;
-  cursor:pointer;
-  box-shadow: 0 10px 30px rgba(1,142,197,0.18);
-  transition: all 150ms ease;
-}
-.btn-create:hover { background: var(--primary-700); }
-.btn-create:active { transform: translateY(1px); }
 
 /* -------------------------
    Files grid
@@ -519,7 +457,7 @@
   display:flex;
   flex-direction:column;
   gap:10px;
-  box-shadow: 0 2px 5px rgba(11, 20, 32, 0.02);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.02);
 }
 
 /* file actions (small ghost buttons) */
@@ -542,15 +480,15 @@
    ------------------------- */
 .timeline-wrap h3 { margin:0 0 8px 0; }
 .timeline-ribbon { display:flex; gap:8px; margin-bottom:16px; align-items:center; }
-.ribbon-seg { flex:1; height:10px; border-radius:6px; background: rgba(11,20,32,0.03); }
+.ribbon-seg { flex:1; height:10px; border-radius:6px; background: rgba(59, 130, 246, 0.03); }
 .ribbon-seg.complete { background: var(--accent); opacity: 0.18; }
 .ribbon-seg.in_progress { background: var(--primary); opacity: 0.12; }
-.ribbon-seg.upcoming { background: rgba(11,20,32,0.03); }
+.ribbon-seg.upcoming { background: rgba(59, 130, 246, 0.03); }
 
 .timeline-list { display:flex; position:relative; gap:16px; padding-left: 36px; }
 .timeline-list .spine {
   position:absolute; left:16px; top:0; bottom:0; width:3px;
-  background: rgba(1,142,197,0.08);
+  background: rgba(59, 130, 246, 0.08);
   border-radius:2px;
 }
 .nodes { display:flex; flex-direction:column; gap:18px; width:100%; }
@@ -564,7 +502,7 @@
   border: 1px solid var(--border);
   background: var(--surface);
   cursor:pointer;
-  box-shadow: 0 2px 5px rgba(11, 20, 32, 0.02);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.02);
 }
 .milestone-dot {
   width:36px; height:36px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:800;
@@ -587,13 +525,19 @@
    Activity list
    ------------------------- */
 .activity-list { list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:12px; }
-.activity-item { padding:14px; border-radius:10px; border:1px solid var(--border); background:var(--surface); box-shadow: 0 2px 5px rgba(11, 20, 32, 0.02); }
+.activity-item { padding:14px; border-radius:10px; border:1px solid var(--border); background:var(--surface); box-shadow: 0 2px 5px rgba(0, 0, 0, 0.02); }
 .act-time { font-size:12px; color:var(--muted); margin-top:6px; }
 
 /* -------------------------
    Skeleton + empty states
    ------------------------- */
-.skeleton { padding:18px; background: #fff; border-radius:10px; border:1px solid var(--border); box-shadow: var(--card-shadow); }
+.skeleton { 
+  padding:18px; 
+  background: #fff; 
+  border-radius:10px; 
+  border: 1.4px solid var(--border-subtle);
+  box-shadow: var(--card-shadow); 
+}
 
 /* -------------------------
    Accessibility focus states
