@@ -2,8 +2,10 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import api from '../../services/api';
+import { ingestS3Uris } from '../../services/ingest';
 import FileCard from './parts/FileCard';
 import { FaSpinner, FaExclamationCircle } from 'react-icons/fa';
+import GitHubImport from './GitHubImport';
 
 export default function FilesView({ projectId: propProjectId }) {
   const { projectId: paramProjectId } = useParams();
@@ -13,6 +15,7 @@ export default function FilesView({ projectId: propProjectId }) {
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');
+  const [isGitHubImportOpen, setIsGitHubImportOpen] = useState(false);
 
   useEffect(() => {
     if (projectId) {
@@ -54,11 +57,22 @@ export default function FilesView({ projectId: propProjectId }) {
     formData.append('project_id', projectId);
 
     try {
-      await api.post('file_sharing/upload/', formData, {
+      const resp = await api.post('file_sharing/upload/', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
       });
+
+      try {
+        const s3Uri = resp?.data?.s3_uri || null;
+        if (s3Uri) {
+          ingestS3Uris([s3Uri], projectId)
+            .then(() => console.debug('Ingest started for', s3Uri))
+            .catch((e) => console.warn('Ingest call failed', e));
+        }
+      } catch (e) {
+        console.warn('Failed to start ingest after upload', e);
+      }
 
       // Refresh file list
       await fetchFiles();
@@ -95,6 +109,15 @@ export default function FilesView({ projectId: propProjectId }) {
               disabled={uploading}
             />
           </label>
+          <button
+            type="button"
+            className={`btn secondary ${uploading ? 'disabled' : ''}`}
+            onClick={() => setIsGitHubImportOpen(true)}
+            disabled={uploading}
+            style={{ marginLeft: 8 }}
+          >
+            Import from GitHub
+          </button>
         </div>
 
         {error && (
@@ -134,6 +157,13 @@ export default function FilesView({ projectId: propProjectId }) {
           </div>
         )}
       </div>
+      {isGitHubImportOpen && (
+        <GitHubImport
+          projectId={projectId}
+          onImportSuccess={async () => { await fetchFiles(); setIsGitHubImportOpen(false); }}
+          onClose={() => setIsGitHubImportOpen(false)}
+        />
+      )}
     </main>
   );
 }

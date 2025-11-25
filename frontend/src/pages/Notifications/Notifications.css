@@ -4,6 +4,7 @@
   color: #0f172a;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
   position: relative;
+  width: 100%;
 }
 
 .notifications-page::before {
@@ -25,16 +26,21 @@
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border-bottom: 1px solid rgba(226, 232, 240, 0.8);
-  padding: 2rem 3rem;
+  padding: 2rem;
   position: sticky;
   top: 0;
   z-index: 100;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05), 0 4px 20px rgba(0, 0, 0, 0.03);
-  position: relative;
+  margin: 0 auto;
+  max-width: 100vw;
+  gap: 2rem;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  width: 100%;
 }
 
 .back-button {
-  display: inline-flex;
   align-items: center;
   gap: 8px;
   background: rgba(255, 255, 255, 0.9);
@@ -45,7 +51,6 @@
   cursor: pointer;
   font-size: 0.9rem;
   font-weight: 600;
-  margin-bottom: 1.5rem;
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
@@ -60,13 +65,6 @@
 
 .back-button:active {
   transform: translateY(0);
-}
-
-.header-content {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 2rem;
 }
 
 .header-title {
@@ -254,7 +252,7 @@
   left: -50%;
   width: 200%;
   height: 200%;
-  background: radial-gradient(circle, rgba(59, 130, 246, 0.03) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(59, 130, 246, 0.03) 0%, transparent 100%);
   animation: rotate 20s linear infinite;
 }
 
@@ -370,9 +368,9 @@
 }
 
 .notification-header-row {
-  display: flex;
+  /* display: flex; */
   justify-content: space-between;
-  align-items: flex-start;
+  /* align-items: flex-start; */
   gap: 2rem;
   margin-bottom: 1.2rem;
 }

@@ -209,6 +209,7 @@ class FileUploadView(APIView):
             'project_id': str(project.id),
             'project_name': project.name,
             's3_path': s3_key,
+            's3_uri': f"s3://{bucket_name}/{s3_key}",
             'participants_with_access': participants,
             'uploaded_at': file_obj.uploaded_at.isoformat()
         }, status=status.HTTP_201_CREATED)

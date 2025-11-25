@@ -1,15 +1,19 @@
 import React, { useState, useEffect, useRef } from "react";
+import ChatToAI from "./ChatToAI";
 import { useParams, useNavigate } from "react-router-dom";
 import MessageBubble from "./MessageBubble";
 import DeleteConfirmationModal from "../../components/DeleteConfirmationModal";
 import { useAuth } from "../../contexts/AuthContext";
 import api from "../../services/api";
 import "./Conversation.css";
+import ThreadPanel from "./ThreadPanel";
 
 export default function Conversation() {
   const { projectId } = useParams();
   const navigate = useNavigate();
   const [messages, setMessages] = useState([]);
+  const [showAIChat, setShowAIChat] = useState(false);
+  const [activeSection, setActiveSection] = useState('group');
   const [input, setInput] = useState("");
   const [projectName, setProjectName] = useState("");
   const { user: currentUser } = useAuth();
@@ -29,12 +33,20 @@ export default function Conversation() {
   const [uploading, setUploading] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [messageToDelete, setMessageToDelete] = useState(null);
+  const [activeThread, setActiveThread] = useState(null); 
+  const [threadMessages, setThreadMessages] = useState([]);
+  const [threadLoading, setThreadLoading] = useState(false);
+  const [threadError, setThreadError] = useState("");
+  const [threadInput, setThreadInput] = useState("");
+  const [threadSending, setThreadSending] = useState(false);
+  const [alsoSendToChannel, setAlsoSendToChannel] = useState(false);
   const fileInputRef = useRef(null);
   const searchTimeoutRef = useRef(null);
   const wsRef = useRef(null);
   const reconnectTimeoutRef = useRef(null);
   const messagesEndRef = useRef(null);
   const messagesContainerRef = useRef(null);
+  const activeThreadRef = useRef(null);
 
   // Current user is provided by AuthContext
 
@@ -59,6 +71,10 @@ export default function Conversation() {
     }
     return null;
   };
+
+  useEffect(() => {
+    activeThreadRef.current = activeThread;
+  }, [activeThread]);
 
   // WebSocket connection function
   const connectWebSocket = () => {
@@ -133,6 +149,39 @@ export default function Conversation() {
         } else if (data.type === "message_deleted") {
           // Message deleted via WebSocket
           setMessages((prev) => prev.filter((msg) => msg.id !== data.message_id));
+        } else if (data.type === "thread_message") {
+          const parentId = String(data.parent_message_id);
+
+          setMessages((prev) =>
+            prev.map((msg) => {
+              if (String(msg.id) === parentId) {
+                const nextCount = (msg.replies_count || 0) + 1;
+                return {
+                  ...msg,
+                  thread_id: data.thread_id || msg.thread_id,
+                  replies_count: nextCount,
+                };
+              }
+              return msg;
+            })
+          );
+
+          const currentThread = activeThreadRef.current;
+          if (currentThread && String(currentThread.parentMessage?.id) === parentId) {
+            setThreadMessages((prev) => [...prev, data]);
+            setActiveThread((prev) => {
+              if (!prev) return prev;
+              return {
+                ...prev,
+                threadId: data.thread_id || prev.threadId,
+                parentMessage: {
+                  ...prev.parentMessage,
+                  thread_id: data.thread_id || prev.parentMessage.thread_id,
+                  replies_count: (prev.parentMessage.replies_count || 0) + 1,
+                },
+              };
+            });
+          }
         }
       } catch (err) {
         console.error("Error parsing WebSocket message:", err);
@@ -440,6 +489,98 @@ export default function Conversation() {
     return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
   };
 
+  const handleReplyClick = async (message) => {
+    if (!message) return;
+
+    setActiveThread({
+      parentMessage: message,
+      threadId: message.thread_id || null,
+    });
+    setThreadMessages([]);
+    setThreadError("");
+    setThreadInput("");
+
+    if (!message.thread_id) {
+      setThreadLoading(false);
+      return;
+    }
+
+
+    setThreadLoading(true);
+    try {
+      const { data } = await api.get(`chats/project/${projectId}/threads/${message.thread_id}/`);
+      setActiveThread((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          threadId: data.thread?.id || message.thread_id,
+          parentMessage: data.parent_message || message,
+        };
+      });
+      setThreadMessages(data.replies || []);
+    } catch (err) {
+      console.error("Failed to load thread:", err);
+      setThreadError(err?.response?.data?.error || "Failed to load thread");
+    } finally {
+      setThreadLoading(false);
+    }
+  };
+
+
+  const closeThreadPanel = () => {
+    setActiveThread(null);
+    setThreadMessages([]);
+    setThreadInput("");
+    setThreadError("");
+    setThreadLoading(false);
+    setThreadSending(false);
+    setAlsoSendToChannel(false);
+  };
+
+
+  const sendThreadReply = async () => {
+    if (!activeThread?.parentMessage?.id) return;
+    if (!threadInput.trim()) return;
+
+    if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
+      setThreadError("WebSocket not connected. Please wait...");
+      return;
+    }
+
+    setThreadSending(true);
+    const messageContent = threadInput.trim();
+    const payload = {
+      content: messageContent,
+      reply_to: activeThread.parentMessage.id,
+    };
+
+    try {
+      wsRef.current.send(JSON.stringify(payload));
+      
+      // If "also send to channel" is checked, send a regular message to the channel
+      if (alsoSendToChannel) {
+        const channelPayload = {
+          content: messageContent,
+        };
+        wsRef.current.send(JSON.stringify(channelPayload));
+      }
+      
+      setThreadInput("");
+    } catch (err) {
+      console.error("Failed to send thread reply:", err);
+      setThreadError("Failed to send reply");
+    } finally {
+      setThreadSending(false);
+    }
+  };
+
+  const handleThreadKeyPress = (e) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      sendThreadReply();
+    }
+  };
+
   const handleDeleteMessage = (messageId) => {
     if (!messageId) return;
     
@@ -593,7 +734,7 @@ export default function Conversation() {
       )}
 
       {/* Main Chat Area */}
-      <div className={`chat-main ${showSidebar ? "with-sidebar" : ""}`}>
+      <div className={`chat-main ${showSidebar ? "with-sidebar" : ""} ${activeThread ? "thread-open" : ""}`}>
         {/* Chat Header */}
         <div className="chat-header">
           <button 
@@ -621,10 +762,49 @@ export default function Conversation() {
           
           <div className="chat-header-info">
             <h2 className="chat-title">{projectName}</h2>
-            <p className="chat-subtitle">Group Chat</p>
+            <p className="chat-subtitle">{activeSection === 'group' ? 'Group Chat' : 'AI Assistant'}</p>
           </div>
 
-          {/* Search Bar */}
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button
+              style={{
+                background: activeSection === 'group' ? '#667eea' : '#f3f4f6',
+                color: activeSection === 'group' ? '#fff' : '#374151',
+                border: 'none',
+                borderRadius: 8,
+                padding: '8px 16px',
+                fontWeight: 600,
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+              }}
+              onClick={() => setActiveSection('group')}
+            >
+              Group Chat
+            </button>
+            <button
+              style={{
+                background: activeSection === 'ai' ? '#667eea' : '#f3f4f6',
+                color: activeSection === 'ai' ? '#fff' : '#374151',
+                border: 'none',
+                borderRadius: 8,
+                padding: '8px 16px',
+                fontWeight: 600,
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+              }}
+              onClick={() => setActiveSection('ai')}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="12" cy="12" r="10" />
+                <path d="M8 15h8M9 9h6" />
+              </svg>
+              AI Chat
+            </button>
+          </div>
+          {/* Search Bar (moved inside header) */}
           <div className="chat-search-container">
             <div className="chat-search-wrapper">
               <svg className="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -655,7 +835,6 @@ export default function Conversation() {
                 <div className="search-spinner"></div>
               )}
             </div>
-
             {/* Search Results Dropdown */}
             {showSearchResults && searchResults.length > 0 && (
               <div className="search-results-dropdown">
@@ -722,13 +901,20 @@ export default function Conversation() {
         </div>
 
       {/* Error Banner */}
-      {error && (
+      {error && activeSection === 'group' && (
         <div className="chat-error-banner">
           <span className="error-icon-small">⚠️</span>
           <span>{error}</span>
         </div>
       )}
 
+      {}
+      {activeSection === 'ai' ? (
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+          <ChatToAI />
+        </div>
+      ) : (
+        <>
       {/* Messages Area */}
       <div className="chat-messages" ref={messagesContainerRef}>
         {messages.length === 0 ? (
@@ -756,6 +942,9 @@ export default function Conversation() {
                     file_type={msg.file_type}
                     file_name={msg.file_name}
                     file_size={msg.file_size}
+                    threadId={msg.thread_id}
+                    repliesCount={msg.replies_count}
+                    onReply={() => handleReplyClick(msg)}
                   />
                 </div>
               );
@@ -838,7 +1027,31 @@ export default function Conversation() {
           </button>
         </div>
       </div>
+      </>
+      )}
+
+      {/* Close chat-main */}
       </div>
+
+      {activeThread && (
+        <ThreadPanel
+          projectName={projectName}
+          parentMessage={activeThread.parentMessage}
+          replies={threadMessages}
+          loading={threadLoading}
+          error={threadError}
+          onClose={closeThreadPanel}
+          inputValue={threadInput}
+          onInputChange={setThreadInput}
+          onSend={sendThreadReply}
+          onKeyDown={handleThreadKeyPress}
+          sending={threadSending}
+          wsConnected={wsConnected}
+          currentUserId={currentUserId}
+          alsoSendToChannel={alsoSendToChannel}
+          onAlsoSendToChannelChange={setAlsoSendToChannel}
+        />
+      )}
 
       {/* Delete Confirmation Modal */}
       <DeleteConfirmationModal

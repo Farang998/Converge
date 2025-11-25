@@ -8,14 +8,17 @@ from rest_framework.exceptions import AuthenticationFailed
 
 from botocore.exceptions import ClientError
 from django.conf import settings
+from django.utils import timezone
 
 from ..auth.models import User
 from .models import Project
 from ..tasks.models import Task
 from ..notifications.models import Notification
 from ..calendar.models import GoogleCredentials
+
 from ..calendar.google_service import create_event
 from ..calendar.google_service import delete_calendar
+from ..calendar.google_service import create_project_calendar
 from ..file_sharing.models import File
 from ..file_sharing.views import _get_s3_client
 
@@ -23,6 +26,11 @@ from mongoengine.errors import DoesNotExist, ValidationError as MongoValidationE
 from mongoengine.queryset.visitor import Q
 
 import requests
+import io
+import zipfile
+import mimetypes
+import os
+import threading
 
 from .utils import (
     prepare_invited_members,
@@ -332,6 +340,157 @@ class ProjectViewSet(viewsets.ViewSet):
             return Response({"error": "Only team leader can delete this project"}, status=403)
 
         project_id = str(project.id)
+        
+    
+    @action(detail=True, methods=["post"], url_path='import-github')
+    def import_github(self, request, pk=None):
+        
+        try:
+            user = authenticate_user_from_request(request)
+        except AuthenticationFailed as e:
+            return Response({"error": str(e)}, status=401)
+
+        try:
+            project = Project.objects.get(id=pk)
+        except Exception:
+            return Response({"error": PROJECT_NOT_FOUND_ERROR}, status=404)
+
+        is_leader = project.team_leader == user
+        is_member = any(m.get('user') == str(user.id) and m.get('accepted', False) for m in project.team_members)
+        if not (is_leader or is_member):
+            return Response({"error": "You do not have permission to import into this project"}, status=403)
+
+        data = request.data
+        repo_url = (data.get('repo_url') or data.get('repository') or '').strip()
+        branch = (data.get('branch') or '').strip()
+        token = (data.get('token') or '').strip()
+
+        if not repo_url:
+            return Response({"error": "repo_url is required"}, status=400)
+        owner = None
+        repo_name = None
+        try:
+            # strip .git suffix
+            clean = repo_url.rstrip('/')
+            if clean.endswith('.git'):
+                clean = clean[:-4]
+
+            if 'github.com' in clean:
+                if clean.startswith('git@'):
+                    # git@github.com:owner/repo
+                    parts = clean.split(':', 1)[-1]
+                else:
+                    parts = clean.split('github.com')[-1].lstrip('/').split('/')
+                    parts = '/'.join(parts[0:2])
+
+                parts = parts.strip('/').split('/')
+                if len(parts) >= 2:
+                    owner, repo_name = parts[0], parts[1]
+        except Exception:
+            pass
+
+        if not owner or not repo_name:
+            # Fallback: try splitting by slashes
+            try:
+                parts = repo_url.strip('/').split('/')
+                owner = parts[-2]
+                repo_name = parts[-1].replace('.git', '')
+            except Exception:
+                return Response({"error": "Could not parse owner/repo from repo_url"}, status=400)
+
+        archive_url = f"https://api.github.com/repos/{owner}/{repo_name}/zipball/{branch or 'HEAD'}"
+
+        headers = {}
+        if token:
+            headers['Authorization'] = f'token {token}'
+
+        try:
+            resp = requests.get(archive_url, headers=headers, stream=True, timeout=60)
+            if resp.status_code >= 400:
+                return Response({"error": f"GitHub responded with {resp.status_code}: {resp.text}"}, status=400)
+
+            content = io.BytesIO(resp.content)
+            z = zipfile.ZipFile(content)
+        except Exception as e:
+            return Response({"error": f"Failed to download or open repository archive: {str(e)}"}, status=400)
+
+        try:
+            s3_client = _get_s3_client()
+            bucket_name = getattr(settings, 'AWS_STORAGE_BUCKET_NAME', None)
+            if not bucket_name:
+                return Response({"error": "AWS_STORAGE_BUCKET_NAME is not configured"}, status=500)
+        except Exception as e:
+            return Response({"error": f"S3 client initialization failed: {str(e)}"}, status=500)
+
+        uploaded = []
+        prefix_base = f"files/{str(project.id)}/github/{owner}_{repo_name}"
+
+        for zi in z.infolist():
+            if zi.is_dir():
+                continue
+            filename = zi.filename
+            parts = filename.split('/', 1)
+            inner_path = parts[1] if len(parts) > 1 else parts[0]
+            if not inner_path or inner_path.endswith('/'):
+                continue
+
+            s3_key = f"{prefix_base}/{inner_path}"
+
+            try:
+                with z.open(zi) as fh:
+                    name = os.path.basename(inner_path)
+                    content_type = mimetypes.guess_type(name)[0] or 'application/octet-stream'
+
+                    s3_client.upload_fileobj(fh, bucket_name, s3_key, ExtraArgs={'ContentType': content_type})
+
+                    file_obj = File(
+                        name=name,
+                        s3_key=s3_key,
+                        file_size=zi.file_size,
+                        content_type=content_type,
+                        uploaded_by=user,
+                        project=project,
+                    )
+                    file_obj.save()
+
+                    uploaded.append({
+                        'file_name': name,
+                        's3_key': s3_key,
+                        's3_uri': f"s3://{bucket_name}/{s3_key}",
+                        'size': zi.file_size,
+                        'content_type': content_type,
+                    })
+            except Exception as e:
+                print(f"Warning: failed to upload {filename}: {str(e)}")
+                continue
+
+        try:
+            project.github_imported = True
+            project.github_import_date = timezone.now()
+            project.github_repo_name = f"{owner}/{repo_name}"
+            project.github_repo_url = repo_url
+            project.github_import_metadata = {'imported_count': len(uploaded)}
+            project.save()
+        except Exception:
+            pass
+
+        s3_uris = [u['s3_uri'] for u in uploaded]
+
+        def _call_ingest(project_id, uris):
+            try:
+                requests.post('http://localhost:5000/ingest', json={'project_id': str(project_id), 's3_uris': uris}, timeout=30)
+            except Exception as e:
+                print(f"Warning: ingest call failed: {str(e)}")
+
+        if s3_uris:
+            try:
+                t = threading.Thread(target=_call_ingest, args=(project.id, s3_uris))
+                t.daemon = True
+                t.start()
+            except Exception as e:
+                print(f"Warning: failed to start ingest thread: {str(e)}")
+
+        return Response({"message": "Import completed", "files": uploaded, "ingest_started": bool(s3_uris)}, status=201)
 
         # ---------------------------------------------------------
         # 1. Notify all members (accepted + invited + leader)

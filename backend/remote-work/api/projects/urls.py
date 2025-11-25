@@ -6,7 +6,6 @@ from .dashboard_views import ProjectDashboardView, ProjectWorkflowView, ProjectT
 router = DefaultRouter()
 router.register(r'', ProjectViewSet, basename='project')
 urlpatterns = [
-    # path('create/', ProjectCreate.as_view(), name='project_create'), <-- THIS LINE IS REMOVED
     path('accept-invitation/<str:project_id>/', AcceptInvitation.as_view(), name='accept_invitation'),
     path('userSearch/', searchuser.as_view(), name='user_search'),
     path('dashboard/<str:project_id>/overview/', ProjectDashboardView.as_view(), name='project_dashboard_overview'),

@@ -163,10 +163,9 @@ const Notifications = () => {
   return (
     <div className="notifications-page">
       <div className="notifications-header">
-        <button className="back-button" onClick={() => navigate('/dashboard')}>
-          <FaArrowLeft /> Back to Dashboard
-        </button>
-        <div className="header-content">
+          <button className="back-button" onClick={() => navigate('/dashboard')}>
+            <FaArrowLeft /> Back to Dashboard
+          </button>
           <div className="header-title">
             <FaBell className="header-icon" />
             <h1>Notifications</h1>
@@ -178,7 +177,6 @@ const Notifications = () => {
             <FaSync className={loading ? 'spinning' : ''} />
             {loading ? 'Refreshing...' : 'Refresh'}
           </button>
-        </div>
       </div>
 
       <div className="notifications-container">

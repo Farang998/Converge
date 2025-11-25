@@ -7,7 +7,7 @@ class Task(Document):
     name = StringField(required=True)
     description = StringField()
     project = ReferenceField(Project, required=True) 
-    assigned_to = ReferenceField(User, null=True)
+    assigned_to = ListField(ReferenceField(User), default=[])
     status = StringField(default='pending', choices=['pending', 'in_progress', 'approval_pending', 'completed'])
     previous_status = StringField()
     due_date = DateTimeField(null=True)

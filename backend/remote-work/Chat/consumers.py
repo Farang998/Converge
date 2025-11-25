@@ -6,7 +6,7 @@ from django.utils import timezone
 from asgiref.sync import sync_to_async
 from api.auth.models import User   # MongoEngine User
 from api.projects.models import Project
-from .models import GroupChat, GroupMessage, IndividualChat, IndividualMessage  # use your Mongo MongoEngine models
+from .models import GroupChat, GroupMessage, IndividualChat, IndividualMessage, Thread, ThreadMessage  # use your Mongo MongoEngine models
 
 def _as_utc_z(dt):
     if not dt:
@@ -158,17 +158,55 @@ class ProjectChatConsumer(AsyncWebsocketConsumer):
         """
         Handle incoming WebSocket messages.
         Expected JSON: {"content": "message text"}
+        For thread reply: {"content": "...", "reply_to": "<group_message_id>"}
         """
         try:
             data = json.loads(text_data)
             content = data.get("content", "").strip()
-            
+            reply_to_id = data.get("reply_to")
+
             if not content:
                 return
             
             # User is already validated in connect()
             sender_id = str(self.user.id)
             
+            if reply_to_id:
+                try: 
+                    parent_msg = await sync_to_async(GroupMessage.objects.get)(id=reply_to_id, chat=self.chat)
+                except Exception:
+                    # invalid parent
+                    return
+                
+                # find or create thread
+                thread = await sync_to_async(Thread.objects(parent_message=parent_msg).first)()
+                if not thread:
+                    thread = Thread(chat=self.chat, parent_message=parent_msg, created_by=sender_id, created_at=timezone.now())
+                    await sync_to_async(thread.save)()
+
+                tmsg = ThreadMessage(
+                    thread=thread,
+                    sender=sender_id,
+                    content=content,
+                    timestamp=timezone.now()
+                )
+                await sync_to_async(tmsg.save)()
+
+                await self.channel_layer.group_send(
+                    self.group_name,
+                    {
+                        "type": "thread_message_broadcast",
+                        "thread_id": str(thread.id),
+                        "message_id": str(tmsg.id),
+                        "sender_id": sender_id,
+                        "sender_username": self.user.username,
+                        "content": content,
+                        "timestamp": tmsg.timestamp.isoformat(),
+                        "parent_message_id": str(parent_msg.id)
+                    }
+                )
+                return
+
             # Save message to MongoDB
             msg = GroupMessage(
                 chat=self.chat,
@@ -215,6 +253,45 @@ class ProjectChatConsumer(AsyncWebsocketConsumer):
             message_data["file_name"] = event.get("file_name")
             message_data["file_size"] = event.get("file_size")
         await self.send(text_data=json.dumps(message_data))
+
+    async def thread_created_broadcast(self, event):
+        """
+        Broadcast newly created thread to all connected users in the project group.
+        """
+        await self.send_json({
+            "type": "thread_created",
+            "thread_id": event.get("thread_id"),
+            "creator_id": event.get("creator_id"),
+            "creator_username": event.get("creator_username"),
+            "timestamp": event.get("timestamp"),
+            "message_preview": event.get("message_preview"),   # first message content or None
+        })
+
+
+    async def thread_message_broadcast(self, event):
+        """
+        Broadcasted when a thread message is created.
+        Frontend can use 'thread_id' + 'parent_message_id' to open thread panel.
+        """
+        data = {
+            "type": "thread_message",
+            "id": event["message_id"],
+            "thread_id": event.get("thread_id"),
+            "parent_message_id": event.get("parent_message_id"),
+            "sender": {
+                "id": event["sender_id"],
+                "username": event["sender_username"]
+            },
+            "content": event["content"],
+            "timestamp": event["timestamp"],
+            "created_at": event["timestamp"]
+        }
+        if event.get("file_url"):
+            data["file_url"] = event["file_url"]
+            data["file_type"] = event.get("file_type")
+            data["file_name"] = event.get("file_name")
+            data["file_size"] = event.get("file_size")
+        await self.send(text_data=json.dumps(data))
     
     async def project_chat_delete(self, event):
         """
