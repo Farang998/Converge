@@ -1,43 +1,57 @@
 import React, { useState } from "react";
 import "./Conversation.css";
+const formatISTDateTime = (timestamp, fallbackTimestamp) => {
+  if (!timestamp && !fallbackTimestamp) return "";
 
-// Format timestamp using user's local timezone (consistent display)
-const formatISTTime = (timestamp, created_at) => {
-  if (!timestamp && !created_at) return "";
-  
-  const date = new Date(timestamp || created_at);
+  const source = timestamp || fallbackTimestamp;
+  const date = new Date(source);
   if (isNaN(date.getTime())) return "";
-  
-  // Compare dates using browser's local timezone for consistency
+
   const now = new Date();
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const messageDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-  
-  const isToday = messageDate.getTime() === today.getTime();
-  const yesterday = new Date(today);
-  yesterday.setDate(yesterday.getDate() - 1);
-  const isYesterday = messageDate.getTime() === yesterday.getTime();
-  
-  // Format time in user's local timezone (browser locale)
+  const nowIST = new Date(
+    now.toLocaleString("en-US", { timeZone: "Asia/Kolkata" })
+  );
+  const dateIST = new Date(
+    date.toLocaleString("en-US", { timeZone: "Asia/Kolkata" })
+  );
+
+  const todayIST = new Date(
+    nowIST.getFullYear(),
+    nowIST.getMonth(),
+    nowIST.getDate()
+  );
+
+  const messageDateIST = new Date(
+    dateIST.getFullYear(),
+    dateIST.getMonth(),
+    dateIST.getDate()
+  );
+
+  const isToday = messageDateIST.getTime() === todayIST.getTime();
+
+  const yesterdayIST = new Date(todayIST);
+  yesterdayIST.setDate(yesterdayIST.getDate() - 1);
+  const isYesterday = messageDateIST.getTime() === yesterdayIST.getTime();
+
   const timeStr = date.toLocaleTimeString("en-IN", {
     hour: "numeric",
     minute: "2-digit",
     hour12: true,
+    timeZone: "Asia/Kolkata",
   });
-  
-  // Format date
-  if (isToday) {
-    return `Today ${timeStr}`;
-  } else if (isYesterday) {
-    return `Yesterday ${timeStr}`;
-  } else {
-    const dateStr = date.toLocaleDateString("en-IN", {
-      day: "numeric",
-      month: "short",
-      year: date.getFullYear() !== now.getFullYear() ? "numeric" : undefined,
-    });
-    return `${dateStr}, ${timeStr}`;
-  }
+
+  if (isToday) return `Today ${timeStr}`;
+  if (isYesterday) return `Yesterday ${timeStr}`;
+
+  const dateStr = date.toLocaleDateString("en-IN", {
+    day: "numeric",
+    month: "short",
+    year:
+      dateIST.getFullYear() !== nowIST.getFullYear() ? "numeric" : undefined,
+    timeZone: "Asia/Kolkata",
+  });
+
+  return `${dateStr}, ${timeStr}`;
 };
 
 // Format file size
@@ -61,12 +75,15 @@ export default function MessageBubble({
   file_type,
   file_name,
   file_size,
+  threadId,
+  repliesCount = 0,
+  onReply,
 }) {
   const [showDeleteBtn, setShowDeleteBtn] = useState(false);
   const [imageError, setImageError] = useState(false);
   // Fixed timestamp normalization
 
-  const formattedTime = formatISTTime(timestamp, created_at);
+  const formattedTime = formatISTDateTime(timestamp, created_at);
   const displaySender = showSender && !isOwn && sender;
 
   const handleDelete = (e) => {
@@ -218,6 +235,38 @@ export default function MessageBubble({
               </button>
             )}
           </div>
+          {onReply && (
+            <div className="message-thread-footer">
+              {repliesCount > 0 && (
+                <button
+                  className="message-thread-btn"
+                  onClick={() => onReply({ threadId, messageId })}
+                >
+                  <span className="thread-count">
+                    {repliesCount} {repliesCount === 1 ? "reply" : "replies"}
+                  </span>
+                  <span className="thread-view-label">View thread</span>
+                </button>
+              )}
+              <button
+                className="message-reply-btn"
+                onClick={() => onReply({ threadId, messageId })}
+              >
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
+                  <polyline points="9 17 4 12 9 7" />
+                  <path d="M20 18v-1a4 4 0 0 0-4-4H4" />
+                </svg>
+                Reply
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>
