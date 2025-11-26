@@ -23,15 +23,61 @@ const Calendar = () => {
   const [creatingCalendar, setCreatingCalendar] = useState(false);
 
   const token = localStorage.getItem("authToken");
+
+  const fetchProjectById = async (id) => {
+    console.log("[CAL DEBUG] Fetching project directly:", id);
+
+    try {
+      const response = await api.get(`projects/${id}/`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+
+      const project = response.data;
+      console.log("[CAL DEBUG] Project response:", project);
+
+      // Calendar ID
+      setProjectCalendarId(project?.calendar_id || null);
+      console.log("[CAL DEBUG] projectCalendarId =", project?.calendar_id);
+
+      // Team leader check
+      const leaderId =
+        project.team_leader?.user_id ||
+        project.team_leader?.id ||
+        project.team_leader;
+
+      const isLeader = String(leaderId) === String(user.id);
+      console.log("[CAL DEBUG] isTeamLeader =", isLeader);
+      setIsTeamLeader(isLeader);
+
+      // If team member → handle calendar
+      if (!isLeader) {
+        if (project.calendar_id) {
+          console.log("[CAL DEBUG] Member fetching events...");
+          await fetchCalendarEvents(id, { isInitial: true });
+        } else {
+          console.log("[CAL DEBUG] Member: no calendar found.");
+          setCheckingConnection(false);
+        }
+      }
+
+    } catch (err) {
+      console.error("[CAL DEBUG] Error fetching project:", err);
+    } finally {
+      setProjectLoaded(true);
+      if (!isTeamLeader) setCheckingConnection(false);
+    }
+  };
+
   
   useEffect(() => {
     if (projectId) {
-      fetchProjectDetails(projectId);
+      console.log("[CAL DEBUG] Calling fetchProjectById");
+      fetchProjectById(projectId);
 
       if (isTeamLeader) {
         fetchCalendarEvents(projectId, { isInitial: true });
       }
-
     } else {
       setCheckingConnection(false);
     }
@@ -41,7 +87,8 @@ const Calendar = () => {
     const state = params.get("state");
     if (code && state) handleOAuthCallback(code, state);
 
-  }, [projectId, isTeamLeader]);  
+  }, [projectId, isTeamLeader]);
+
   
   useEffect(() => {
     if (projectId && isConnected && isTeamLeader) {
@@ -49,48 +96,6 @@ const Calendar = () => {
     }
     // eslint-disable-next-line
   }, [isConnected]);
-
-  // -----------------------------
-  // Project details
-  // -----------------------------
-  const fetchProjectDetails = async (id) => {
-    try {
-      const response = await api.get('projects/', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-
-      const list = response.data || [];
-      const current = list.find((p) => p.id === id);
-
-      setProjectCalendarId(current?.calendar_id || null);
-
-      let leader = false;
-      if (current && current.team_leader) {
-        const leaderId =
-          current.team_leader?.user_id ||
-          current.team_leader?.id ||
-          current.team_leader;
-
-        leader = String(leaderId) === String(user.id);
-        setIsTeamLeader(leader);
-      } else {
-        setIsTeamLeader(false);
-      }
-      // For team members: if team has a calendar, fetch events; else just end loading
-      if (!leader) {
-        if (current?.calendar_id) {
-          await fetchCalendarEvents(id, { isInitial: true });
-        } else {
-          setCheckingConnection(false);
-        }
-      }
-    } catch (err) {
-      console.error('Error loading project details:', err);
-    } finally {
-      setProjectLoaded(true);
-      if (!isTeamLeader) setCheckingConnection(false);
-    }
-  };
 
   // -----------------------------
   // Create project Google Calendar
