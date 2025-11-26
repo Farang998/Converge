@@ -273,118 +273,134 @@ class ProjectWorkflowView(APIView):
 class ProjectTeamActivityView(APIView):
     """
     Returns:
-      - activity_timeline: list of { date: "YYYY-MM-DD", created: int, due: int }
-      - active_contributors: [ { name: "...", value: n } ]
-      - task_touch_frequency: [ { name: "...", value: n } ]
-    Simple calculations using Task model fields only (no logs).
+      - activity_timeline: [{ date, created, due }]
+      - active_contributors: [{ name, value }]
+      - task_touch_frequency: [{ name, value }]
     """
+
     def get(self, request, project_id):
-        # auth
+
+        # --- AUTH ---
         try:
             user = authenticate_user_from_request(request)
         except AuthenticationFailed:
-            return Response({"error": "Authentication failed"}, status=401)
+            return Response({"error": "Authentication failed"}, 401)
 
-        # project
+        # --- PROJECT ---
         try:
             project = Project.objects.get(id=project_id)
         except DoesNotExist:
-            return Response({"error": "Project not found"}, status=404)
+            return Response({"error": "Project not found"}, 404)
 
-        # membership check (same as your other view)
+        # --- CHECK MEMBERSHIP ---
         user_id = str(user.id)
-        is_leader = project.team_leader == user
+        is_leader = (project.team_leader == user)
         is_member = any(m.get("user") == user_id and m.get("accepted") for m in project.team_members)
-        if not (is_leader or is_member):
-            return Response({"error": "Not authorized"}, status=403)
 
-        # fetch tasks
+        if not (is_leader or is_member):
+            return Response({"error": "Not authorized"}, 403)
+
+        # --- FETCH TASKS ---
         tasks = list(Task.objects.filter(project=project))
 
-        # ---------- Activity Timeline ----------
-        # We'll aggregate counts per day for "created" and "due"
-        # Format keys: "YYYY-MM-DD" strings
+        # ----------------------------------------------------------------------
+        # 1) ACTIVITY TIMELINE (created + due per day)
+        # ----------------------------------------------------------------------
         def day_key(dt):
-            if dt is None:
+            """Convert any datetime (naive or aware) into YYYY-MM-DD (UTC)."""
+            if not dt:
                 return None
             if dt.tzinfo is None:
                 dt = dt.replace(tzinfo=timezone.utc)
             return dt.astimezone(timezone.utc).date().isoformat()
 
-        timeline_map = {}  # { day: {created: n, due: m} }
+        timeline_map = {}  # { "YYYY-MM-DD": {created: x, due: y} }
+
         for t in tasks:
             # created
-            if getattr(t, "created_at", None):
-                k = day_key(t.created_at)
-                if k:
-                    timeline_map.setdefault(k, {"created": 0, "due": 0})
-                    timeline_map[k]["created"] += 1
-            # due
-            if getattr(t, "due_date", None):
-                k = day_key(t.due_date)
-                if k:
-                    timeline_map.setdefault(k, {"created": 0, "due": 0})
-                    timeline_map[k]["due"] += 1
+            dk = day_key(getattr(t, "created_at", None))
+            if dk:
+                timeline_map.setdefault(dk, {"created": 0, "due": 0})
+                timeline_map[dk]["created"] += 1
 
-        # produce sorted list by date
-        timeline = []
-        for day in sorted(timeline_map.keys()):
-            timeline.append({
+            # due
+            dk = day_key(getattr(t, "due_date", None))
+            if dk:
+                timeline_map.setdefault(dk, {"created": 0, "due": 0})
+                timeline_map[dk]["due"] += 1
+
+        activity_timeline = [
+            {
                 "date": day,
                 "created": timeline_map[day]["created"],
-                "due": timeline_map[day]["due"],
-            })
+                "due": timeline_map[day]["due"]
+            }
+            for day in sorted(timeline_map.keys())
+        ]
 
-        # ---------- Active Contributors ----------
-        # Simple scoring per user: #created + #assigned + #completed
+        # ----------------------------------------------------------------------
+        # 2) ACTIVE CONTRIBUTORS
+        # scoring rule:
+        #   assigned_to => +1
+        #   completed (assigned_to) => +1
+        # ----------------------------------------------------------------------
         contrib_scores = {}
+
         for t in tasks:
-            # created by: we don't have created_by in Task model — skip unless you have it.
-            # fallback: use assigned_to and completed-> assigned_to
-            # increment assigned_to
-            if t.assigned_to:
-                name = getattr(t.assigned_to, "name", "Unknown")
-                contrib_scores[name] = contrib_scores.get(name, 0) + 1
+            assigned = getattr(t, "assigned_to", None)
 
-            # completed -> attribute status
-            if t.status == "completed":
-                # assume the assignee completed it (best-effort)
-                if t.assigned_to:
-                    name = getattr(t.assigned_to, "name", "Unknown")
-                    contrib_scores[name] = contrib_scores.get(name, 0) + 1
+            if assigned:
+                username = getattr(assigned, "username", None) or getattr(assigned, "name", None)
+                if username:
+                    contrib_scores[username] = contrib_scores.get(username, 0) + 1
 
-        # Convert to list sorted desc
+            if t.status == "completed" and assigned:
+                username = getattr(assigned, "username", None) or getattr(assigned, "name", None)
+                if username:
+                    contrib_scores[username] = contrib_scores.get(username, 0) + 1
+
         active_contributors = [
             {"name": name, "value": count}
             for name, count in sorted(contrib_scores.items(), key=lambda x: -x[1])
         ]
 
-        # If no contributors found, return single "Unassigned" bar with 0 (frontend can render message)
         if not active_contributors:
-            active_contributors = [{"name": "Unassigned", "value": 0}]
+            active_contributors = [{"name": "No contributors", "value": 0}]
 
-        # ---------- Task Touch Frequency ----------
-        # touch_count per user: assigned_to count + completed_by (best-effort same as above)
+        # ----------------------------------------------------------------------
+        # 3) TASK TOUCH FREQUENCY
+        # count interactions by assigned_to + completion
+        # ----------------------------------------------------------------------
         touch_map = {}
-        for t in tasks:
-            if t.assigned_to:
-                n = getattr(t.assigned_to, "name", "Unknown")
-                touch_map[n] = touch_map.get(n, 0) + 1
-            if t.status == "completed" and t.assigned_to:
-                n = getattr(t.assigned_to, "name", "Unknown")
-                touch_map[n] = touch_map.get(n, 0) + 1
 
-        task_touch_freq = [
+        for t in tasks:
+            assigned = getattr(t, "assigned_to", None)
+
+            if assigned:
+                username = getattr(assigned, "username", None) or getattr(assigned, "name", None)
+                if username:
+                    touch_map[username] = touch_map.get(username, 0) + 1
+
+            if t.status == "completed" and assigned:
+                username = getattr(assigned, "username", None) or getattr(assigned, "name", None)
+                if username:
+                    touch_map[username] = touch_map.get(username, 0) + 1
+
+        task_touch_frequency = [
             {"name": name, "value": count}
             for name, count in sorted(touch_map.items(), key=lambda x: -x[1])
         ]
-        if not task_touch_freq:
-            task_touch_freq = [{"name": "Unassigned", "value": 0}]
 
+        if not task_touch_frequency:
+            task_touch_frequency = [{"name": "No activity", "value": 0}]
+
+        # ----------------------------------------------------------------------
+        # FINAL RESPONSE
+        # ----------------------------------------------------------------------
         return Response({
-            "activity_timeline": timeline,
+            "activity_timeline": activity_timeline,
             "active_contributors": active_contributors,
-            "task_touch_frequency": task_touch_freq,
+            "task_touch_frequency": task_touch_frequency,
         })
 
 class ProjectFileAnalyticsView(APIView):
