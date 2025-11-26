@@ -2,7 +2,6 @@
 import React from "react";
 import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip, Legend } from "recharts";
 
-// const COLORS = ["#1a9647ff",  "#059669", "#7bc98aff", "#4ADE80", "#09b87dff", "#63e0b2ff","#64a46bff",  "#CCF3D6"];
 const COLORS = [ "#00ab3fff", "#ffcc00ff", "#e66700ff", "#004cc6ff", "#d72121ff", "#8b11d6ff", "#0cc5b0ff", "#dc197bff", "#ff2c4fff", "#afcf0fff" ];
 export default function FileTypesPieChart({ data = [] }) {
   // data: [{ type, count }]
