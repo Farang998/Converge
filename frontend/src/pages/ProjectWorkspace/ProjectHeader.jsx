@@ -20,7 +20,6 @@ export default function ProjectHeader({ project, progressPct, onOpenDetails}) {
           <button className="btn ghost" onClick={onOpenDetails}>
             Update Details
           </button>
-          <button className="btn primary">Settings</button>
           <button onClick={() => navigate("/dashboard")} className="pw-back-btn">← Back</button>
         </div>
       </div>

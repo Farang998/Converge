@@ -15,8 +15,6 @@ import Index from './Tasks/Index';
 import CalendarView from './Calendar/CalendarView';
 
 
-const TimelineView = React.lazy(() => import('./TimelineView'));
-
 // --- Mock data (in a real app replace with API calls) ---
 const nowIso = () => new Date().toISOString();
 
@@ -72,7 +70,7 @@ export default function ProjectWorkspace() {
   const [files, setFiles] = useState(seedFiles);
   const [milestones] = useState(seedMilestones);
   const [activity, setActivity] = useState(seedActivity);
-  const [activeView, setActiveView] = useState('overview'); // overview|tasks|files|timeline|activity|calendar
+  const [activeView, setActiveView] = useState('overview'); // overview|tasks|files|calendar
   const [, setSelectedTask] = useState(null);
 
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
@@ -184,7 +182,6 @@ export default function ProjectWorkspace() {
                 { id: 'overview', label: 'Overview', icon: 'LayoutDashboard' },
                 { id: 'tasks', label: 'Tasks', icon: 'CheckSquare' },
                 { id: 'files', label: 'Files', icon: 'Folder' },
-                { id: 'timeline', label: 'Timeline', icon: 'Clock' },
                 { id: 'calendar', label: 'Calendar', icon: 'Calendar' },
                 { id: 'activity', label: 'Activity', icon: 'Activity' }
               ]}
@@ -195,14 +192,7 @@ export default function ProjectWorkspace() {
             {activeView === 'overview' && <OverviewView project={project} tasks={tasks} files={files} activity={activity} onCreateTask={createTask} />}
             {activeView === 'tasks' && <Index projectId={projectId} />}
             {activeView === 'files' && <FilesView projectId={projectId} />}
-            {activeView === 'activity' && <ActivityView activity={activity} />}
             {activeView === 'calendar' && <CalendarView />}
-
-            {activeView === 'timeline' && (
-              <Suspense fallback={<div className="skeleton">Loading timeline…</div>}>
-                <TimelineView milestones={milestones} tasks={tasks} />
-              </Suspense>
-            )}
              
           </main>
         </div>

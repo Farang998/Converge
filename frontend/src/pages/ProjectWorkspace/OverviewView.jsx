@@ -27,10 +27,6 @@ export default function OverviewView({ project, tasks, files, activity, onCreate
         </div>
       </section>
 
-      <section className="card mt">
-        <h3>Recent activity</h3>
-        <ActivityView activity={activity.slice(0, 5)} />
-      </section>
       
     </div>
   </main>

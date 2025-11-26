@@ -51,14 +51,6 @@ export default function ProjectNav({ active, setActive, project }) {
       />
 
       <NavItem
-        label="Timeline"
-        icon={<FaClock />}
-        active={active === 'timeline'}
-        onClick={() => setActive('timeline')}
-        collapsed={collapsed}
-      />
-
-      <NavItem
         label="Calendar"
         icon={<FaCalendarAlt />}
         active={active === 'calendar'}
