@@ -64,8 +64,8 @@ const EdgeForm = ({ nodes, onSave, onCancel, existingEdge = null }) => {
             >
               <option value="">Select a task</option>
               {fromOptions.map((node) => (
-                <option key={node.id} value={node.id}>
-                  {node.name} ({node.id})
+                <option value={node.id}>
+                  {node.name}
                 </option>
               ))}
             </select>
@@ -84,8 +84,8 @@ const EdgeForm = ({ nodes, onSave, onCancel, existingEdge = null }) => {
             >
               <option value="">Select a task</option>
               {toOptions.map((node) => (
-                <option key={node.id} value={node.id}>
-                  {node.name} ({node.id})
+                <option value={node.id}>
+                  {node.name}
                 </option>
               ))}
             </select>

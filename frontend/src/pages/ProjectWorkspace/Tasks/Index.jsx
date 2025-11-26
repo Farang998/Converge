@@ -288,15 +288,30 @@ const Index = ({ projectId }) => {
   };
 
   const handleSaveEdge = async (edgeData) => {
-    await api.post(`/tasks/${edgeData.to}/add_dependency/`, {
-      dependency_id: edgeData.from,
-    });
+    try {
+        await api.post(`/tasks/${edgeData.to}/add_dependency/`, {
+        dependency_id: edgeData.from,
+        });
 
-    refreshTasks();
-    closeModal();
+        refreshTasks();
+        closeModal();
+    } catch (err) {
+    // --- ADDED ERROR HANDLING ---
+      console.error('Error saving single dependency:', err.response?.data || err.message);
+      // Extract error message from the backend response
+      const backendError = err.response?.data?.error;
+        
+      // Fallback message in case the backend doesn't provide a specific error
+      const defaultMessage = 'An unknown error occurred while saving the dependency.';
+
+      setNotification({
+        type: 'error',
+        title: 'Dependency Creation Failed',
+        message: backendError || defaultMessage,
+      });
+      
+    }
   };
-
-
 
 
   return (
