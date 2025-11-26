@@ -11,6 +11,39 @@ from mongoengine.errors import DoesNotExist
 
 class ProjectDashboardView(APIView):
 
+    def get_assignee(self, task):
+        """
+        Safely extract the assignee name when assigned_to may be:
+        - a single User object
+        - a BaseList / list of users or ids
+        - None
+        """
+        a = task.assigned_to
+
+        if not a:
+            return "Unassigned"
+
+        # Case 1: Single user object (ReferenceField)
+        if hasattr(a, "username") or hasattr(a, "name"):
+            return getattr(a, "username", None) or getattr(a, "name", None) or "Unassigned"
+
+        # Case 2: List of users/ids
+        if isinstance(a, (list, tuple)):
+            if len(a) == 0:
+                return "Unassigned"
+
+            first = a[0]
+
+            # element is a User object
+            if hasattr(first, "username") or hasattr(first, "name"):
+                return getattr(first, "username", None) or getattr(first, "name", None) or "Unassigned"
+
+            # element is id/string
+            return str(first)
+
+        # fallback
+        return "Unassigned"
+
     def get(self, request, project_id):
 
         # --- AUTH FIX ---
@@ -59,11 +92,12 @@ class ProjectDashboardView(APIView):
         tasks_per_member = {}
 
         for t in tasks:
-            assignee = t.assigned_to.name if t.assigned_to else "Unassigned"
+            assignee = self.get_assignee(t)
             tasks_per_member[assignee] = tasks_per_member.get(assignee, 0) + 1
 
         workload_data = [
-            {"name": k, "value": v} for k, v in tasks_per_member.items()
+            {"name": name, "value": count}
+            for name, count in tasks_per_member.items()
         ]
 
         # --------------------
