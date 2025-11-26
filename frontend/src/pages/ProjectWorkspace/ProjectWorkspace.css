@@ -293,7 +293,7 @@
 .pw-left, .pw-main, .pw-right {
   min-height: 0;
   /* Added margin top/bottom to nav/right cards for visual lift */
-  margin-right: 14px;
+  /* margin-right: 14px; */
 }
 
 .pw-left {
@@ -324,12 +324,6 @@
   gap: 16px;
 }
 
-.view-grid {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 18px;
-  align-items: start;
-}
 /* -------------------------
    Left nav (scrollable)
    ------------------------- */
@@ -411,6 +405,16 @@
 /* -------------------------
    Cards (used across main & right)
    ------------------------- */
+.view-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  align-items: start;
+}
+
+.view-card {
+  margin: 16px;
+}
+
 .card {
   background: var(--surface);
   border-radius: var(--radius);

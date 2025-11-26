@@ -124,6 +124,40 @@ class ProjectViewSet(viewsets.ViewSet):
             })
 
         return Response(serialized, status=200)
+    
+    def retrieve(self, request, pk=None):
+        try:
+            user = authenticate_user_from_request(request)
+        except AuthenticationFailed as e:
+            return Response({"error": str(e)}, status=401)
+
+        try:
+            project = Project.objects.get(id=pk)
+        except Project.DoesNotExist:
+            return Response({"error": "Project not found"}, status=404)
+
+        # serialize manually
+        data = {
+            "id": str(project.id),
+            "name": project.name,
+            "description": project.description,
+            "project_type": project.project_type,
+            "team_leader": {
+                "user_id": str(project.team_leader.id),
+                "username": getattr(project.team_leader, "username", None),
+            },
+            "team_members": [
+                {
+                    "user_id": m["user"],
+                    "accepted": bool(m.get("accepted"))
+                }
+                for m in project.team_members
+            ],
+            "calendar_id": getattr(project, "calendar_id", None),
+            "created_at": project.created_at.isoformat() if project.created_at else None,
+        }
+
+        return Response(data, status=200)
 
     # ------------------------
     # CREATE PROJECT

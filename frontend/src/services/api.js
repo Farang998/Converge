@@ -15,17 +15,17 @@ if (token) {
   api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
 }
 
-// Simple request logger and ensure base is used
-api.interceptors.request.use((config) => {
-  // Ensure URL uses baseURL for debugging
-  try {
-    // eslint-disable-next-line no-console
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('authToken');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
     console.debug('[api] Request:', config.method?.toUpperCase(), config.baseURL + config.url);
-  } catch (e) {
-    // ignore
-  }
-  return config;
-});
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
 
 api.interceptors.response.use((response) => {
   try {

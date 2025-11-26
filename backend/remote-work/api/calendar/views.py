@@ -4,7 +4,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.conf import settings
 from urllib.parse import urlencode
-from .google_service import get_calendar_events
+from .google_service import get_calendar_events, create_project_calendar
 import dotenv
 import os
 
@@ -108,10 +108,87 @@ class ProjectCalendarEventsView(APIView):
         if not project or not project.calendar_id:
             return Response({"events": []})
 
-        # Get credentials
+        # Get credentials for requester; if missing, fall back to team leader
         credentials = GoogleCredentials.objects(user=user).first()
         if not credentials:
+            # fallback to team leader credentials to allow team members to view
+            leader_creds = GoogleCredentials.objects(user=project.team_leader).first()
+            if not leader_creds:
+                return Response({"error": "Google Calendar not connected"}, status=400)
+            events = get_calendar_events(leader_creds, project.calendar_id)
+        else:
+            events = get_calendar_events(credentials, project.calendar_id)
+        return Response({"events": events})
+
+
+class CredentialsStatusView(APIView):
+    def get(self, request):
+        auth_header = request.headers.get("Authorization")
+        if not auth_header:
+            return Response({"connected": False, "error": "Missing Authorization header"}, status=401)
+        token = auth_header.split(" ")[1]
+        user = User.validate_token(token)
+        if not user:
+            return Response({"connected": False, "error": "Unauthorized"}, status=401)
+
+        creds = GoogleCredentials.objects(user=user).first()
+        if creds:
+            return Response({"connected": True, "email": creds.google_email})
+        return Response({"connected": False})
+
+
+class ProjectCalendarInfoView(APIView):
+    def get(self, request, project_id):
+        auth_header = request.headers.get("Authorization")
+        if not auth_header:
+            return Response({"error": "Missing Authorization header"}, status=401)
+        token = auth_header.split(" ")[1]
+        user = User.validate_token(token)
+        if not user:
+            return Response({"error": "Unauthorized"}, status=401)
+
+        from ..projects.models import Project
+        project = Project.objects(id=project_id).first()
+        if not project:
+            return Response({"error": "Project not found"}, status=404)
+
+        return Response({
+            "has_calendar": bool(project.calendar_id),
+            "calendar_id": project.calendar_id or None,
+        })
+
+
+class CreateProjectCalendarView(APIView):
+    def post(self, request, project_id):
+        auth_header = request.headers.get("Authorization")
+        if not auth_header:
+            return Response({"error": "Missing Authorization header"}, status=401)
+        token = auth_header.split(" ")[1]
+        user = User.validate_token(token)
+        if not user:
+            return Response({"error": "Unauthorized"}, status=401)
+
+        from ..projects.models import Project
+        project = Project.objects(id=project_id).first()
+        if not project:
+            return Response({"error": "Project not found"}, status=404)
+
+        # Only team leader can create the project calendar
+        if str(project.team_leader.id) != str(user.id):
+            return Response({"error": "Forbidden: only team leader can create calendar"}, status=403)
+
+        # If calendar already exists, just return it
+        if project.calendar_id:
+            return Response({"calendar_id": project.calendar_id, "created": False})
+
+        creds = GoogleCredentials.objects(user=user).first()
+        if not creds:
             return Response({"error": "Google Calendar not connected"}, status=400)
 
-        events = get_calendar_events(credentials, project.calendar_id)
-        return Response({"events": events})
+        cal_id = create_project_calendar(creds, project.name)
+        if not cal_id:
+            return Response({"error": "Failed to create Google Calendar"}, status=400)
+
+        project.calendar_id = cal_id
+        project.save()
+        return Response({"calendar_id": cal_id, "created": True}, status=201)

@@ -45,7 +45,7 @@ def create_project_calendar(credentials, project_name):
     url = f"{GOOGLE_CALENDAR_API}/calendars"
     headers = {"Authorization": f"Bearer {access_token}"}
 
-    body = {"summary": f"Converge – {project_name}"}
+    body = {"summary": f"Converge   {project_name}"}
 
     resp = requests.post(url, json=body, headers=headers)
     calendar_id = resp.json().get("id")
