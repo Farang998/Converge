@@ -1,7 +1,9 @@
 // src/components/ProjectWorkspace/ProjectHeader.jsx
 import React from 'react';
+import { useNavigate } from "react-router-dom";
 
 export default function ProjectHeader({ project, progressPct, onOpenDetails}) {
+  const navigate = useNavigate();
   return (
     <header className="pw-header">
       <div className="pw-header-wrapper">
@@ -19,7 +21,7 @@ export default function ProjectHeader({ project, progressPct, onOpenDetails}) {
             Update Details
           </button>
           <button className="btn primary">Settings</button>
-          <button onClick={() => navigate(-1)} className="pw-back-btn">← Back</button>
+          <button onClick={() => navigate("/dashboard")} className="pw-back-btn">← Back</button>
         </div>
       </div>
       </div>
