@@ -3,9 +3,9 @@ import { useNavigate, useParams } from 'react-router-dom';
 import api from '../../../services/api';
 import { toast } from 'react-toastify';
 import './Calendar.css';
-import { FaCalendarAlt, FaGoogle, FaLink, FaSpinner } from 'react-icons/fa';
+import { FaCalendarAlt, FaGoogle, FaLink, FaSpinner, FaPlus } from 'react-icons/fa';
 import { useAuth } from '../../../contexts/AuthContext';
-import TeamCalendar from './TeamCalendar/TeamCalendar';
+// import TeamCalendar from './TeamCalendar/TeamCalendar';
 
 const Calendar = () => {
   const navigate = useNavigate();
@@ -20,6 +20,7 @@ const Calendar = () => {
   const [projectCalendarId, setProjectCalendarId] = useState(null);
   const [projectLoaded, setProjectLoaded] = useState(false);
   const [isTeamLeader, setIsTeamLeader] = useState(false);
+  const [creatingCalendar, setCreatingCalendar] = useState(false);
 
   const token = localStorage.getItem("authToken");
   
@@ -29,9 +30,6 @@ const Calendar = () => {
 
       if (isTeamLeader) {
         fetchCalendarEvents(projectId, { isInitial: true });
-      } else {
-        // For team members → immediately stop loading
-        setCheckingConnection(false);
       }
 
     } else {
@@ -66,21 +64,56 @@ const Calendar = () => {
 
       setProjectCalendarId(current?.calendar_id || null);
 
+      let leader = false;
       if (current && current.team_leader) {
         const leaderId =
           current.team_leader?.user_id ||
           current.team_leader?.id ||
           current.team_leader;
 
-        setIsTeamLeader(String(leaderId) === String(user.id));
+        leader = String(leaderId) === String(user.id);
+        setIsTeamLeader(leader);
       } else {
         setIsTeamLeader(false);
+      }
+      // For team members: if team has a calendar, fetch events; else just end loading
+      if (!leader) {
+        if (current?.calendar_id) {
+          await fetchCalendarEvents(id, { isInitial: true });
+        } else {
+          setCheckingConnection(false);
+        }
       }
     } catch (err) {
       console.error('Error loading project details:', err);
     } finally {
       setProjectLoaded(true);
       if (!isTeamLeader) setCheckingConnection(false);
+    }
+  };
+
+  // -----------------------------
+  // Create project Google Calendar
+  // -----------------------------
+  const createProjectCalendar = async () => {
+    try {
+      setCreatingCalendar(true);
+      const resp = await api.post(`calendar/project/${projectId}/create/`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const newId = resp.data?.calendar_id;
+      if (newId) {
+        toast.success('Project Google Calendar created');
+        setProjectCalendarId(newId);
+        await fetchCalendarEvents(projectId);
+      } else {
+        toast.error('Failed to create calendar');
+      }
+    } catch (err) {
+      console.error('Error creating project calendar:', err);
+      toast.error(err.response?.data?.error || 'Failed to create Google Calendar');
+    } finally {
+      setCreatingCalendar(false);
     }
   };
 
@@ -205,16 +238,56 @@ const Calendar = () => {
           </div>
         )}
 
-        {/* ----------------- Team members see internal meetings ----------------- */}
+        {/* ----------------- Team member view ----------------- */}
         {!checkingConnection && !isTeamLeader && (
-          <TeamCalendar
-            projectId={projectId}
-            token={token}
-          />
+          <>
+            {projectCalendarId ? (
+              <>
+                {loadingEvents && (
+                  <div className="loading-state">
+                    <FaSpinner className="spinner" />
+                    <p>Loading calendar events...</p>
+                  </div>
+                )}
+                {!loadingEvents && events.length === 0 && (
+                  <div className="empty-state">
+                    <FaCalendarAlt className="empty-icon" />
+                    <h2>No events scheduled</h2>
+                    <p>This project's Google Calendar is empty.</p>
+                  </div>
+                )}
+                {!loadingEvents && events.length > 0 && (
+                  <div className="events-section">
+                    <h2 className="events-title">Upcoming Events</h2>
+                    <div className="events-list">
+                      {events.map((event) => (
+                        <div key={event.id} className="event-card">
+                          <h3>{event.summary}</h3>
+                          <p>{event.description}</p>
+                          <p><strong>Start:</strong> {event.start?.toString()}</p>
+                          {event.htmlLink && (
+                            <button onClick={() => window.open(event.htmlLink, "_blank")}>
+                              <FaLink /> View in Google Calendar
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="empty-state">
+                <FaCalendarAlt className="empty-icon" />
+                <h2>No team calendar</h2>
+                <p>Your project team does not have a Google Calendar.</p>
+              </div>
+            )}
+          </>
         )}
 
-        {/* ----------------- Team leader: Google Calendar not connected ----------------- */}
-        {!checkingConnection && isTeamLeader && (!isConnected || !projectCalendarId) && (
+        {/* ----------------- Team leader: Not connected ----------------- */}
+        {!checkingConnection && isTeamLeader && !isConnected && (
           <div className="connection-prompt">
             <div className="prompt-content">
               <FaGoogle className="google-icon" />
@@ -240,8 +313,30 @@ const Calendar = () => {
           </div>
         )}
 
-        {/* ----------------- Team leader: Google Calendar connected ----------------- */}
-        {!checkingConnection && isTeamLeader && isConnected && (
+        {/* ----------------- Team leader: Connected but no calendar yet ----------------- */}
+        {!checkingConnection && isTeamLeader && isConnected && !projectCalendarId && (
+          <div className="connection-prompt">
+            <div className="prompt-content">
+              <FaCalendarAlt className="google-icon" />
+              <h2>Create a Project Calendar</h2>
+              <p>Create a dedicated Google Calendar for this project.</p>
+              <button className="connect-button" onClick={createProjectCalendar} disabled={creatingCalendar}>
+                {creatingCalendar ? (
+                  <>
+                    <FaSpinner className="button-spinner" /> Creating...
+                  </>
+                ) : (
+                  <>
+                    <FaPlus /> Create Project Calendar
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ----------------- Team leader: Google Calendar connected with calendar ----------------- */}
+        {!checkingConnection && isTeamLeader && isConnected && projectCalendarId && (
           <>
             <div className="calendar-controls">
               {projectCalendarId && (
@@ -263,7 +358,7 @@ const Calendar = () => {
               </div>
             )}
 
-            {!loadingEvents && projectCalendarId && events.length === 0 && (
+            {!loadingEvents && events.length === 0 && (
               <div className="empty-state">
                 <FaCalendarAlt className="empty-icon" />
                 <h2>No events scheduled</h2>
