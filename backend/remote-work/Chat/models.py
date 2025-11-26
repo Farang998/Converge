@@ -1,4 +1,4 @@
-from mongoengine import Document, StringField, ReferenceField, ListField, DateTimeField, IntField
+from mongoengine import Document, StringField, ReferenceField, ListField, DateTimeField, IntField, ObjectIdField
 from django.utils import timezone
 from api.auth.models import User
 
@@ -13,11 +13,13 @@ class GroupChat(Document):
     admin = StringField(required=True)  # user id as string
     participants = ListField(StringField(), required=True)  # user ids
     created_at = DateTimeField(default=timezone.now)
+    project_id = ObjectIdField(required=True)
     meta = {'collection': 'group_chats'}
 
 class GroupMessage(Document):
     chat = ReferenceField(GroupChat, required=True, reverse_delete_rule=2)  # CASCADE
     sender = StringField(required=True)  # user id
+    # sender_name = StringField() ;
     content = StringField(default='')
     timestamp = DateTimeField(default=timezone.now)
     # Media fields
@@ -38,3 +40,24 @@ class IndividualMessage(Document):
     file_name = StringField() 
     file_size = IntField()  
     meta = {'collection': 'individual_messages'}
+
+class Thread(Document):
+    chat = ReferenceField('GroupChat', required=True, reverse_delete_rule=2)
+    parent_message = ReferenceField('GroupMessage', required=True, reverse_delete_rule=3)
+    created_by = StringField(required=True)
+    created_at = DateTimeField(default=timezone.now)
+    meta = {'collection': 'threads'}
+
+class ThreadMessage(Document):
+    thread = ReferenceField('Thread', required=True, reverse_delete_rule=2)
+    sender =StringField(required=True)
+    content = StringField(default='')
+    timestamp = DateTimeField(default=timezone.now)
+
+    # media
+    file_url = StringField()
+    file_type = StringField()
+    file_name = StringField()
+    file_size = IntField()
+
+    meta = {'collection': 'thread_messages'}

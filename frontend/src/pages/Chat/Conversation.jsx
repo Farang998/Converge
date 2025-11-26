@@ -6,6 +6,7 @@ import DeleteConfirmationModal from "../../components/DeleteConfirmationModal";
 import { useAuth } from "../../contexts/AuthContext";
 import api from "../../services/api";
 import "./Conversation.css";
+import ThreadPanel from "./ThreadPanel";
 
 export default function Conversation() {
   const { projectId } = useParams();
@@ -32,12 +33,20 @@ export default function Conversation() {
   const [uploading, setUploading] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [messageToDelete, setMessageToDelete] = useState(null);
+  const [activeThread, setActiveThread] = useState(null); 
+  const [threadMessages, setThreadMessages] = useState([]);
+  const [threadLoading, setThreadLoading] = useState(false);
+  const [threadError, setThreadError] = useState("");
+  const [threadInput, setThreadInput] = useState("");
+  const [threadSending, setThreadSending] = useState(false);
+  const [alsoSendToChannel, setAlsoSendToChannel] = useState(false);
   const fileInputRef = useRef(null);
   const searchTimeoutRef = useRef(null);
   const wsRef = useRef(null);
   const reconnectTimeoutRef = useRef(null);
   const messagesEndRef = useRef(null);
   const messagesContainerRef = useRef(null);
+  const activeThreadRef = useRef(null);
 
   // Current user is provided by AuthContext
 
@@ -62,6 +71,10 @@ export default function Conversation() {
     }
     return null;
   };
+
+  useEffect(() => {
+    activeThreadRef.current = activeThread;
+  }, [activeThread]);
 
   // WebSocket connection function
   const connectWebSocket = () => {
@@ -136,6 +149,39 @@ export default function Conversation() {
         } else if (data.type === "message_deleted") {
           // Message deleted via WebSocket
           setMessages((prev) => prev.filter((msg) => msg.id !== data.message_id));
+        } else if (data.type === "thread_message") {
+          const parentId = String(data.parent_message_id);
+
+          setMessages((prev) =>
+            prev.map((msg) => {
+              if (String(msg.id) === parentId) {
+                const nextCount = (msg.replies_count || 0) + 1;
+                return {
+                  ...msg,
+                  thread_id: data.thread_id || msg.thread_id,
+                  replies_count: nextCount,
+                };
+              }
+              return msg;
+            })
+          );
+
+          const currentThread = activeThreadRef.current;
+          if (currentThread && String(currentThread.parentMessage?.id) === parentId) {
+            setThreadMessages((prev) => [...prev, data]);
+            setActiveThread((prev) => {
+              if (!prev) return prev;
+              return {
+                ...prev,
+                threadId: data.thread_id || prev.threadId,
+                parentMessage: {
+                  ...prev.parentMessage,
+                  thread_id: data.thread_id || prev.parentMessage.thread_id,
+                  replies_count: (prev.parentMessage.replies_count || 0) + 1,
+                },
+              };
+            });
+          }
         }
       } catch (err) {
         console.error("Error parsing WebSocket message:", err);
@@ -443,6 +489,98 @@ export default function Conversation() {
     return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
   };
 
+  const handleReplyClick = async (message) => {
+    if (!message) return;
+
+    setActiveThread({
+      parentMessage: message,
+      threadId: message.thread_id || null,
+    });
+    setThreadMessages([]);
+    setThreadError("");
+    setThreadInput("");
+
+    if (!message.thread_id) {
+      setThreadLoading(false);
+      return;
+    }
+
+
+    setThreadLoading(true);
+    try {
+      const { data } = await api.get(`chats/project/${projectId}/threads/${message.thread_id}/`);
+      setActiveThread((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          threadId: data.thread?.id || message.thread_id,
+          parentMessage: data.parent_message || message,
+        };
+      });
+      setThreadMessages(data.replies || []);
+    } catch (err) {
+      console.error("Failed to load thread:", err);
+      setThreadError(err?.response?.data?.error || "Failed to load thread");
+    } finally {
+      setThreadLoading(false);
+    }
+  };
+
+
+  const closeThreadPanel = () => {
+    setActiveThread(null);
+    setThreadMessages([]);
+    setThreadInput("");
+    setThreadError("");
+    setThreadLoading(false);
+    setThreadSending(false);
+    setAlsoSendToChannel(false);
+  };
+
+
+  const sendThreadReply = async () => {
+    if (!activeThread?.parentMessage?.id) return;
+    if (!threadInput.trim()) return;
+
+    if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
+      setThreadError("WebSocket not connected. Please wait...");
+      return;
+    }
+
+    setThreadSending(true);
+    const messageContent = threadInput.trim();
+    const payload = {
+      content: messageContent,
+      reply_to: activeThread.parentMessage.id,
+    };
+
+    try {
+      wsRef.current.send(JSON.stringify(payload));
+      
+      // If "also send to channel" is checked, send a regular message to the channel
+      if (alsoSendToChannel) {
+        const channelPayload = {
+          content: messageContent,
+        };
+        wsRef.current.send(JSON.stringify(channelPayload));
+      }
+      
+      setThreadInput("");
+    } catch (err) {
+      console.error("Failed to send thread reply:", err);
+      setThreadError("Failed to send reply");
+    } finally {
+      setThreadSending(false);
+    }
+  };
+
+  const handleThreadKeyPress = (e) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      sendThreadReply();
+    }
+  };
+
   const handleDeleteMessage = (messageId) => {
     if (!messageId) return;
     
@@ -596,7 +734,7 @@ export default function Conversation() {
       )}
 
       {/* Main Chat Area */}
-      <div className={`chat-main ${showSidebar ? "with-sidebar" : ""}`}>
+      <div className={`chat-main ${showSidebar ? "with-sidebar" : ""} ${activeThread ? "thread-open" : ""}`}>
         {/* Chat Header */}
         <div className="chat-header">
           <button 
@@ -804,6 +942,9 @@ export default function Conversation() {
                     file_type={msg.file_type}
                     file_name={msg.file_name}
                     file_size={msg.file_size}
+                    threadId={msg.thread_id}
+                    repliesCount={msg.replies_count}
+                    onReply={() => handleReplyClick(msg)}
                   />
                 </div>
               );
@@ -891,6 +1032,26 @@ export default function Conversation() {
 
       {/* Close chat-main */}
       </div>
+
+      {activeThread && (
+        <ThreadPanel
+          projectName={projectName}
+          parentMessage={activeThread.parentMessage}
+          replies={threadMessages}
+          loading={threadLoading}
+          error={threadError}
+          onClose={closeThreadPanel}
+          inputValue={threadInput}
+          onInputChange={setThreadInput}
+          onSend={sendThreadReply}
+          onKeyDown={handleThreadKeyPress}
+          sending={threadSending}
+          wsConnected={wsConnected}
+          currentUserId={currentUserId}
+          alsoSendToChannel={alsoSendToChannel}
+          onAlsoSendToChannelChange={setAlsoSendToChannel}
+        />
+      )}
 
       {/* Delete Confirmation Modal */}
       <DeleteConfirmationModal

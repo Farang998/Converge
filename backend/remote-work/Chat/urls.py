@@ -4,11 +4,15 @@ from .views import (
     ProjectChatMessages, SendProjectMessage, DeleteMessage,
     ProjectTeamMembers, GetOrCreateIndividualChat,
     IndividualChatMessages, SendIndividualMessage,
-    SearchGroupChatMessages, SearchIndividualChatMessages
+    SearchGroupChatMessages, SearchIndividualChatMessages,
+    ListProjectThreads, GetThreadMessages, ReplyToThread
 )
 
 urlpatterns = [
     # MOST SPECIFIC patterns FIRST - this is critical!
+    path("project/<str:project_id>/threads/", ListProjectThreads.as_view(), name="project_threads"), # /api/chats/project/<project_id>/threads/
+    path("project/<str:project_id>/threads/<str:thread_id>/", GetThreadMessages.as_view(), name="project_thread_messages"), # /api/chats/project/<project_id>/threads/<thread_id>/
+    path("project/<str:project_id>/threads/<str:thread_id>/reply/", ReplyToThread.as_view(), name="project_thread_reply"), # /api/chats/project/<project_id>/threads/<thread_id>/reply
     path('project/<str:project_id>/team-members/', ProjectTeamMembers.as_view()),  # /api/chats/project/<project_id>/team-members/
     path('project/<str:project_id>/individual-chat/', GetOrCreateIndividualChat.as_view()),  # /api/chats/project/<project_id>/individual-chat/
     path('project/<str:project_id>/search/', SearchGroupChatMessages.as_view()),  # /api/chats/project/<project_id>/search/?q=<term>

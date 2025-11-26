@@ -15,8 +15,8 @@ import uuid
 from pathlib import Path
 from api.auth.models import User  # your MongoEngine User with validate_token
 from api.projects.models import Project
-from .models import GroupChat, GroupMessage, IndividualChat, IndividualMessage
-from .serializers import group_chat_public, group_message_public, individual_message_public
+from .models import GroupChat, GroupMessage, IndividualChat, IndividualMessage, Thread, ThreadMessage
+from .serializers import group_chat_public, group_message_public, individual_message_public, thread_public, thread_message_public
 
 def _as_utc_z(dt):
     """Convert datetime to UTC ISO string with Z suffix"""
@@ -517,7 +517,8 @@ class SendProjectMessage(APIView):
             chat = GroupChat(
                 name=project.name,
                 admin=str(project.team_leader.id),
-                participants=participants
+                participants=participants,
+                project_id=project.id
             )
             chat.save()
             print(f"[DEBUG] Created chat '{project.name}' with participants: {participants}")
@@ -689,7 +690,7 @@ class SearchGroupChatMessages(APIView):
             return Response({"error": "You are not a member of this project"}, status=403)
         
         # Get chat by project name
-        chat = GroupChat.objects(name=project.name).first()
+        chat = GroupChat.objects(project_id=project_id).first()
         if not chat:
             return Response({
                 "project_id": str(project.id),
@@ -795,3 +796,266 @@ class SearchIndividualChatMessages(APIView):
             "total_results": len(messages),
             "messages": messages
         }, status=200)
+
+class CreateThread(APIView):
+    def post(self, request):
+        user, err = _get_user_from_auth(request)
+        if err:
+            return err
+        
+        data = request.data
+
+        parent_id = data.get("parent_message_id")
+        group_id = data.get("group_id")
+        content = data.get("content")
+
+        if not parent_id or not group_id or not content:
+            return Response({"error": "parent_message_id, group_id, and content are required"}, status=400)
+        
+        parent_msg = GroupMessage.objects.filter(id=parent_id, group_id=group_id).first()
+        if not parent_msg:
+            return Response({"error": "Parent message not found"}, status=400)
+        
+        existing_thread = Thread.objects.filter(parent_message=parent_id).first()
+        if existing_thread:
+            return Response({"error": "Thread already exists", "thread_id": str(existing_thread.id)}, status=400)
+        
+        thread = Thread.objects.create(
+            parent_message = parent_msg,
+            # group_id = group_id,
+            chat = parent_msg.chat
+        )
+
+        tmsg = ThreadMessage.objects.create(
+            thread = thread,
+            sender = str(user.id),
+            content = content,
+        )
+
+        try:
+            channel_layer = get_channel_layer()
+            if channel_layer:
+                group_name = f"project_{parent_msg.project_id}_group_{group_id}"
+
+                async_to_sync(channel_layer.group_send)(
+                    group_name,
+                    {
+                        "type": "thread_created_broadcast",
+                        "thread_id": str(thread.id),
+                        "parent_message_id": parent_id,
+                        "timestamp": tmsg.timestamp.isoformat(),
+                        "message_preview": content,
+                    }
+                )
+        except Exception as e:
+            print(f"[CreateThread] Broadcast failed: {e}")
+
+        return Response({
+            "status": "thread_created",
+            "thread_id": str(thread.id),
+            "first_message_id": str(tmsg.id)
+        }, status=201)
+
+class ListProjectThreads(APIView):
+    """
+    Returns a list of thread root messages for the group chat 
+    """
+    def get(self, request, project_id):
+        print(f"[DEBUG] ListProjectThreads called with project_id={project_id}")
+        user, err = _get_user_from_auth(request)
+        if err:
+            return err
+        
+        # verifying if the project exists
+        try:
+            project = Project.objects.get(id=project_id)
+            print(f"[DEBUG] Project found: {project.name}")
+        except DoesNotExist:
+            print(f"[DEBUG] Project not found for id={project_id}")
+            return Response({"error": "Project not found"}, status=404)
+        
+        uid = str(user.id)
+        is_leader = str(project.team_leader.id) == uid
+        is_member = any(str(member.get('user')) == uid for member in (project.team_members or []))
+        if not is_leader and not is_member:
+            print(f"[DEBUG] User {uid} not a member of project")
+            return Response({"error": "You are not a member of this project"}, status=403)
+        
+        chat = GroupChat.objects(project_id=project.id).first()
+        print(f"[DEBUG] Looking for chat with project_id={project.id}, found={chat is not None}")
+        
+        # Fallback: if no chat found by project_id, try by project name (for existing chats)
+        if not chat:
+            print(f"[DEBUG] Fallback: looking for chat by project name={project.name}")
+            chat = GroupChat.objects(name=project.name).first()
+            if chat:
+                print(f"[DEBUG] Found chat by name, updating with project_id={project.id}")
+                chat.project_id = project.id
+                chat.save()
+        
+        if not chat: # corresponding group chat doesn't exist
+            print(f"[DEBUG] No chat found for project_id={project.id}")
+            return Response({"error": "Chat not found"}, status=404)
+        
+        threads = Thread.objects(chat=chat).order_by("-created_at")[:50]
+        print(f"[DEBUG] Found {len(threads)} threads")
+        return Response({
+            "project_id": str(project.id),
+            "project_name": project.name,
+            "chat_id": str(chat.id),
+            "threads": [thread_public(t) for t in threads]
+        }, status=200)
+    
+class GetThreadMessages(APIView):
+    """
+    Returns the root and the thread messages
+    """
+    def get(self, request, project_id, thread_id):
+        print(f"[DEBUG] GetThreadMessages called with project_id={project_id}, thread_id={thread_id}")
+        user, err = _get_user_from_auth(request)
+        if err:
+            return err
+        try:
+            project = Project.objects.get(id=project_id)
+            print(f"[DEBUG] Project found: {project.name}")
+        except DoesNotExist:
+            print(f"[DEBUG] Project not found for id={project_id}")
+            return Response({"error": "Project not found"}, status=404)
+        
+        uid = str(user.id)
+        is_leader = str(project.team_leader.id) == uid
+        is_member = any(str(m.get('user')) == uid for m in (project.team_members or []))
+        if not is_leader and not is_member:
+            print(f"[DEBUG] User {uid} not a member of project")
+            return Response({"error": "You are not a member of this project"}, status=403)
+
+        chat = GroupChat.objects(project_id=project.id).first()
+        print(f"[DEBUG] Looking for chat with project_id={project.id}, found={chat is not None}")
+        
+        # Fallback: if no chat found by project_id, try by project name (for existing chats)
+        if not chat:
+            print(f"[DEBUG] Fallback: looking for chat by project name={project.name}")
+            chat = GroupChat.objects(name=project.name).first()
+            if chat:
+                print(f"[DEBUG] Found chat by name, updating with project_id={project.id}")
+                chat.project_id = project.id
+                chat.save()
+        
+        if not chat:
+            print(f"[DEBUG] No chat found for project_id={project.id}")
+            return Response({"error": "Chat not found"}, status=404)
+
+        try:
+            thread = Thread.objects.get(id=thread_id, chat=chat)
+            print(f"[DEBUG] Thread found: {thread.id}")
+        except DoesNotExist:
+            print(f"[DEBUG] Thread not found for id={thread_id} in chat {chat.id}")
+            return Response({"error": "Thread not found in this chat"}, status=404)
+
+        parent = thread.parent_message
+        if not parent:
+            print(f"[DEBUG] No parent message for thread {thread.id}")
+            return Response({"error": "Parent message not found"}, status=404)
+        
+        print(f"[DEBUG] GetThreadMessages returning successfully")
+        replies = ThreadMessage.objects(thread=thread).order_by("timestamp")
+        sender_ids = list({parent.sender} | {r.sender for r in replies})
+        users = {str(u.id): u for u in User.objects(id__in=sender_ids)}
+        return Response({
+            "thread": thread_public(thread),
+            "parent_message": group_message_public(parent, users),
+            "replies": [thread_message_public(r, users) for r in replies]
+        }, status=200)
+    
+class ReplyToThread(APIView):
+    def post(self, request, project_id, thread_id):
+        user, err = _get_user_from_auth(request)
+        if err:
+            return err
+        
+        content = request.data.get("content", "").strip()
+        file = request.FILES.get("file")
+        if not content and not file:
+            return Response({"error": "Either meassage content or file is required"}, status=400)
+        
+        try:
+            project = Project.objects.get(id=project_id)
+        except DoesNotExist:
+            return Response({"error": "Project not found"}, status=404)
+        
+        uid = str(user.id)
+        is_leader = str(project.team_leader.id) == uid
+        is_member = any(str(m.get('user')) == uid for m in (project.team_members or []))
+        if not is_leader and not is_member:
+            return Response({"error": "You are not a member of this project"}, status=403)
+
+        chat = GroupChat.objects(name=project.name).first()
+        if not chat:
+            return Response({"error": "Chat not found"}, status=404)
+
+        try:
+            thread = Thread.objects.get(id=thread_id, chat=chat)
+        except DoesNotExist:
+            return Response({"error": "Thread not found"}, status=404)
+        
+        file_data = None
+        if file:
+            try:
+                file_data = _save_uploaded_file(file, uid)
+            except ValueError as e:
+                return Response({"error": str(e)}, status=400)
+            except Exception as e:
+                print(f"[ReplyToThread] File upload failed: {e}")
+                return Response({"error": "Failed to upload file"}, status=500)
+            
+            tmsg = ThreadMessage(
+                thread = thread,
+                sender = uid,
+                content = content,
+                timestamp = timezone.now()
+            )
+            if file_data:
+                tmsg.file_url = file_data['file_url']
+                tmsg.file_type = file_data['file_type']
+                tmsg.file_name = file_data['file_name']
+                tmsg.file_size = file_data['file_size']
+            tmsg.save()
+
+            try:
+                channel_layer = get_channel_layer
+                if channel_layer:
+                    channels_group_name = f"project_{chat.project_id}_group_{chat.id}"
+                    async_to_sync(channel_layer.group_send)(
+                        channels_group_name,
+                        {
+                            "type": "thread_message_broadcast",
+                            "thread_id": str(thread.id),
+                            "message_id": str(tmsg.id),
+                            "sender_id": uid,
+                            "sender_username": user.username,
+                            "content": content,
+                            "timestamp": tmsg.timestamp.isoformat(),
+                            "file_url": tmsg.file_url if tmsg.file_url else None,
+                            "file_type": tmsg.file_type if tmsg.file_type else None,
+                            "file_name": tmsg.file_name if tmsg.file_name else None,
+                            "file_size": tmsg.file_size if tmsg.file_size else None,
+                        }
+                    )
+            except Exception as e:
+                print(f"[ReplyToThread] Error broadcasting: {e}")
+
+            users = {str(u.id): u for u in User.objects(id__in=[uid])}
+            return Response(thread_message_public(tmsg, users), status=201)
+        
+        message = GroupMessage(
+            chat = chat,
+            sender = uid,
+            content = content,
+            timestamp = timezone.now()
+        )
+        if file_data:
+            message.file_url = file_data['file_url']
+            message.file_type = file_data['file_type']
+            message.file_name = file_data['file_name']
+            message.file_size = file_data['file_size']
+        message.save()

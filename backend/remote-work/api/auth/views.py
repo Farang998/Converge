@@ -20,6 +20,7 @@ from django.core.cache import cache
 import secrets
 from google.oauth2 import id_token
 from google.auth.transport import requests
+from Chat.handler import handle_user_account_deleted
 
 
 def _get_authenticated_user(request):
@@ -452,3 +453,20 @@ class UpdateProfileView(APIView):
             }, status=status.HTTP_200_OK)
         except Exception as e:
             return Response({'error': 'Failed to update profile: ' + str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+class DeleteAccountView(APIView):
+    def delete(self, request):
+        user, error_response = _get_authenticated_user(request)
+        if error_response:
+            return error_response
+        
+        if not user:
+            return Response({"error": "Unauthorized"}, status=401)
+        
+        user_id = str(user.id)
+
+        handle_user_account_deleted(str(user_id))
+
+        user.delete()
+
+        return Response({"message": "your account has been permanently deleted."})
