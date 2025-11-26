@@ -3,9 +3,9 @@ import { useNavigate, useParams } from 'react-router-dom';
 import api from '../../../services/api';
 import { toast } from 'react-toastify';
 import './Calendar.css';
-import { FaCalendarAlt, FaGoogle, FaLink, FaSpinner, FaPlus } from 'react-icons/fa';
+import { FaCalendarAlt, FaGoogle, FaLink, FaSpinner, FaPlus, FaSync } from 'react-icons/fa';
 import { useAuth } from '../../../contexts/AuthContext';
-// import TeamCalendar from './TeamCalendar/TeamCalendar';
+import TeamCalendar from './TeamCalendar/TeamCalendar';
 
 const Calendar = () => {
   const navigate = useNavigate();
@@ -21,6 +21,7 @@ const Calendar = () => {
   const [projectLoaded, setProjectLoaded] = useState(false);
   const [isTeamLeader, setIsTeamLeader] = useState(false);
   const [creatingCalendar, setCreatingCalendar] = useState(false);
+  const [syncingMeetings, setSyncingMeetings] = useState(false);
 
   const token = localStorage.getItem("authToken");
 
@@ -167,7 +168,8 @@ const Calendar = () => {
         window.history.replaceState({}, document.title, window.location.pathname);
 
         if (projectId) {
-          fetchProjectDetails(projectId);
+          // refresh project + events after OAuth completes
+          fetchProjectById(projectId);
           fetchCalendarEvents(projectId);
         }
       }
@@ -229,6 +231,27 @@ const Calendar = () => {
   };
 
   // -----------------------------
+  // Sync meetings from Google (leader only)
+  // -----------------------------
+  const syncMeetingsFromGoogle = async () => {
+    if (!projectId) return;
+    try {
+      setSyncingMeetings(true);
+      await api.post(
+        `meetings/sync/`,
+        { project_id: projectId },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      toast.success('Synced meetings from Google');
+    } catch (err) {
+      const msg = err?.response?.data?.error || 'Failed to sync meetings';
+      toast.error(msg);
+    } finally {
+      setSyncingMeetings(false);
+    }
+  };
+
+  // -----------------------------
   // UI
   // -----------------------------
   return (
@@ -261,25 +284,10 @@ const Calendar = () => {
                     <p>This project's Google Calendar is empty.</p>
                   </div>
                 )}
-                {!loadingEvents && events.length > 0 && (
-                  <div className="events-section">
-                    <h2 className="events-title">Upcoming Events</h2>
-                    <div className="events-list">
-                      {events.map((event) => (
-                        <div key={event.id} className="event-card">
-                          <h3>{event.summary}</h3>
-                          <p>{event.description}</p>
-                          <p><strong>Start:</strong> {event.start?.toString()}</p>
-                          {event.htmlLink && (
-                            <button onClick={() => window.open(event.htmlLink, "_blank")}>
-                              <FaLink /> View in Google Calendar
-                            </button>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
+                {!loadingEvents && (
+                  <TeamCalendar projectId={projectId} token={token} />
                 )}
+
               </>
             ) : (
               <div className="empty-state">
@@ -354,6 +362,22 @@ const Calendar = () => {
                   <FaLink /> Open in Google Calendar
                 </a>
               )}
+              <button
+                className="google-calendar-link"
+                onClick={syncMeetingsFromGoogle}
+                disabled={syncingMeetings}
+                style={{ marginLeft: 12 }}
+              >
+                {syncingMeetings ? (
+                  <>
+                    <FaSpinner className="button-spinner" /> Syncing...
+                  </>
+                ) : (
+                  <>
+                    <FaSync /> Sync Meetings from Google
+                  </>
+                )}
+              </button>
             </div>
 
             {loadingEvents && (

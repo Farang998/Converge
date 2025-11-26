@@ -7,6 +7,10 @@ from ..projects.models import Project
 from .models import Meeting
 from ..calendar.models import GoogleCredentials
 from .google_meet_service import create_google_meeting, update_google_meeting, delete_google_meeting
+from .google_meet_service import sync_google_events_to_db
+
+from rest_framework.decorators import action
+
 
 ERROR_AUTH_HEADER_MISSING = "Authorization header missing"
 ERROR_INVALID_AUTH_HEADER = "Invalid authorization header format"
@@ -55,6 +59,34 @@ class MeetingViewSet(viewsets.ViewSet):
             "google_event_id": meeting.google_event_id,
         }
 
+    @action(detail=False, methods=["post"], url_path="sync")
+    def sync_with_google(self, request):
+        try:
+            user = self._authenticate_user(request)
+        except Exception as e:
+            return Response({"error": e.args[0]}, status=e.args[1])
+
+        project_id = request.data.get("project_id")
+        if not project_id:
+            return Response({"error": "project_id required"}, status=400)
+
+        project = Project.objects(id=project_id).first()
+        if not project:
+            return Response({"error": "project not found"}, status=404)
+
+        # only leader can sync (they own the token)
+        if project.team_leader != user:
+            return Response({"error": "Only team leader can sync from Google"}, status=403)
+
+        error, meetings = sync_google_events_to_db(project, user)
+        if error:
+            return Response({"error": error}, status=400)
+
+        return Response({
+            "message": "Synced with Google",
+            "meetings": [self._serialize(m) for m in meetings]
+        })
+    
     # ------------------------------------------
     # LIST MEETINGS
     # ------------------------------------------
