@@ -121,17 +121,41 @@ class ChatMessages(APIView):
 
 class CreateGroup(APIView):
     def post(self, request):
-        # user, err = _get_user_from_auth(request)
-        # if err: return err
         uid = request.data.get("admin")
         name = request.data.get("name", "").strip()
         team_members = request.data.get("participants", [])
-        if not name: return Response({"error": "Name required"}, status=400)
+        project_id = request.data.get("project_id")
+
+        if not name:
+            return Response({"error": "Name required"}, status=400)
+
         if GroupChat.objects(name=name).first():
             return Response({"error": "Group name already exists"}, status=400)
-        chat = GroupChat(name=name, admin=uid, participants=[uid] + team_members)
+
+        project_obj = None
+        if project_id:
+            try:
+                project_obj = Project.objects.get(id=project_id)
+            except DoesNotExist:
+                return Response({"error": "Project not found"}, status=404)
+
+        if not isinstance(team_members, list):
+            team_members = [team_members]
+
+        participants = [uid] + team_members
+
+        chat_kwargs = {
+            "name": name,
+            "admin": uid,
+            "participants": participants
+        }
+
+        if project_obj:
+            chat_kwargs["project_id"] = project_obj.id
+
+        chat = GroupChat(**chat_kwargs)
         chat.save()
-        return Response({"message": "created", "name": name}, status=201)
+        return Response({"message": "created", "name": name, "project_id": str(project_obj.id) if project_obj else None}, status=201)
 
 class DirectChat(APIView):
     def post(self, request, username):

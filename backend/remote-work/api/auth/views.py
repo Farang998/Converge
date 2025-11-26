@@ -5,6 +5,7 @@ from rest_framework.views import APIView
 from rest_framework import status
 from .models import User, EmailOTP
 from django.contrib.auth.hashers import make_password
+from django.contrib.auth.hashers import check_password
 from django.contrib.auth import authenticate, login
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.authentication import SessionAuthentication
@@ -470,3 +471,31 @@ class DeleteAccountView(APIView):
         user.delete()
 
         return Response({"message": "your account has been permanently deleted."})
+
+
+class ChangePasswordView(APIView):
+    def post(self, request):
+        user, error_response = _get_authenticated_user(request)
+        if error_response:
+            return error_response
+
+        old_password = request.data.get('old_password')
+        new_password = request.data.get('new_password')
+
+        if not old_password or not new_password:
+            return Response({'error': 'Both old_password and new_password are required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            if not check_password(old_password, user.password):
+                return Response({'error': 'Old password is incorrect.'}, status=status.HTTP_400_BAD_REQUEST)
+
+            if len(new_password) < 8:
+                return Response({'error': 'New password must be at least 8 characters.'}, status=status.HTTP_400_BAD_REQUEST)
+
+            # update password
+            user.password = make_password(new_password)
+            user.save()
+
+            return Response({'message': 'Password changed successfully.'}, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({'error': 'Failed to change password: ' + str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

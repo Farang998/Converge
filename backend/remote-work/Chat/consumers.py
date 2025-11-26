@@ -334,7 +334,8 @@ class ProjectChatConsumer(AsyncWebsocketConsumer):
             chat = GroupChat(
                 name=project.name,
                 admin=str(project.team_leader.id),
-                participants=participants
+                participants=participants,
+                project_id=project.id
             )
             chat.save()
             print(f"[ProjectChatConsumer] Created chat for project: {project.name}")
