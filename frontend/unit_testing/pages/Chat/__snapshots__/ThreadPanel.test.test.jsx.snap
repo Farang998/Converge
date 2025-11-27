@@ -1,0 +1,155 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`ThreadPanel > should match snapshot 1`] = `
+<div>
+  <aside
+    class="thread-panel"
+  >
+    <div
+      class="thread-header"
+    >
+      <div
+        class="thread-header-content"
+      >
+        <p
+          class="thread-title"
+        >
+          Thread
+        </p>
+        <p
+          class="thread-subtitle"
+        >
+          #
+          Test Project
+        </p>
+      </div>
+      <button
+        aria-label="Close thread"
+        class="thread-close-btn"
+      >
+        <svg
+          fill="none"
+          height="18"
+          stroke="currentColor"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="18"
+        >
+          <line
+            x1="18"
+            x2="6"
+            y1="6"
+            y2="18"
+          />
+          <line
+            x1="6"
+            x2="18"
+            y1="6"
+            y2="18"
+          />
+        </svg>
+      </button>
+    </div>
+    <div
+      class="thread-body"
+    >
+      <div
+        class="thread-parent-card"
+      >
+        <div
+          class="thread-parent-avatar"
+        >
+          YO
+        </div>
+        <div
+          class="thread-parent-content"
+        >
+          <div
+            class="thread-parent-meta"
+          >
+            <span
+              class="thread-parent-author"
+            >
+              You
+            </span>
+            <span
+              class="thread-parent-time"
+            >
+              1 Jan 2024 3:30 pm
+            </span>
+          </div>
+          <p
+            class="thread-parent-text"
+          >
+            Parent message
+          </p>
+        </div>
+      </div>
+      <div
+        class="thread-divider"
+      >
+        Start a thread
+      </div>
+      <div
+        class="thread-replies"
+      >
+        <div
+          class="thread-empty"
+        >
+          <p>
+            No replies yet. Start the conversation!
+          </p>
+        </div>
+      </div>
+    </div>
+    <div
+      class="thread-input-area"
+    >
+      <textarea
+        class="thread-input"
+        placeholder="Reply..."
+        rows="3"
+      />
+      <label
+        class="thread-send-to-channel-checkbox"
+      >
+        <input
+          type="checkbox"
+        />
+        <span>
+          Also send to #
+          Test Project
+        </span>
+      </label>
+      <div
+        class="thread-input-toolbar"
+      >
+        <button
+          class="thread-send-btn"
+          disabled=""
+          title="Send reply"
+        >
+          <svg
+            fill="none"
+            height="18"
+            stroke="currentColor"
+            stroke-width="2"
+            viewBox="0 0 24 24"
+            width="18"
+          >
+            <line
+              x1="22"
+              x2="11"
+              y1="2"
+              y2="13"
+            />
+            <polygon
+              points="22 2 15 22 11 13 2 9 22 2"
+            />
+          </svg>
+        </button>
+      </div>
+    </div>
+  </aside>
+</div>
+`;

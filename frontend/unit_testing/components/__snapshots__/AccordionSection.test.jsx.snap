@@ -1,0 +1,63 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`AccordionSection Component > should match snapshot 1`] = `
+<div>
+  <div
+    class="accordion-section"
+  >
+    <button
+      aria-expanded="false"
+      class="accordion-header"
+    >
+      <span
+        class="accordion-title"
+      >
+        Test Section
+      </span>
+    </button>
+    <div
+      class="accordion-content "
+      style="max-height: 0px; opacity: 0;"
+    >
+      <div
+        class="accordion-inner"
+      >
+        <div>
+          Test Content
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+`;
+
+exports[`AccordionSection Component > should match snapshot when open 1`] = `
+<div>
+  <div
+    class="accordion-section"
+  >
+    <button
+      aria-expanded="false"
+      class="accordion-header"
+    >
+      <span
+        class="accordion-title"
+      >
+        Test Section
+      </span>
+    </button>
+    <div
+      class="accordion-content "
+      style="max-height: 0px; opacity: 0;"
+    >
+      <div
+        class="accordion-inner"
+      >
+        <div>
+          Test Content
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+`;

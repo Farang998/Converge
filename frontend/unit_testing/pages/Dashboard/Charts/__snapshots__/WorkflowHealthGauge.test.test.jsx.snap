@@ -1,0 +1,54 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`WorkflowHealthGauge > should match snapshot 1`] = `
+<div>
+  <div
+    style="display: flex; align-items: center; gap: 20px;"
+  >
+    <svg
+      height="164"
+      width="164"
+    >
+      <g
+        transform="translate(82,82) rotate(-90)"
+      >
+        <circle
+          cx="0"
+          cy="0"
+          fill="transparent"
+          r="70"
+          stroke="rgba(0,0,0,0.06)"
+          stroke-width="12"
+        />
+        <circle
+          cx="0"
+          cy="0"
+          fill="transparent"
+          r="70"
+          stroke="#109c19ff"
+          stroke-dasharray="439.822971502571"
+          stroke-dashoffset="0"
+          stroke-linecap="round"
+          stroke-width="12"
+        />
+      </g>
+    </svg>
+    <div>
+      <div
+        style="font-size: 22px; font-weight: 700; color: rgb(15, 23, 42);"
+      >
+        100
+        %
+      </div>
+      <div
+        style="color: rgb(71, 85, 105); margin-top: 6px;"
+      >
+        0
+         / 
+        0
+         completed
+      </div>
+    </div>
+  </div>
+</div>
+`;
