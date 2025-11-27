@@ -10,6 +10,13 @@ export default function TaskTouchFrequencyChart({ data = [] }) {
     value: d.value,
   }));
 
+  const maxValue = chartData.reduce(
+    (max, item) => Math.max(max, item.value || 0),
+    0
+  );
+  const yAxisDomain = [0, maxValue === 0 ? 4 : maxValue * 1.1];
+
+
   // Custom Tooltip Component
   const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
@@ -49,7 +56,7 @@ export default function TaskTouchFrequencyChart({ data = [] }) {
             textAnchor="end"
             height={60}
           />
-          <YAxis allowDecimals={false} />
+          <YAxis allowDecimals={false} domain={yAxisDomain} />
 
           {/* Use Custom Tooltip */}
           <Tooltip content={<CustomTooltip />} />
