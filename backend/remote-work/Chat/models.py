@@ -13,11 +13,11 @@ class GroupChat(Document):
     admin = StringField(required=True)  # user id as string
     participants = ListField(StringField(), required=True)  # user ids
     created_at = DateTimeField(default=timezone.now)
-    project_id = ObjectIdField(required=True)
+    project_id = ObjectIdField()  # Optional to support legacy chats
     meta = {'collection': 'group_chats'}
 
 class GroupMessage(Document):
-    chat = ReferenceField(GroupChat, required=True, reverse_delete_rule=2)  # CASCADE
+    chat = ReferenceField(GroupChat, required=True, reverse_delete_rule=0)  # DO_NOTHING - preserve messages even if chat is deleted
     sender = StringField(required=True)  # user id
     # sender_name = StringField() ;
     content = StringField(default='')
@@ -30,7 +30,7 @@ class GroupMessage(Document):
     meta = {'collection': 'group_messages'}
 
 class IndividualMessage(Document):
-    chat = ReferenceField(IndividualChat, required=True, reverse_delete_rule=2)
+    chat = ReferenceField(IndividualChat, required=True, reverse_delete_rule=0)  # DO_NOTHING - preserve messages even if chat is deleted
     sender = StringField(required=True)  # user id
     content = StringField(default='')
     timestamp = DateTimeField(default=timezone.now)
@@ -42,14 +42,14 @@ class IndividualMessage(Document):
     meta = {'collection': 'individual_messages'}
 
 class Thread(Document):
-    chat = ReferenceField('GroupChat', required=True, reverse_delete_rule=2)
-    parent_message = ReferenceField('GroupMessage', required=True, reverse_delete_rule=3)
+    chat = ReferenceField('GroupChat', required=True, reverse_delete_rule=0)  # DO_NOTHING - preserve threads even if chat is deleted
+    parent_message = ReferenceField('GroupMessage', required=True, reverse_delete_rule=0)  # DO_NOTHING - preserve thread even if parent is deleted
     created_by = StringField(required=True)
     created_at = DateTimeField(default=timezone.now)
     meta = {'collection': 'threads'}
 
 class ThreadMessage(Document):
-    thread = ReferenceField('Thread', required=True, reverse_delete_rule=2)
+    thread = ReferenceField('Thread', required=True, reverse_delete_rule=0)  # DO_NOTHING - preserve messages even if thread is deleted
     sender =StringField(required=True)
     content = StringField(default='')
     timestamp = DateTimeField(default=timezone.now)

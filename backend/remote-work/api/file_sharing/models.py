@@ -1,4 +1,4 @@
-from mongoengine import Document, StringField, ReferenceField, DateTimeField, IntField
+from mongoengine import Document, StringField, ReferenceField, DateTimeField, IntField, DENY
 from django.utils import timezone
 from ..auth.models import User
 from ..projects.models import Project
@@ -17,8 +17,8 @@ class File(Document):
     s3_key = StringField(required=True)  # S3 object key/path
     file_size = IntField(required=True)  # Size in bytes
     content_type = StringField()  # MIME type
-    uploaded_by = ReferenceField(User, required=True)
-    project = ReferenceField(Project, required=True)
+    uploaded_by = ReferenceField(User, required=True, reverse_delete_rule=DENY)
+    project = ReferenceField(Project, required=True, reverse_delete_rule=DENY)
     uploaded_at = DateTimeField(default=timezone.now)
     
     meta = {'collection': 'files'}

@@ -24,7 +24,7 @@ from google.auth.transport import requests
 from Chat.handler import handle_user_account_deleted
 
 
-def _get_authenticated_user(request):
+def get_authenticated_user(request):
     auth_header = request.headers.get('Authorization')
     if not auth_header:
         return None, Response({'error': 'Authorization token is required'}, status=status.HTTP_401_UNAUTHORIZED)
@@ -225,7 +225,7 @@ class ResetPasswordView(APIView):
 
 class IdentifyUserView(APIView):
     def get(self, request):
-        user, error_response = _get_authenticated_user(request)
+        user, error_response = get_authenticated_user(request)
         if error_response:
             return error_response
 
@@ -247,7 +247,7 @@ class IdentifyUserView(APIView):
     
 class UserListView(APIView):
     def get(self, request):
-        user, error_response = _get_authenticated_user(request)
+        user, error_response = get_authenticated_user(request)
         if error_response:
             return error_response
 
@@ -282,7 +282,7 @@ class UserListView(APIView):
 
 class UserByUsernameView(APIView):
     def get(self, request):
-        user, error_response = _get_authenticated_user(request)
+        user, error_response = get_authenticated_user(request)
         if error_response:
             return error_response
 
@@ -418,7 +418,7 @@ class UpdateProfileView(APIView):
     permission_classes = [IsAuthenticated]
 
     def put(self, request):
-        user, error_response = _get_authenticated_user(request)
+        user, error_response = get_authenticated_user(request)
         if error_response:
             return error_response
 
@@ -457,7 +457,7 @@ class UpdateProfileView(APIView):
         
 class DeleteAccountView(APIView):
     def delete(self, request):
-        user, error_response = _get_authenticated_user(request)
+        user, error_response = get_authenticated_user(request)
         if error_response:
             return error_response
         
@@ -475,7 +475,7 @@ class DeleteAccountView(APIView):
 
 class ChangePasswordView(APIView):
     def post(self, request):
-        user, error_response = _get_authenticated_user(request)
+        user, error_response = get_authenticated_user(request)
         if error_response:
             return error_response
 

@@ -1,4 +1,4 @@
-from mongoengine import Document, StringField, DateTimeField, ReferenceField, ListField
+from mongoengine import Document, StringField, DateTimeField, ReferenceField, ListField, DENY, PULL
 from django.utils import timezone
 from ..auth.models import User
 from ..projects.models import Project
@@ -6,8 +6,8 @@ from ..projects.models import Project
 class Task(Document):
     name = StringField(required=True)
     description = StringField()
-    project = ReferenceField(Project, required=True) 
-    assigned_to = ListField(ReferenceField(User), default=[])
+    project = ReferenceField(Project, required=True, reverse_delete_rule=DENY) 
+    assigned_to = ListField(ReferenceField(User, reverse_delete_rule=PULL), default=[])
     status = StringField(default='pending', choices=['pending', 'in_progress', 'approval_pending', 'completed'])
     previous_status = StringField()
     due_date = DateTimeField(null=True)

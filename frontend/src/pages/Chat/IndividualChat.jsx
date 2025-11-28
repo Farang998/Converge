@@ -44,6 +44,9 @@ export default function IndividualChat() {
   const [uploading, setUploading] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [messageToDelete, setMessageToDelete] = useState(null);
+  const [chatSummary, setChatSummary] = useState(null);
+  const [summarizing, setSummarizing] = useState(false);
+  const [showSummary, setShowSummary] = useState(false);
   const fileInputRef = useRef(null);
   const searchTimeoutRef = useRef(null);
   const wsRef = useRef(null);
@@ -418,6 +421,34 @@ export default function IndividualChat() {
     }
   };
 
+  const handleSummarizeChat = async () => {
+    if (summarizing) return;
+    
+    setSummarizing(true);
+    setError("");
+    
+    try {
+      const { data } = await api.post('chats/summarize/', {
+        chat_type: 'individual',
+        chat_id: chatId,
+        max_messages: 100 // Summarize up to 100 recent messages
+      });
+      
+      setChatSummary(data);
+      setShowSummary(true);
+    } catch (err) {
+      console.error("Failed to summarize chat:", err);
+      setError(err?.response?.data?.error || "Failed to generate chat summary");
+    } finally {
+      setSummarizing(false);
+    }
+  };
+
+  const closeSummary = () => {
+    setShowSummary(false);
+    setChatSummary(null);
+  };
+
   const highlightText = (text, searchTerm) => {
     if (!searchTerm) return text;
     const parts = text.split(new RegExp(`(${searchTerm})`, 'gi'));
@@ -486,6 +517,41 @@ export default function IndividualChat() {
         <div className="chat-header-info">
           <h2 className="chat-title">{otherUser?.username || "Individual Chat"}</h2>
           <p className="chat-subtitle">Direct Message</p>
+        </div>
+
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button
+            style={{
+              background: '#10b981',
+              color: '#fff',
+              border: 'none',
+              borderRadius: 8,
+              padding: '8px 16px',
+              fontWeight: 600,
+              cursor: summarizing ? 'not-allowed' : 'pointer',
+              transition: 'all 0.2s',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+              opacity: summarizing ? 0.6 : 1,
+            }}
+            onClick={handleSummarizeChat}
+            disabled={summarizing}
+            title="Summarize chat using AI"
+          >
+            {summarizing ? (
+              <div className="send-spinner" style={{ width: 16, height: 16 }}></div>
+            ) : (
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                <polyline points="14 2 14 8 20 8"></polyline>
+                <line x1="16" y1="13" x2="8" y2="13"></line>
+                <line x1="16" y1="17" x2="8" y2="17"></line>
+                <polyline points="10 9 9 9 8 9"></polyline>
+              </svg>
+            )}
+            {summarizing ? 'Summarizing...' : 'Summarize'}
+          </button>
         </div>
 
         {/* Search Bar */}
@@ -715,6 +781,68 @@ export default function IndividualChat() {
         hasFile={messageToDelete?.hasFile}
         fileName={messageToDelete?.fileName}
       />
+
+      {}
+      {showSummary && chatSummary && (
+        <div className="summary-modal-overlay" onClick={closeSummary}>
+          <div className="summary-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="summary-modal-header">
+              <h3 className="summary-modal-title">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ marginRight: 8 }}>
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                  <polyline points="14 2 14 8 20 8"></polyline>
+                  <line x1="16" y1="13" x2="8" y2="13"></line>
+                  <line x1="16" y1="17" x2="8" y2="17"></line>
+                  <polyline points="10 9 9 9 8 9"></polyline>
+                </svg>
+                Chat Summary
+              </h3>
+              <button 
+                className="summary-modal-close"
+                onClick={closeSummary}
+                aria-label="Close summary"
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+              </button>
+            </div>
+            <div className="summary-modal-content">
+              <div className="summary-info">
+                <div className="summary-stat">
+                  <span className="summary-stat-label">Chat Type:</span>
+                  <span className="summary-stat-value">{chatSummary.chat_type}</span>
+                </div>
+                <div className="summary-stat">
+                  <span className="summary-stat-label">With:</span>
+                  <span className="summary-stat-value">{chatSummary.other_user?.username || "Unknown"}</span>
+                </div>
+                <div className="summary-stat">
+                  <span className="summary-stat-label">Messages Analyzed:</span>
+                  <span className="summary-stat-value">{chatSummary.message_count}</span>
+                </div>
+              </div>
+              <div className="summary-text">
+                <h4>Summary:</h4>
+                <div className="summary-body">
+                  {chatSummary.summary.split('\n').map((line, index) => (
+                    <p key={index} style={{ margin: '8px 0' }}>
+                      {line.startsWith('- ') ? (
+                        <span style={{ marginLeft: '16px' }}>• {line.substring(2)}</span>
+                      ) : line.startsWith('* ') ? (
+                        <span style={{ marginLeft: '16px' }}>• {line.substring(2)}</span>
+                      ) : (
+                        line
+                      )}
+                    </p>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

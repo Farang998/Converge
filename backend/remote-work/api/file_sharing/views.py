@@ -21,7 +21,7 @@ ERROR_INVALID_TOKEN = 'Invalid or expired token'
 MAX_FILE_SIZE = 5 * 1024 * 1024  # 5 MB in bytes
 
 
-def _authenticate_user(request):
+def authenticate_user(request):
     """Helper to authenticate user from Authorization header."""
     auth_header = request.headers.get('Authorization')
     if not auth_header:
@@ -42,7 +42,7 @@ def _authenticate_user(request):
     return user
 
 
-def _check_project_access(user, project):
+def check_project_access(user, project):
     """Check if user has access to the project (leader or accepted member)."""
     # Check if user is the team leader
     if project.team_leader == user:
@@ -56,7 +56,7 @@ def _check_project_access(user, project):
     
     return False
 
-def _get_s3_client():
+def get_s3_client():
     """Initialize and return S3 client."""
     # Validate AWS settings
     if not settings.AWS_ACCESS_KEY_ID:
@@ -82,7 +82,7 @@ class FileUploadView(APIView):
     
     def post(self, request):
         try:
-            user = _authenticate_user(request)
+            user = authenticate_user(request)
         except AuthenticationFailed as e:
             return Response({'error': str(e)}, status=status.HTTP_401_UNAUTHORIZED)
         
@@ -110,7 +110,7 @@ class FileUploadView(APIView):
             return Response({'error': 'Project not found'}, status=status.HTTP_404_NOT_FOUND)
         
         # Verify user has access to project (can upload)
-        if not _check_project_access(user, project):
+        if not check_project_access(user, project):
             return Response({
                 'error': 'You do not have access to this project'
             }, status=status.HTTP_403_FORBIDDEN)
@@ -129,7 +129,7 @@ class FileUploadView(APIView):
         
         # Upload to S3
         try:
-            s3_client = _get_s3_client()
+            s3_client = get_s3_client()
             bucket_name = settings.AWS_STORAGE_BUCKET_NAME
             if not bucket_name:
                 return Response({
@@ -222,7 +222,7 @@ class FileListView(APIView):
     
     def get(self, request, project_id):
         try:
-            user = _authenticate_user(request)
+            user = authenticate_user(request)
         except AuthenticationFailed as e:
             return Response({'error': str(e)}, status=status.HTTP_401_UNAUTHORIZED)
         
@@ -233,7 +233,7 @@ class FileListView(APIView):
             return Response({'error': 'Project not found'}, status=status.HTTP_404_NOT_FOUND)
         
         # Verify user has access to project
-        if not _check_project_access(user, project):
+        if not check_project_access(user, project):
             return Response({
                 'error': 'You do not have access to this project'
             }, status=status.HTTP_403_FORBIDDEN)
@@ -274,7 +274,7 @@ class FileDownloadView(APIView):
     
     def get(self, request, file_id):
         try:
-            user = _authenticate_user(request)
+            user = authenticate_user(request)
         except AuthenticationFailed as e:
             return Response({'error': str(e)}, status=status.HTTP_401_UNAUTHORIZED)
         
@@ -286,14 +286,14 @@ class FileDownloadView(APIView):
         
         # Verify user has access to the project
         project = file_obj.project
-        if not _check_project_access(user, project):
+        if not check_project_access(user, project):
             return Response({
                 'error': 'You do not have access to this file'
             }, status=status.HTTP_403_FORBIDDEN)
         
         # Generate pre-signed URL (valid for 1 hour)
         try:
-            s3_client = _get_s3_client()
+            s3_client = get_s3_client()
             bucket_name = settings.AWS_STORAGE_BUCKET_NAME
             if not bucket_name:
                 return Response({
@@ -338,7 +338,7 @@ class FileDeleteView(APIView):
     
     def delete(self, request, file_id):
         try:
-            user = _authenticate_user(request)
+            user = authenticate_user(request)
         except AuthenticationFailed as e:
             return Response({'error': str(e)}, status=status.HTTP_401_UNAUTHORIZED)
         
@@ -356,7 +356,7 @@ class FileDeleteView(APIView):
         
         # Delete from S3
         try:
-            s3_client = _get_s3_client()
+            s3_client = get_s3_client()
             bucket_name = settings.AWS_STORAGE_BUCKET_NAME
             if bucket_name:
                 try:

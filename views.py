@@ -6,7 +6,7 @@ from django.utils import timezone
 import datetime as _dt
 
 
-def _as_utc_z(dt):
+def convert_to_utc_z(dt):
     if not dt:
         return None
     try:
@@ -32,7 +32,7 @@ from api.projects.models import Project
 from .models import GroupChat, GroupMessage, IndividualChat, IndividualMessage
 from .serializers import group_chat_public, group_message_public, individual_message_public
 
-def _get_user_from_auth(request):
+def authenticate_user(request):
     auth = request.headers.get("Authorization", "")
     if not auth.startswith("Bearer "):
         return None, Response({"error": "Authorization header missing"}, status=401)
@@ -42,7 +42,7 @@ def _get_user_from_auth(request):
         return None, Response({"error": "Invalid or expired token"}, status=401)
     return user, None
 
-def _get_file_type(filename):
+def determine_file_type(filename):
     """Determine file type from extension"""
     ext = filename.lower().split('.')[-1] if '.' in filename else ''
     image_exts = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg']
@@ -58,7 +58,7 @@ def _get_file_type(filename):
     else:
         return 'document'
 
-def _save_uploaded_file(file, user_id):
+def handle_file_upload(file, user_id):
     """Save uploaded file and return file URL and metadata"""
     # Validate file size (max 50MB)
     MAX_FILE_SIZE = 50 * 1024 * 1024  # 50MB
@@ -97,7 +97,7 @@ def _save_uploaded_file(file, user_id):
 
 class ChatList(APIView):
     def get(self, request):
-        user, err = _get_user_from_auth(request)
+        user, err = authenticate_user(request)
         if err: return err
         uid = str(user.id)
         chats = GroupChat.objects(participants__in=[uid]).order_by("-created_at")
@@ -105,7 +105,7 @@ class ChatList(APIView):
 
 class ChatMessages(APIView):
     def get(self, request, chatroom_name):   
-        user, err = _get_user_from_auth(request)
+        user, err = authenticate_user(request)
         if err: return err
         chat = GroupChat.objects(name=chatroom_name).first()
         if not chat: return Response({"error": "Not found"}, status=404)
@@ -121,7 +121,7 @@ class ChatMessages(APIView):
 
 class CreateGroup(APIView):
     def post(self, request):
-        # user, err = _get_user_from_auth(request)
+        # user, err = authenticate_user(request)
         # if err: return err
         uid = request.data.get("admin")
         name = request.data.get("name", "").strip()
@@ -135,7 +135,7 @@ class CreateGroup(APIView):
 
 class DirectChat(APIView):
     def post(self, request, username):
-        user, err = _get_user_from_auth(request)
+        user, err = authenticate_user(request)
         if err: return err
         if username == user.username:
             return Response({"error": "Cannot chat with yourself"}, status=400)
@@ -158,7 +158,7 @@ class ProjectTeamMembers(APIView):
         Get all team members of a project (leader + members).
         Excludes the current user.
         """
-        user, err = _get_user_from_auth(request)
+        user, err = authenticate_user(request)
         if err: return err
         
         try:
@@ -227,7 +227,7 @@ class GetOrCreateIndividualChat(APIView):
         Get or create an individual chat with another team member scoped to a specific project.
         Request body: {"other_user_id": "<user_id>"}
         """
-        user, err = _get_user_from_auth(request)
+        user, err = authenticate_user(request)
         if err: return err
         
         other_user_id = request.data.get("other_user_id")
@@ -290,7 +290,7 @@ class IndividualChatMessages(APIView):
         """
         Get all messages in an individual chat.
         """
-        user, err = _get_user_from_auth(request)
+        user, err = authenticate_user(request)
         if err: return err
         
         uid = str(user.id)
@@ -335,7 +335,7 @@ class SendIndividualMessage(APIView):
         Supports both text and file uploads.
         Request: multipart/form-data with 'content' (optional) and 'file' (optional)
         """
-        user, err = _get_user_from_auth(request)
+        user, err = authenticate_user(request)
         if err: return err
         
         content = request.data.get("content", "").strip()
@@ -360,7 +360,7 @@ class SendIndividualMessage(APIView):
         file_data = None
         if file:
             try:
-                file_data = _save_uploaded_file(file, uid)
+                file_data = handle_file_upload(file, uid)
             except ValueError as e:
                 return Response({"error": str(e)}, status=400)
             except Exception as e:
@@ -418,7 +418,7 @@ class ProjectChatMessages(APIView):
         The chat name is the same as the project name.
         """
         print(f"[DEBUG] ProjectChatMessages.get() called with project_id={project_id}")
-        user, err = _get_user_from_auth(request)
+        user, err = authenticate_user(request)
         if err: return err
         
         # Get project by ID
@@ -479,7 +479,7 @@ class SendProjectMessage(APIView):
         Supports both text and file uploads.
         Request: multipart/form-data with 'content' (optional) and 'file' (optional)
         """
-        user, err = _get_user_from_auth(request)
+        user, err = authenticate_user(request)
         if err: return err
         
         content = request.data.get("content", "").strip()
@@ -532,7 +532,7 @@ class SendProjectMessage(APIView):
         file_data = None
         if file:
             try:
-                file_data = _save_uploaded_file(file, uid)
+                file_data = handle_file_upload(file, uid)
             except ValueError as e:
                 return Response({"error": str(e)}, status=400)
             except Exception as e:
@@ -590,7 +590,7 @@ class DeleteMessage(APIView):
         Delete a chat message (group or individual).
         Only the sender of the message can delete it.
         """
-        user, err = _get_user_from_auth(request)
+        user, err = authenticate_user(request)
         if err: 
             return err
         
@@ -667,7 +667,7 @@ class SearchGroupChatMessages(APIView):
         Search messages in a project's group chat.
         Query parameter: ?q=<search_term>
         """
-        user, err = _get_user_from_auth(request)
+        user, err = authenticate_user(request)
         if err: return err
         
         search_term = request.query_params.get('q', '').strip()
@@ -736,7 +736,7 @@ class SearchIndividualChatMessages(APIView):
         Search messages in an individual chat.
         Query parameter: ?q=<search_term>
         """
-        user, err = _get_user_from_auth(request)
+        user, err = authenticate_user(request)
         if err: return err
         
         search_term = request.query_params.get('q', '').strip()

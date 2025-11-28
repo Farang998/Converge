@@ -13,13 +13,17 @@ from asgiref.sync import async_to_sync
 import os
 import uuid
 from pathlib import Path
+import google.generativeai as genai
 from api.auth.models import User  # your MongoEngine User with validate_token
 from api.projects.models import Project
 from .models import GroupChat, GroupMessage, IndividualChat, IndividualMessage, Thread, ThreadMessage
 from .serializers import group_chat_public, group_message_public, individual_message_public, thread_public, thread_message_public
 
-def _as_utc_z(dt):
-    """Convert datetime to UTC ISO string with Z suffix"""
+# Configure Gemini API
+genai.configure(api_key=os.getenv('GEMINI_API_KEY'))
+model = genai.GenerativeModel('gemini-2.0-flash')
+
+def convert_to_utc_z(dt):
     if not dt:
         return None
     try:
@@ -32,7 +36,7 @@ def _as_utc_z(dt):
         except Exception:
             return None
 
-def _get_user_from_auth(request):
+def authenticate_user(request):
     auth = request.headers.get("Authorization", "")
     if not auth.startswith("Bearer "):
         return None, Response({"error": "Authorization header missing"}, status=401)
@@ -42,8 +46,7 @@ def _get_user_from_auth(request):
         return None, Response({"error": "Invalid or expired token"}, status=401)
     return user, None
 
-def _get_file_type(filename):
-    """Determine file type from extension"""
+def determine_file_type(filename):
     ext = filename.lower().split('.')[-1] if '.' in filename else ''
     image_exts = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg']
     video_exts = ['mp4', 'webm', 'ogg', 'mov', 'avi', 'mkv']
@@ -58,8 +61,7 @@ def _get_file_type(filename):
     else:
         return 'document'
 
-def _save_uploaded_file(file, user_id):
-    """Save uploaded file and return file URL and metadata"""
+def handle_file_upload(file, user_id):
     # Validate file size (max 50MB)
     MAX_FILE_SIZE = 50 * 1024 * 1024  # 50MB
     if file.size > MAX_FILE_SIZE:
@@ -90,14 +92,14 @@ def _save_uploaded_file(file, user_id):
     
     return {
         'file_url': file_url,
-        'file_type': _get_file_type(original_filename),
+        'file_type': determine_file_type(original_filename),
         'file_name': original_filename,
         'file_size': file.size
     }
 
 class ChatList(APIView):
     def get(self, request):
-        user, err = _get_user_from_auth(request)
+        user, err = authenticate_user(request)
         if err: return err
         uid = str(user.id)
         chats = GroupChat.objects(participants__in=[uid]).order_by("-created_at")
@@ -105,7 +107,7 @@ class ChatList(APIView):
 
 class ChatMessages(APIView):
     def get(self, request, chatroom_name):   
-        user, err = _get_user_from_auth(request)
+        user, err = authenticate_user(request)
         if err: return err
         chat = GroupChat.objects(name=chatroom_name).first()
         if not chat: return Response({"error": "Not found"}, status=404)
@@ -126,9 +128,13 @@ class CreateGroup(APIView):
         team_members = request.data.get("participants", [])
         project_id = request.data.get("project_id")
 
+        if not uid:
+            return Response({"error": "Admin user ID required"}, status=400)
+
         if not name:
             return Response({"error": "Name required"}, status=400)
 
+        # Check for duplicate chat names
         if GroupChat.objects(name=name).first():
             return Response({"error": "Group name already exists"}, status=400)
 
@@ -140,9 +146,9 @@ class CreateGroup(APIView):
                 return Response({"error": "Project not found"}, status=404)
 
         if not isinstance(team_members, list):
-            team_members = [team_members]
+            team_members = [team_members] if team_members else []
 
-        participants = [uid] + team_members
+        participants = list(set([uid] + team_members))
 
         chat_kwargs = {
             "name": name,
@@ -153,13 +159,21 @@ class CreateGroup(APIView):
         if project_obj:
             chat_kwargs["project_id"] = project_obj.id
 
-        chat = GroupChat(**chat_kwargs)
-        chat.save()
-        return Response({"message": "created", "name": name, "project_id": str(project_obj.id) if project_obj else None}, status=201)
+        try:
+            chat = GroupChat(**chat_kwargs)
+            chat.save()
+            return Response({
+                "message": "created", 
+                "name": name, 
+                "chat_id": str(chat.id),
+                "project_id": str(project_obj.id) if project_obj else None
+            }, status=201)
+        except Exception as e:
+            return Response({"error": f"Failed to create chat: {str(e)}"}, status=500)
 
 class DirectChat(APIView):
     def post(self, request, username):
-        user, err = _get_user_from_auth(request)
+        user, err = authenticate_user(request)
         if err: return err
         if username == user.username:
             return Response({"error": "Cannot chat with yourself"}, status=400)
@@ -178,11 +192,7 @@ class DirectChat(APIView):
 
 class ProjectTeamMembers(APIView):
     def get(self, request, project_id):
-        """
-        Get all team members of a project (leader + members).
-        Excludes the current user.
-        """
-        user, err = _get_user_from_auth(request)
+        user, err = authenticate_user(request)
         if err: return err
         
         try:
@@ -199,25 +209,20 @@ class ProjectTeamMembers(APIView):
         )
         
         if not is_leader and not is_member:
-            return Response({"error": "You are not a member of this project"}, status=403)
+            return Response({"error": "Not a project member"}, status=403)
         
-        # Get team leader info
         leader_id = str(project.team_leader.id)
         leader_username = project.team_leader.username
         
-        # Get team members info
         team_member_ids = []
         if project.team_members:
             team_member_ids = [str(member.get('user')) for member in project.team_members if member.get('user')]
         
-        # Fetch all user objects
         all_user_ids = [leader_id] + team_member_ids
         users = {str(u.id): u for u in User.objects(id__in=all_user_ids)}
         
-        # Build team members list (exclude current user)
         members = []
         
-        # Add leader if not current user
         if leader_id != uid:
             members.append({
                 "user_id": leader_id,
@@ -247,11 +252,7 @@ class ProjectTeamMembers(APIView):
 
 class GetOrCreateIndividualChat(APIView):
     def post(self, request, project_id):
-        """
-        Get or create an individual chat with another team member scoped to a specific project.
-        Request body: {"other_user_id": "<user_id>"}
-        """
-        user, err = _get_user_from_auth(request)
+        user, err = authenticate_user(request)
         if err: return err
         
         other_user_id = request.data.get("other_user_id")
@@ -273,15 +274,13 @@ class GetOrCreateIndividualChat(APIView):
         is_leader = str(project.team_leader.id) == uid
         is_member = any(str(member.get('user')) == uid for member in (project.team_members or []))
         if not is_leader and not is_member:
-            return Response({"error": "You are not a member of this project"}, status=403)
+            return Response({"error": "Not a project member"}, status=403)
         
-        # Check if other user is in project
         other_is_leader = str(project.team_leader.id) == oid
         other_is_member = any(str(member.get('user')) == oid for member in (project.team_members or []))
         if not other_is_leader and not other_is_member:
-            return Response({"error": "Other user is not a member of this project"}, status=403)
+            return Response({"error": "Other user not in project"}, status=403)
         
-        # Get other user info
         try:
             other_user = User.objects.get(id=oid)
         except DoesNotExist:
@@ -311,10 +310,7 @@ class GetOrCreateIndividualChat(APIView):
 
 class IndividualChatMessages(APIView):
     def get(self, request, chat_id):
-        """
-        Get all messages in an individual chat.
-        """
-        user, err = _get_user_from_auth(request)
+        user, err = authenticate_user(request)
         if err: return err
         
         uid = str(user.id)
@@ -354,20 +350,14 @@ class IndividualChatMessages(APIView):
 
 class SendIndividualMessage(APIView):
     def post(self, request, chat_id):
-        """
-        Send a message in an individual chat.
-        Supports both text and file uploads.
-        Request: multipart/form-data with 'content' (optional) and 'file' (optional)
-        """
-        user, err = _get_user_from_auth(request)
+        user, err = authenticate_user(request)
         if err: return err
         
         content = request.data.get("content", "").strip()
         file = request.FILES.get('file')
         
-        # At least content or file must be provided
         if not content and not file:
-            return Response({"error": "Either message content or file is required"}, status=400)
+            return Response({"error": "Content or file required"}, status=400)
         
         uid = str(user.id)
         
@@ -384,7 +374,7 @@ class SendIndividualMessage(APIView):
         file_data = None
         if file:
             try:
-                file_data = _save_uploaded_file(file, uid)
+                file_data = handle_file_upload(file, uid)
             except ValueError as e:
                 return Response({"error": str(e)}, status=400)
             except Exception as e:
@@ -437,12 +427,8 @@ class SendIndividualMessage(APIView):
 
 class ProjectChatMessages(APIView):
     def get(self, request, project_id):
-        """
-        Get chat messages for a project by project ID.
-        The chat name is the same as the project name.
-        """
         print(f"[DEBUG] ProjectChatMessages.get() called with project_id={project_id}")
-        user, err = _get_user_from_auth(request)
+        user, err = authenticate_user(request)
         if err: return err
         
         # Get project by ID
@@ -464,7 +450,7 @@ class ProjectChatMessages(APIView):
         print(f"[DEBUG] Team members: {project.team_members}")
         
         if not is_leader and not is_member:
-            return Response({"error": "You are not a member of this project"}, status=403)
+            return Response({"error": "Not a project member"}, status=403)
         
         # Get chat by project name
         chat = GroupChat.objects(name=project.name).first()
@@ -498,12 +484,7 @@ class ProjectChatMessages(APIView):
 
 class SendProjectMessage(APIView):
     def post(self, request, project_id):
-        """
-        Send a message to a project's chat.
-        Supports both text and file uploads.
-        Request: multipart/form-data with 'content' (optional) and 'file' (optional)
-        """
-        user, err = _get_user_from_auth(request)
+        user, err = authenticate_user(request)
         if err: return err
         
         content = request.data.get("content", "").strip()
@@ -511,7 +492,7 @@ class SendProjectMessage(APIView):
         
         # At least content or file must be provided
         if not content and not file:
-            return Response({"error": "Either message content or file is required"}, status=400)
+            return Response({"error": "Content or file required"}, status=400)
         
         # Get project by ID
         try:
@@ -528,7 +509,7 @@ class SendProjectMessage(APIView):
         )
         
         if not is_leader and not is_member:
-            return Response({"error": "You are not a member of this project"}, status=403)
+            return Response({"error": "Not a project member"}, status=403)
         
         # Get chat by project name, create if it doesn't exist
         chat = GroupChat.objects(name=project.name).first()
@@ -557,7 +538,7 @@ class SendProjectMessage(APIView):
         file_data = None
         if file:
             try:
-                file_data = _save_uploaded_file(file, uid)
+                file_data = handle_file_upload(file, uid)
             except ValueError as e:
                 return Response({"error": str(e)}, status=400)
             except Exception as e:
@@ -611,11 +592,7 @@ class SendProjectMessage(APIView):
 
 class DeleteMessage(APIView):
     def delete(self, request, message_id):
-        """
-        Delete a chat message (group or individual).
-        Only the sender of the message can delete it.
-        """
-        user, err = _get_user_from_auth(request)
+        user, err = authenticate_user(request)
         if err: 
             return err
         
@@ -637,7 +614,7 @@ class DeleteMessage(APIView):
         
         # Verify user is the sender
         if message.sender != uid:
-            return Response({"error": "You can only delete your own messages"}, status=403)
+            return Response({"error": "Can only delete own messages"}, status=403)
         
         # Verify user has access to the chat
         chat = message.chat
@@ -688,11 +665,7 @@ class DeleteMessage(APIView):
 
 class SearchGroupChatMessages(APIView):
     def get(self, request, project_id):
-        """
-        Search messages in a project's group chat.
-        Query parameter: ?q=<search_term>
-        """
-        user, err = _get_user_from_auth(request)
+        user, err = authenticate_user(request)
         if err: return err
         
         search_term = request.query_params.get('q', '').strip()
@@ -757,11 +730,7 @@ class SearchGroupChatMessages(APIView):
 
 class SearchIndividualChatMessages(APIView):
     def get(self, request, chat_id):
-        """
-        Search messages in an individual chat.
-        Query parameter: ?q=<search_term>
-        """
-        user, err = _get_user_from_auth(request)
+        user, err = authenticate_user(request)
         if err: return err
         
         search_term = request.query_params.get('q', '').strip()
@@ -823,7 +792,7 @@ class SearchIndividualChatMessages(APIView):
 
 class CreateThread(APIView):
     def post(self, request):
-        user, err = _get_user_from_auth(request)
+        user, err = authenticate_user(request)
         if err:
             return err
         
@@ -881,12 +850,9 @@ class CreateThread(APIView):
         }, status=201)
 
 class ListProjectThreads(APIView):
-    """
-    Returns a list of thread root messages for the group chat 
-    """
     def get(self, request, project_id):
         print(f"[DEBUG] ListProjectThreads called with project_id={project_id}")
-        user, err = _get_user_from_auth(request)
+        user, err = authenticate_user(request)
         if err:
             return err
         
@@ -931,12 +897,9 @@ class ListProjectThreads(APIView):
         }, status=200)
     
 class GetThreadMessages(APIView):
-    """
-    Returns the root and the thread messages
-    """
     def get(self, request, project_id, thread_id):
         print(f"[DEBUG] GetThreadMessages called with project_id={project_id}, thread_id={thread_id}")
-        user, err = _get_user_from_auth(request)
+        user, err = authenticate_user(request)
         if err:
             return err
         try:
@@ -991,9 +954,219 @@ class GetThreadMessages(APIView):
             "replies": [thread_message_public(r, users) for r in replies]
         }, status=200)
     
+class ChatSummarizer(APIView):
+    def post(self, request):
+        user, err = authenticate_user(request)
+        if err: return err
+        
+        chat_type = request.data.get('chat_type')  # 'project', 'individual', 'thread'
+        chat_id = request.data.get('chat_id')  # project_id for project chats, chat_id for individual chats, thread_id for threads
+        max_messages = request.data.get('max_messages', 50)  # Limit number of messages to summarize
+        
+        if not chat_type or not chat_id:
+            return Response({"error": "chat_type and chat_id are required"}, status=400)
+        
+        uid = str(user.id)
+        
+        try:
+            if chat_type == 'project':
+                # Summarize project chat
+                try:
+                    project = Project.objects.get(id=chat_id)
+                except DoesNotExist:
+                    return Response({"error": "Project not found"}, status=404)
+                
+                # Check if user is part of the project
+                is_leader = str(project.team_leader.id) == uid
+                is_member = any(str(member.get('user')) == uid for member in (project.team_members or []))
+                if not is_leader and not is_member:
+                    return Response({"error": "You are not a member of this project"}, status=403)
+                
+                # Get chat by project name
+                chat = GroupChat.objects(name=project.name).first()
+                if not chat:
+                    return Response({"error": "Chat not found"}, status=404)
+                
+                # Get recent messages
+                messages = GroupMessage.objects(chat=chat).order_by("-timestamp")[:max_messages]
+                messages = list(reversed(messages))  # Reverse to chronological order
+                
+                # Get user info for messages
+                sender_ids = list({m.sender for m in messages})
+                users = {str(u.id): u for u in User.objects(id__in=sender_ids)}
+                
+                # Format messages for summarization
+                chat_content = self._format_group_messages(messages, users)
+                summary = self._generate_summary(chat_content, f"Project: {project.name}")
+                
+                return Response({
+                    "chat_type": "project",
+                    "project_id": str(project.id),
+                    "project_name": project.name,
+                    "message_count": len(messages),
+                    "summary": summary
+                })
+                
+            elif chat_type == 'individual':
+                # Summarize individual chat
+                try:
+                    chat = IndividualChat.objects.get(id=chat_id)
+                except DoesNotExist:
+                    return Response({"error": "Chat not found"}, status=404)
+                
+                # Verify user is a participant
+                if uid not in chat.participants:
+                    return Response({"error": "Forbidden"}, status=403)
+                
+                # Get other participant info
+                other_participant_id = next(p for p in chat.participants if p != uid)
+                try:
+                    other_user = User.objects.get(id=other_participant_id)
+                except DoesNotExist:
+                    other_user = None
+                
+                # Get recent messages
+                messages = IndividualMessage.objects(chat=chat).order_by("-timestamp")[:max_messages]
+                messages = list(reversed(messages))  # Reverse to chronological order
+                
+                # Get user info for messages
+                sender_ids = list({m.sender for m in messages})
+                users = {str(u.id): u for u in User.objects(id__in=sender_ids)}
+                
+                # Format messages for summarization
+                chat_content = self._format_individual_messages(messages, users, uid)
+                other_username = other_user.username if other_user else "Unknown"
+                summary = self._generate_summary(chat_content, f"Chat with {other_username}")
+                
+                return Response({
+                    "chat_type": "individual",
+                    "chat_id": str(chat.id),
+                    "other_user": {
+                        "id": other_participant_id,
+                        "username": other_username
+                    },
+                    "message_count": len(messages),
+                    "summary": summary
+                })
+                
+            elif chat_type == 'thread':
+                # Summarize thread
+                thread_id = chat_id
+                try:
+                    thread = Thread.objects.get(id=thread_id)
+                except DoesNotExist:
+                    return Response({"error": "Thread not found"}, status=404)
+                
+                # Verify user has access to the chat
+                chat = thread.chat
+                if uid not in chat.participants:
+                    return Response({"error": "Forbidden"}, status=403)
+                
+                # Get parent message and replies
+                parent = thread.parent_message
+                replies = ThreadMessage.objects(thread=thread).order_by("timestamp")
+                
+                # Combine parent and replies
+                all_messages = [parent] + list(replies)
+                
+                # Get user info
+                sender_ids = list({m.sender for m in all_messages})
+                users = {str(u.id): u for u in User.objects(id__in=sender_ids)}
+                
+                # Format messages for summarization
+                chat_content = self._format_thread_messages(parent, replies, users)
+                summary = self._generate_summary(chat_content, f"Thread: {parent.content[:50]}...")
+                
+                return Response({
+                    "chat_type": "thread",
+                    "thread_id": str(thread.id),
+                    "parent_message_id": str(parent.id),
+                    "message_count": len(all_messages),
+                    "summary": summary
+                })
+            
+            else:
+                return Response({"error": "Invalid chat_type. Must be 'project', 'individual', or 'thread'"}, status=400)
+                
+        except Exception as e:
+            print(f"[ChatSummarizer] Error: {e}")
+            return Response({"error": "Failed to generate summary"}, status=500)
+    
+    def _format_group_messages(self, messages, users):
+        """Format group chat messages for summarization"""
+        formatted = []
+        for msg in messages:
+            sender = users.get(msg.sender)
+            username = sender.username if sender else "Unknown"
+            timestamp = msg.timestamp.strftime("%Y-%m-%d %H:%M") if msg.timestamp else "Unknown"
+            content = msg.content or "[Media/File]"
+            formatted.append(f"[{timestamp}] {username}: {content}")
+        return "\n".join(formatted)
+    
+    def _format_individual_messages(self, messages, users, current_user_id):
+        """Format individual chat messages for summarization"""
+        formatted = []
+        for msg in messages:
+            sender = users.get(msg.sender)
+            username = sender.username if sender else "Unknown"
+            if msg.sender == current_user_id:
+                username = "You"
+            timestamp = msg.timestamp.strftime("%Y-%m-%d %H:%M") if msg.timestamp else "Unknown"
+            content = msg.content or "[Media/File]"
+            formatted.append(f"[{timestamp}] {username}: {content}")
+        return "\n".join(formatted)
+    
+    def _format_thread_messages(self, parent, replies, users):
+        """Format thread messages for summarization"""
+        formatted = []
+        
+        # Parent message
+        sender = users.get(parent.sender)
+        username = sender.username if sender else "Unknown"
+        timestamp = parent.timestamp.strftime("%Y-%m-%d %H:%M") if parent.timestamp else "Unknown"
+        content = parent.content or "[Media/File]"
+        formatted.append(f"[PARENT - {timestamp}] {username}: {content}")
+        
+        # Replies
+        for reply in replies:
+            sender = users.get(reply.sender)
+            username = sender.username if sender else "Unknown"
+            timestamp = reply.timestamp.strftime("%Y-%m-%d %H:%M") if reply.timestamp else "Unknown"
+            content = reply.content or "[Media/File]"
+            formatted.append(f"[{timestamp}] {username}: {content}")
+        
+        return "\n".join(formatted)
+    
+    def _generate_summary(self, chat_content, context):
+        """Generate summary using Gemini API"""
+        if not chat_content.strip():
+            return "No messages to summarize."
+        
+        prompt = f"""
+        Please provide a concise summary of the following chat conversation in the context of "{context}".
+        
+        Focus on:
+        - Key topics discussed
+        - Important decisions made
+        - Action items or tasks mentioned
+        - Any agreements or conclusions reached
+        
+        Keep the summary brief but comprehensive. Use bullet points if appropriate.
+        
+        Chat messages:
+        {chat_content}
+        """
+        
+        try:
+            response = model.generate_content(prompt)
+            return response.text.strip()
+        except Exception as e:
+            print(f"[ChatSummarizer] Gemini API error: {e}")
+            return "Unable to generate summary due to an error."
+    
 class ReplyToThread(APIView):
     def post(self, request, project_id, thread_id):
-        user, err = _get_user_from_auth(request)
+        user, err = authenticate_user(request)
         if err:
             return err
         
@@ -1025,7 +1198,7 @@ class ReplyToThread(APIView):
         file_data = None
         if file:
             try:
-                file_data = _save_uploaded_file(file, uid)
+                file_data = handle_file_upload(file, uid)
             except ValueError as e:
                 return Response({"error": str(e)}, status=400)
             except Exception as e:
