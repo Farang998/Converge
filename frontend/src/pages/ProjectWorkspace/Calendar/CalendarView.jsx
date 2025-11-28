@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import api from '../../../services/api';
 import { toast } from 'react-toastify';
@@ -14,8 +14,10 @@ const Calendar = () => {
 
   const [isConnected, setIsConnected] = useState(false);
   const [checkingConnection, setCheckingConnection] = useState(true);
+
   const [events, setEvents] = useState([]);
   const [loadingEvents, setLoadingEvents] = useState(false);
+
   const [connecting, setConnecting] = useState(false);
   const [projectCalendarId, setProjectCalendarId] = useState(null);
   const [projectLoaded, setProjectLoaded] = useState(false);
@@ -23,217 +25,172 @@ const Calendar = () => {
   const [creatingCalendar, setCreatingCalendar] = useState(false);
   const [syncingMeetings, setSyncingMeetings] = useState(false);
 
-  const token = localStorage.getItem("authToken");
+  const token = localStorage.getItem('authToken');
 
-  const fetchProjectById = async (id) => {
-    console.log("[CAL DEBUG] Fetching project directly:", id);
-
+  // -----------------------------
+  // Helper: fetch credentials status
+  // -----------------------------
+  const fetchCredentialsStatus = useCallback(async () => {
+    if (!token) {
+      setIsConnected(false);
+      return { connected: false };
+    }
     try {
-      const response = await api.get(`projects/${id}/`, {
-        headers: { Authorization: `Bearer ${token}` }
+      const resp = await api.get('calendar/credentials/status/', {
+        headers: { Authorization: `Bearer ${token}` },
       });
-
-
-      const project = response.data;
-      console.log("[CAL DEBUG] Project response:", project);
-
-      // Calendar ID
-      setProjectCalendarId(project?.calendar_id || null);
-      console.log("[CAL DEBUG] projectCalendarId =", project?.calendar_id);
-
-      // Team leader check
-      const leaderId =
-        project.team_leader?.user_id ||
-        project.team_leader?.id ||
-        project.team_leader;
-
-      const isLeader = String(leaderId) === String(user.id);
-      console.log("[CAL DEBUG] isTeamLeader =", isLeader);
-      setIsTeamLeader(isLeader);
-
-      // If team member → handle calendar
-      if (!isLeader) {
-        if (project.calendar_id) {
-          console.log("[CAL DEBUG] Member fetching events...");
-          await fetchCalendarEvents(id, { isInitial: true });
-        } else {
-          console.log("[CAL DEBUG] Member: no calendar found.");
-          setCheckingConnection(false);
-        }
-      }
-
+      const data = resp.data || {};
+      setIsConnected(Boolean(data.connected));
+      return data;
     } catch (err) {
-      console.error("[CAL DEBUG] Error fetching project:", err);
-    } finally {
-      setProjectLoaded(true);
-      if (!isTeamLeader) setCheckingConnection(false);
+      console.error('[CAL DEBUG] fetchCredentialsStatus error:', err);
+      setIsConnected(false);
+      return { connected: false };
     }
-  };
+  }, [token]);
 
-  
-  useEffect(() => {
-    if (projectId) {
-      console.log("[CAL DEBUG] Calling fetchProjectById");
-      fetchProjectById(projectId);
+  // -----------------------------
+  // Helper: fetch project info
+  // -----------------------------
+  const fetchProjectById = useCallback(
+    async (id) => {
+      if (!id) return null;
+      try {
+        const response = await api.get(`projects/${id}/`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const project = response.data;
+        setProjectCalendarId(project?.calendar_id || null);
 
-      if (isTeamLeader) {
-        fetchCalendarEvents(projectId, { isInitial: true });
+        const leaderId =
+          project.team_leader?.user_id ||
+          project.team_leader?.id ||
+          project.team_leader;
+
+        const leaderMatch = String(leaderId) === String(user?.id);
+        setIsTeamLeader(Boolean(leaderMatch));
+
+        return project;
+      } catch (err) {
+        console.error('[CAL DEBUG] Error fetching project:', err);
+        toast.error('Failed to load project');
+        return null;
+      } finally {
+        setProjectLoaded(true);
       }
-    } else {
-      setCheckingConnection(false);
-    }
-
-    const params = new URLSearchParams(window.location.search);
-    const code = params.get("code");
-    const state = params.get("state");
-    if (code && state) handleOAuthCallback(code, state);
-
-  }, [projectId, isTeamLeader]);
-
-  
-  useEffect(() => {
-    if (projectId && isConnected && isTeamLeader) {
-      fetchCalendarEvents(projectId);
-    }
-    // eslint-disable-next-line
-  }, [isConnected]);
+    },
+    [token, user?.id]
+  );
 
   // -----------------------------
-  // Create project Google Calendar
+  // Events loader (safe: backend handles fallback to leader creds)
   // -----------------------------
-  const createProjectCalendar = async () => {
+  const fetchCalendarEvents = useCallback(
+    async (id, { isInitial = false } = {}) => {
+      if (!id) return;
+      try {
+        if (!isInitial) setLoadingEvents(true);
+
+        const response = await api.get(`calendar/project/${id}/events/`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        const eventsData = response.data?.events || [];
+        const formatted = eventsData.map((event) => {
+          const start = event.start?.dateTime || event.start?.date;
+          const end = event.end?.dateTime || event.end?.date;
+          return {
+            id: event.id,
+            summary: event.summary || 'No title',
+            description: event.description || '',
+            start: start ? new Date(start) : null,
+            end: end ? new Date(end) : null,
+            htmlLink: event.htmlLink || null,
+            location: event.location || '',
+            attendees: event.attendees || [],
+            status: event.status || 'confirmed',
+          };
+        });
+
+        formatted.sort((a, b) => (!a.start ? 1 : !b.start ? -1 : a.start - b.start));
+
+        setEvents(formatted);
+      } catch (error) {
+        console.error('[CAL DEBUG] Error fetching Google events:', error);
+        // If backend returns an explicit "not connected" style message, mark disconnected
+        if (error.response?.status === 400 && typeof error.response?.data?.error === 'string') {
+          if (error.response.data.error.toLowerCase().includes('not connected')) {
+            setIsConnected(false);
+          }
+        }
+        setEvents([]);
+      } finally {
+        if (!isInitial) setLoadingEvents(false);
+        setCheckingConnection(false);
+      }
+    },
+    [token]
+  );
+
+  // -----------------------------
+  // OAuth callback handler
+  // -----------------------------
+  const handleOAuthCallback = useCallback(
+    async (code, state) => {
+      if (!code || !state) return false;
+      try {
+        setConnecting(true);
+        const response = await api.get(`calendar/auth/callback/?code=${encodeURIComponent(code)}&state=${encodeURIComponent(state)}`);
+        if (response.status === 200) {
+          toast.success('Google Calendar connected successfully!');
+          // update connected state
+          await fetchCredentialsStatus();
+          // remove query params from URL cleanly
+          window.history.replaceState({}, document.title, window.location.pathname);
+          return true;
+        }
+      } catch (err) {
+        console.error('[CAL DEBUG] handleOAuthCallback error:', err);
+        toast.error(err.response?.data?.error || 'Failed to complete Google Calendar connection');
+      } finally {
+        setConnecting(false);
+      }
+      return false;
+    },
+    [fetchCredentialsStatus]
+  );
+
+  // -----------------------------
+  // Create project calendar (leader only)
+  // -----------------------------
+  const createProjectCalendar = useCallback(async () => {
+    if (!projectId) return;
     try {
       setCreatingCalendar(true);
       const resp = await api.post(`calendar/project/${projectId}/create/`, {}, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` },
       });
       const newId = resp.data?.calendar_id;
       if (newId) {
         toast.success('Project Google Calendar created');
         setProjectCalendarId(newId);
+        // load events after calendar creation
         await fetchCalendarEvents(projectId);
       } else {
         toast.error('Failed to create calendar');
       }
     } catch (err) {
-      console.error('Error creating project calendar:', err);
+      console.error('[CAL DEBUG] Error creating project calendar:', err);
       toast.error(err.response?.data?.error || 'Failed to create Google Calendar');
     } finally {
       setCreatingCalendar(false);
     }
-  };
+  }, [projectId, token, fetchCalendarEvents]);
 
   // -----------------------------
-  // Google OAuth init
+  // Sync meetings
   // -----------------------------
-  const connectGoogleCalendar = async () => {
-    try {
-      setConnecting(true);
-
-      if (!token) {
-        toast.error('Please log in first');
-        navigate('/login');
-        return;
-      }
-
-      const response = await api.get('calendar/auth/init/', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-
-      if (response.data?.auth_url) {
-        window.location.href = response.data.auth_url;
-      } else {
-        toast.error('Failed to initiate Google Calendar connection');
-      }
-    } catch (err) {
-      console.error('Error initiating Google Calendar connection:', err);
-      toast.error(err.response?.data?.error || 'Failed to connect Google Calendar');
-      setConnecting(false);
-    }
-  };
-
-  // -----------------------------
-  // Google OAuth callback handler
-  // -----------------------------
-  const handleOAuthCallback = async (code, state) => {
-    try {
-      setConnecting(true);
-
-      const response = await api.get(`calendar/auth/callback/?code=${code}&state=${state}`);
-
-      if (response.status === 200) {
-        toast.success('Google Calendar connected successfully!');
-        setIsConnected(true);
-
-        window.history.replaceState({}, document.title, window.location.pathname);
-
-        if (projectId) {
-          // refresh project + events after OAuth completes
-          fetchProjectById(projectId);
-          fetchCalendarEvents(projectId);
-        }
-      }
-    } catch (err) {
-      console.error('Error handling OAuth callback:', err);
-      toast.error(err.response?.data?.error || 'Failed to complete Google Calendar connection');
-    } finally {
-      setConnecting(false);
-    }
-  };
-
-  // -----------------------------
-  // Fetch events from Google Calendar
-  // -----------------------------
-  const fetchCalendarEvents = async (id, { isInitial = false } = {}) => {
-    try {
-      if (!isInitial) setLoadingEvents(true);
-
-      const response = await api.get(`calendar/project/${id}/events/`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-
-      const eventsData = response.data?.events || [];
-
-      const formatted = eventsData.map((event) => {
-        const start = event.start?.dateTime || event.start?.date;
-        const end = event.end?.dateTime || event.end?.date;
-
-        return {
-          id: event.id,
-          summary: event.summary || 'No title',
-          description: event.description || '',
-          start: start ? new Date(start) : null,
-          end: end ? new Date(end) : null,
-          htmlLink: event.htmlLink || null,
-          location: event.location || '',
-          attendees: event.attendees || [],
-          status: event.status || 'confirmed'
-        };
-      });
-
-      formatted.sort((a, b) => (!a.start ? 1 : !b.start ? -1 : a.start - b.start));
-
-      setEvents(formatted);
-      setIsConnected(true);
-    } catch (error) {
-      console.error('Error fetching Google events:', error);
-
-      if (error.response?.status === 400 &&
-          error.response?.data?.error?.includes('not connected')) {
-        setIsConnected(false);
-      } else {
-        setEvents([]);
-      }
-    } finally {
-      if (!isInitial) setLoadingEvents(false);
-      setCheckingConnection(false);
-    }
-  };
-
-  // -----------------------------
-  // Sync meetings from Google (leader only)
-  // -----------------------------
-  const syncMeetingsFromGoogle = async () => {
+  const syncMeetingsFromGoogle = useCallback(async () => {
     if (!projectId) return;
     try {
       setSyncingMeetings(true);
@@ -244,12 +201,101 @@ const Calendar = () => {
       );
       toast.success('Synced meetings from Google');
     } catch (err) {
+      console.error('[CAL DEBUG] syncMeetingsFromGoogle error:', err);
       const msg = err?.response?.data?.error || 'Failed to sync meetings';
       toast.error(msg);
     } finally {
       setSyncingMeetings(false);
     }
-  };
+  }, [projectId, token]);
+
+  // -----------------------------
+  // Connect Google (redirect to Google OAuth)
+  // -----------------------------
+  const connectGoogleCalendar = useCallback(async () => {
+    if (!token) {
+      toast.error('Please log in first');
+      navigate('/login');
+      return;
+    }
+    try {
+      setConnecting(true);
+      const response = await api.get('calendar/auth/init/', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (response.data?.auth_url) {
+        window.location.href = response.data.auth_url;
+      } else {
+        toast.error('Failed to initiate Google Calendar connection');
+        setConnecting(false);
+      }
+    } catch (err) {
+      console.error('[CAL DEBUG] connectGoogleCalendar error:', err);
+      toast.error(err.response?.data?.error || 'Failed to connect Google Calendar');
+      setConnecting(false);
+    }
+  }, [token, navigate]);
+
+  // -----------------------------
+  // Init flow (single, sequential)
+  // -----------------------------
+  useEffect(() => {
+    let mounted = true;
+
+    const init = async () => {
+      setCheckingConnection(true);
+
+      // 1) If OAuth query params exist -> handle them first (this will create credentials)
+      const params = new URLSearchParams(window.location.search);
+      const code = params.get('code');
+      const state = params.get('state');
+
+      // If callback exists, process it first
+      if (code && state) {
+        await handleOAuthCallback(code, state);
+      }
+
+      // 2) Check credentials status (after callback handling)
+      await fetchCredentialsStatus();
+
+      // 3) Fetch project info
+      if (projectId) {
+        await fetchProjectById(projectId);
+
+        // If this user is a team member and project already has a calendar, fetch events
+        // If team leader, only fetch events if connected and calendar exists.
+        if (!mounted) return;
+
+        if (!isTeamLeader && projectCalendarId) {
+          await fetchCalendarEvents(projectId, { isInitial: true });
+        } else if (isTeamLeader && projectCalendarId && isConnected) {
+          // if leader and connected and calendar exists -> fetch events
+          await fetchCalendarEvents(projectId, { isInitial: true });
+        }
+      }
+
+      // final clean-up ui flags
+      if (mounted) {
+        setCheckingConnection(false);
+      }
+    };
+
+    init();
+
+    return () => {
+      mounted = false;
+    };
+    // purposely run once on mount (lint disabled on dependencies to keep single-shot init)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projectId]);
+
+  // If credentials change (user connected after some action elsewhere), optionally refresh events:
+  useEffect(() => {
+    // If we just became connected AND there is a project calendar, load events
+    if (isConnected && projectId && projectCalendarId) {
+      fetchCalendarEvents(projectId);
+    }
+  }, [isConnected, projectId, projectCalendarId, fetchCalendarEvents]);
 
   // -----------------------------
   // UI
@@ -258,7 +304,6 @@ const Calendar = () => {
     <div className="calendar-page">
       <div className="calendar-container">
 
-        {/* ----------------- Loading State ----------------- */}
         {checkingConnection && (
           <div className="loading-state">
             <FaSpinner className="spinner" />
@@ -266,7 +311,6 @@ const Calendar = () => {
           </div>
         )}
 
-        {/* ----------------- Team member view ----------------- */}
         {!checkingConnection && !isTeamLeader && (
           <>
             {projectCalendarId ? (
@@ -287,7 +331,6 @@ const Calendar = () => {
                 {!loadingEvents && (
                   <TeamCalendar projectId={projectId} token={token} />
                 )}
-
               </>
             ) : (
               <div className="empty-state">
@@ -299,7 +342,6 @@ const Calendar = () => {
           </>
         )}
 
-        {/* ----------------- Team leader: Not connected ----------------- */}
         {!checkingConnection && isTeamLeader && !isConnected && (
           <div className="connection-prompt">
             <div className="prompt-content">
@@ -326,7 +368,6 @@ const Calendar = () => {
           </div>
         )}
 
-        {/* ----------------- Team leader: Connected but no calendar yet ----------------- */}
         {!checkingConnection && isTeamLeader && isConnected && !projectCalendarId && (
           <div className="connection-prompt">
             <div className="prompt-content">
@@ -348,7 +389,6 @@ const Calendar = () => {
           </div>
         )}
 
-        {/* ----------------- Team leader: Google Calendar connected with calendar ----------------- */}
         {!checkingConnection && isTeamLeader && isConnected && projectCalendarId && (
           <>
             <div className="calendar-controls">
