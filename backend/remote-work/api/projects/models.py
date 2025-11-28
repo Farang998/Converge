@@ -1,11 +1,11 @@
-from mongoengine import Document, StringField, ListField, DictField, DateTimeField, ReferenceField, BooleanField
+from mongoengine import Document, StringField, ListField, DictField, DateTimeField, ReferenceField, BooleanField, DENY
 from django.utils import timezone
 from ..auth.models import User
 
 class Project(Document):
     name = StringField(required=True)
     description = StringField()
-    team_leader = ReferenceField(User, required=True)
+    team_leader = ReferenceField(User, required=True, reverse_delete_rule=DENY)
     project_type = StringField(default='development')
     team_members = ListField(DictField())
     github_imported = BooleanField(default=False)

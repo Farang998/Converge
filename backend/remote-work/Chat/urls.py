@@ -5,7 +5,8 @@ from .views import (
     ProjectTeamMembers, GetOrCreateIndividualChat,
     IndividualChatMessages, SendIndividualMessage,
     SearchGroupChatMessages, SearchIndividualChatMessages,
-    ListProjectThreads, GetThreadMessages, ReplyToThread
+    ListProjectThreads, GetThreadMessages, ReplyToThread,
+    ChatSummarizer
 )
 
 urlpatterns = [
@@ -18,6 +19,7 @@ urlpatterns = [
     path('project/<str:project_id>/search/', SearchGroupChatMessages.as_view()),  # /api/chats/project/<project_id>/search/?q=<term>
     path('project/<str:project_id>/messages/', ProjectChatMessages.as_view()),  # /api/chats/project/<project_id>/messages/
     path('project/<str:project_id>/send/', SendProjectMessage.as_view()),  # /api/chats/project/<project_id>/send/
+    path('summarize/', ChatSummarizer.as_view()), 
     path('individual/<str:chat_id>/search/', SearchIndividualChatMessages.as_view()),  # /api/chats/individual/<chat_id>/search/?q=<term>
     path('individual/<str:chat_id>/messages/', IndividualChatMessages.as_view()),  # /api/chats/individual/<chat_id>/messages/
     path('individual/<str:chat_id>/send/', SendIndividualMessage.as_view()),  # /api/chats/individual/<chat_id>/send/

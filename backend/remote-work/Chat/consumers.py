@@ -339,8 +339,12 @@ class ProjectChatConsumer(AsyncWebsocketConsumer):
             )
             chat.save()
             print(f"[ProjectChatConsumer] Created chat for project: {project.name}")
+        else:
+            if not chat.project_id:
+                chat.project_id = project.id
+                chat.save()
+                print(f"[ProjectChatConsumer] Updated legacy chat with project_id: {project.name}")
         
-        # Ensure current user is in participants
         uid = str(self.user.id)
         if uid not in chat.participants:
             chat.participants.append(uid)

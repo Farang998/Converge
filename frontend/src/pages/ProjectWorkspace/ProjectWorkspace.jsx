@@ -1,4 +1,3 @@
-// main container orchestrating data and views.
 import React, { useState, useMemo, Suspense, useEffect } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import api from '../../services/api';
@@ -15,25 +14,23 @@ import Index from './Tasks/Index';
 import CalendarView from './Calendar/CalendarView';
 
 
-// --- Mock data (in a real app replace with API calls) ---
 const nowIso = () => new Date().toISOString();
 
 const sampleProject = {
   id: 'proj_123',
   name: 'Project 1',
-  owner: { id: 'user_1', name: 'Ishti Patel' },
+  owner: { id: 'user_1', name: 'User1' },
   members: [
-    { id: 'user_1', name: 'Ishti' },
-    { id: 'user_2', name: 'Rohit' },
-    { id: 'user_3', name: 'Ayesha' }
+    { id: 'user_1', name: 'User_1' },
+    { id: 'user_2', name: 'User_2' },
+    { id: 'user_3', name: 'User_3' }
   ],
-  description: 'A small collaboration workspace to manage tasks, files and timelines.'
+  description: 'This is the description of the project.'
 };
 
 const seedTasks = [
   { id: 't1', title: 'Design project page', status: 'in_progress', assignee: 'user_2', milestone: 'm1', updatedAt: nowIso(), priority: 'High' },
   { id: 't2', title: 'Implement file upload', status: 'todo', assignee: 'user_3', milestone: 'm1', updatedAt: nowIso(), priority: 'Medium' },
-  { id: 't3', title: 'Write API endpoints', status: 'done', assignee: 'user_1', milestone: 'm0', updatedAt: nowIso(), priority: 'High' }
 ];
 
 const seedFiles = [
@@ -48,7 +45,7 @@ const seedMilestones = [
 ];
 
 const seedActivity = [
-  { id: 'a1', text: 'Ishti marked "Write API endpoints" as done', time: nowIso() },
+  { id: 'a1', text: 'User_1 marked "Write API endpoints" as done', time: nowIso() },
   { id: 'a2', text: 'Rohit uploaded wireframe.png', time: nowIso() }
 ];
 
@@ -79,13 +76,74 @@ export default function ProjectWorkspace() {
   const progressPct = Math.round((completedCount / Math.max(1, tasks.length)) * 100);
   const isTeamLeader = Boolean(user && project?.owner?.id && String(project.owner.id) === String(user.id));
 
-  const handleSaveProjectDetails = (updatedProject, invitations) => {
-    setProject(updatedProject);
-    // In a real app: handle member invitations here (e.g., updating a 'members' state array)
-    console.log('Project updated:', updatedProject);
-    console.log('Invitations sent:', invitations);
+  
+const handleSaveProjectDetails = async (updatedProject, invitations = []) => {
+  // updatedProject: { id, name, description, ... }
+  // invitations: array of { usernameOrEmail: '...' } or similar
+  try {
+    // Prepare payload for backend (only send fields you want to update)
+    const payload = {
+      name: updatedProject.name,
+      description: updatedProject.description
+    };
+
+    const patchResp = await api.patch(`projects/${updatedProject.id}/`, payload);
+
+    // If backend responds with object, use it; otherwise re-fetch the project
+    let backendProject = patchResp?.data;
+    if (!backendProject || Object.keys(backendProject).length === 0) {
+      const re = await api.get(`projects/${updatedProject.id}/`);
+      backendProject = re.data;
+    }
+
+    // If there are invitations, send them (backend endpoint may vary)
+    if (Array.isArray(invitations) && invitations.length > 0) {
+      // send invites sequentially (or change to Promise.all for parallel)
+      for (const inv of invitations) {
+        const body = { user: inv.usernameOrEmail }; // adapt if backend expects { email } or { username }
+        try {
+          await api.post(`projects/${updatedProject.id}/invite/`, body);
+        } catch (invErr) {
+          console.warn('Invite failed for', inv, invErr?.response?.data || invErr);
+          // do not fail the whole operation; you can collect invite errors if required
+        }
+      }
+      // refresh project details after invites (to get updated members)
+      const refreshed = await api.get(`projects/${updatedProject.id}/`);
+      backendProject = refreshed.data;
+    }
+
+    // Normalize backend shape into UI shape used in this component
+    const mapped = {
+      id: backendProject.id || backendProject._id || (backendProject._id && backendProject._id.$oid) || updatedProject.id,
+      name: backendProject.name || backendProject.title || updatedProject.name,
+      description: backendProject.description || updatedProject.description || '',
+      owner: (backendProject.team_leader && {
+        id: backendProject.team_leader.user_id || backendProject.team_leader.id || String(backendProject.team_leader),
+        name: backendProject.team_leader.username || backendProject.team_leader.name || 'Owner'
+      }) || (backendProject.owner || updatedProject.owner || { id: null, name: 'Owner' }),
+      members: Array.isArray(backendProject.team_members)
+        ? backendProject.team_members.map(m => ({ id: m.user || m.user_id || m.id || String(m), name: m.username || m.name || String(m.user || m.user_id || '') }))
+        : (backendProject.members || updatedProject.members || []),
+    };
+
+    // Update local UI state
+    setProject(mapped);
+    // also update members state if you keep separate members variable
+    // setMembers(mapped.members ?? []);
+
+    // Add activity entry
     addActivity('Updated project details');
-  };
+
+    // resolve so modal can close (your modal awaits this as a promise)
+    return mapped;
+  } catch (err) {
+    console.error('Failed to save project details:', err);
+    // Throw to signal failure back to modal (modal shows the error)
+    throw new Error(err?.response?.data?.detail || err?.message || 'Save failed');
+  }
+};
+
 
   // Helpers
   function addActivity(text) {
@@ -134,6 +192,31 @@ export default function ProjectWorkspace() {
     })();
     return () => { cancelled = true; };
   }, [projectId, project]);
+
+
+  // NEW: Load tasks from the backend when the project loads
+  useEffect(() => {
+    if (!projectId) return;
+
+    let cancelled = false;
+    (async () => {
+      try {
+        // ASSUMPTION: The API for tasks is at projects/projectId/tasks
+        const resp = await api.get(`projects/${projectId}/tasks/`);
+        const data = resp?.data;
+        if (Array.isArray(data) && !cancelled) {
+          // Normalize task data from backend if necessary, or just use it.
+          // For simplicity, we assume the backend returns objects compatible with the UI.
+          // If you need normalization (like converting status from 'COMPLETED' to 'done'), add it here.
+          setTasks(data); // Update the tasks state with real data
+        }
+      } catch (err) {
+        console.debug('Could not load tasks from API for overview:', err?.message || err);
+        // On error, keep the seed data for development/placeholder
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [projectId]);
 
   function createTask(title) {
     const t = { id: 't' + Date.now(), title, status: 'todo', assignee: null, milestone: null, updatedAt: nowIso(), priority: 'Low' };

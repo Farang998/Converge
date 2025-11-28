@@ -1,4 +1,4 @@
-from mongoengine import Document, StringField, BooleanField, DateTimeField, ReferenceField
+from mongoengine import Document, StringField, BooleanField, DateTimeField, ReferenceField, CASCADE
 from django.utils import timezone
 from ..auth.models import User  # Import the User model
 
@@ -6,7 +6,7 @@ class Notification(Document):
     """
     Represents a notification for a specific user.
     """
-    user = ReferenceField(User, required=True) # Reference to the User document
+    user = ReferenceField(User, required=True, reverse_delete_rule=CASCADE) # Delete notifications when user is deleted
     message = StringField(required=True)
     read = BooleanField(default=False)
     link_url = StringField() # Optional: e.g., /projects/<project_id>

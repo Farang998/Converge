@@ -14,7 +14,7 @@ ERROR_INVALID_AUTH_HEADER = 'Invalid authorization header format'
 ERROR_INVALID_TOKEN = 'Invalid or expired token'
 
 
-def _authenticate_user(request):
+def authenticate_user(request):
     auth_header = request.headers.get('Authorization')
     if not auth_header:
         return None, Response({'error': ERROR_AUTH_HEADER_MISSING}, status=status.HTTP_401_UNAUTHORIZED)
@@ -39,7 +39,7 @@ class NotificationListView(APIView):
         """
         Gets all unread notifications for the authenticated user.
         """
-        user, error_response = _authenticate_user(request)
+        user, error_response = authenticate_user(request)
         if error_response:
             return error_response
 
@@ -58,7 +58,7 @@ class MarkNotificationAsReadView(APIView):
         """
         Sets the 'read' flag of a notification to True.
         """
-        user, error_response = _authenticate_user(request)
+        user, error_response = authenticate_user(request)
         if error_response:
             return error_response
 
@@ -83,7 +83,7 @@ class SupportFeedbackView(APIView):
     """
 
     def post(self, request):
-        user, error_response = _authenticate_user(request)
+        user, error_response = authenticate_user(request)
         if error_response:
             return error_response
 
@@ -109,7 +109,7 @@ class MarkNotificationsByLinkView(APIView):
     POST payload: { "link_url": "/accept-invitation/<project_id>" }
     """
     def post(self, request):
-        user, error_response = _authenticate_user(request)
+        user, error_response = authenticate_user(request)
         if error_response:
             return error_response
 

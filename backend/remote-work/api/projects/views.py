@@ -1,5 +1,3 @@
-# projects/views.py
-
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status, viewsets
@@ -20,7 +18,7 @@ from ..calendar.google_service import create_event
 from ..calendar.google_service import delete_calendar
 from ..calendar.google_service import create_project_calendar
 from ..file_sharing.models import File
-from ..file_sharing.views import _get_s3_client
+from ..file_sharing.views import get_s3_client
 
 from mongoengine.errors import DoesNotExist, ValidationError as MongoValidationError
 from mongoengine.queryset.visitor import Q
@@ -49,10 +47,6 @@ PROJECT_NOT_FOUND_ERROR = "Project not found"
 
 
 class ProjectViewSet(viewsets.ViewSet):
-
-    # ------------------------
-    # LIST PROJECTS
-    # ------------------------
     def list(self, request):
         try:
             user = authenticate_user_from_request(request)
@@ -159,9 +153,6 @@ class ProjectViewSet(viewsets.ViewSet):
 
         return Response(data, status=200)
 
-    # ------------------------
-    # CREATE PROJECT
-    # ------------------------
     def create(self, request):
         try:
             user = authenticate_user_from_request(request)
@@ -223,9 +214,6 @@ class ProjectViewSet(viewsets.ViewSet):
         except MongoValidationError as e:
             return Response({"error": str(e)}, status=400)
 
-    # ------------------------
-    # UPDATE PROJECT
-    # ------------------------
     def partial_update(self, request, pk=None):
         try:
             user = authenticate_user_from_request(request)
@@ -255,9 +243,6 @@ class ProjectViewSet(viewsets.ViewSet):
 
         return Response({"message": "Nothing changed"}, status=200)
 
-    # ------------------------
-    # ADD MEMBERS
-    # ------------------------
     @action(detail=True, methods=["post"])
     def add_members(self, request, pk=None):
         try:
@@ -278,22 +263,47 @@ class ProjectViewSet(viewsets.ViewSet):
             return Response({"error": "'add_members' must be a list"}, status=400)
 
         existing = {m["user"] for m in project.team_members}
-        to_add = [uid for uid in add_list if uid != str(project.team_leader.id) and uid not in existing]
+        leader_id = str(project.team_leader.id)
+        
+        # Validate all user IDs and filter out invalid ones
+        validated_to_add = []
+        invalid_ids = []
 
-        for uid in to_add:
+        for uid in add_list:
+            # Skip team leader and already existing members
+            if uid == leader_id or uid in existing:
+                continue
+
+            # Validate that the user ID corresponds to an actual user
+            try:
+                invited_user = User.objects.get(id=uid)
+                validated_to_add.append((uid, invited_user))
+            except User.DoesNotExist:
+                invalid_ids.append(uid)
+
+        if invalid_ids:
+            return Response({
+                "error": f"Invalid user IDs provided: {', '.join(invalid_ids)}"
+            }, status=400)
+
+        if not validated_to_add:
+            return Response({"message": "No new members to add"}, status=200)
+
+        # Add validated members to project
+        for uid, invited_user in validated_to_add:
             project.team_members.append({"user": uid, "accepted": False})
 
         project.save()
 
-        invited_users = [User.objects.get(id=uid) for uid in to_add]
+        # Send notifications and emails
+        invited_users = [invited_user for _, invited_user in validated_to_add]
+        to_add_ids = [uid for uid, _ in validated_to_add]
+
         send_invitation_notifications(invited_users, project.name, pk)
-        send_invites_async(to_add, project.name, pk, send_invitations_background)
+        send_invites_async(to_add_ids, project.name, pk, send_invitations_background)
 
-        return Response({"message": f"Invited {len(to_add)}"}, status=200)
+        return Response({"message": f"Invited {len(validated_to_add)} members"}, status=200)
 
-    # ------------------------
-    # REMOVE MEMBERS
-    # ------------------------
     @action(detail=True, methods=["post"])
     def remove_members(self, request, pk=None):
         try:
@@ -321,9 +331,6 @@ class ProjectViewSet(viewsets.ViewSet):
 
         return Response({"message": f"Removed {len(valid)}"}, status=200)
 
-    # ------------------------
-    # CREATE CALENDAR
-    # ------------------------
     @action(detail=True, methods=["post"])
     def create_calendar(self, request, pk=None):
         try:
@@ -354,9 +361,6 @@ class ProjectViewSet(viewsets.ViewSet):
             "calendar_id": calendar_id
         }, status=201)
     
-    # ------------------------
-    # DELETE PROJECT
-    # ------------------------
     def destroy(self, request, pk=None):
         try:
             user = authenticate_user_from_request(request)
@@ -449,7 +453,7 @@ class ProjectViewSet(viewsets.ViewSet):
             return Response({"error": f"Failed to download or open repository archive: {str(e)}"}, status=400)
 
         try:
-            s3_client = _get_s3_client()
+            s3_client = get_s3_client()
             bucket_name = getattr(settings, 'AWS_STORAGE_BUCKET_NAME', None)
             if not bucket_name:
                 return Response({"error": "AWS_STORAGE_BUCKET_NAME is not configured"}, status=500)
@@ -495,7 +499,6 @@ class ProjectViewSet(viewsets.ViewSet):
                         'content_type': content_type,
                     })
             except Exception as e:
-                print(f"Warning: failed to upload {filename}: {str(e)}")
                 continue
 
         try:
@@ -514,7 +517,7 @@ class ProjectViewSet(viewsets.ViewSet):
             try:
                 requests.post('http://localhost:5000/ingest', json={'project_id': str(project_id), 's3_uris': uris}, timeout=30)
             except Exception as e:
-                print(f"Warning: ingest call failed: {str(e)}")
+                pass
 
         if s3_uris:
             try:
@@ -522,7 +525,7 @@ class ProjectViewSet(viewsets.ViewSet):
                 t.daemon = True
                 t.start()
             except Exception as e:
-                print(f"Warning: failed to start ingest thread: {str(e)}")
+                pass
 
         return Response({"message": "Import completed", "files": uploaded, "ingest_started": bool(s3_uris)}, status=201)
 
@@ -557,20 +560,20 @@ class ProjectViewSet(viewsets.ViewSet):
             files = File.objects(project=project)
 
             # Delete S3 objects
-            s3_client = _get_s3_client()
+            s3_client = get_s3_client()
             bucket = settings.AWS_STORAGE_BUCKET_NAME
 
             for f in files:
                 try:
                     s3_client.delete_object(Bucket=bucket, Key=f.s3_key)
                 except ClientError as e:
-                    print(f"Warning: Failed to delete S3 file {f.s3_key}: {e}")
+                    pass
 
             # Delete MongoDB file metadata
             files.delete()
 
         except Exception as e:
-            print(f"Warning: Error deleting files for project {project_id}: {e}")
+            pass
 
 
         # ---------------------------------------------------------
@@ -587,51 +590,81 @@ class ProjectViewSet(viewsets.ViewSet):
         # ---------------------------------------------------------
         # 4. Delete Chat group for this project
         # ---------------------------------------------------------
-        # We need to create this endpoint in chat service to handle deletion
+        try:
+            from Chat.models import GroupChat, GroupMessage, Thread, ThreadMessage
 
-        # ---------------------------------------------------------
-        # 5. Delete project
-        # ---------------------------------------------------------
+            # Find chat for this project
+            chat = GroupChat.objects(project_id=project.id).first()
+            if not chat:
+                # Fallback: try by project name for legacy chats
+                chat = GroupChat.objects(name=project.name).first()
+
+            if chat:
+                # Delete all thread messages first
+                threads = Thread.objects(chat=chat)
+                for thread in threads:
+                    ThreadMessage.objects(thread=thread).delete()
+
+                # Delete all threads
+                threads.delete()
+
+                # Delete all group messages
+                GroupMessage.objects(chat=chat).delete()
+
+                # Finally delete the chat
+                chat.delete()
+        except Exception as e:
+            pass
+
         project.delete()
 
         return Response({"message": "Project deleted successfully"}, status=200)
 
-# -------------------------------------------------------
-# ACCEPT INVITATION
-# -------------------------------------------------------
+
 class AcceptInvitation(APIView):
     def get(self, request, project_id):
         try:
             user = authenticate_user_from_request(request)
         except AuthenticationFailed as e:
-            return Response({"error": str(e)}, status=401)
+            return Response({"error": "You are not authorized. Please log in to accept this invitation."}, status=401)
 
         try:
             project = Project.objects.get(id=project_id)
         except Exception:
             return Response({"error": PROJECT_NOT_FOUND_ERROR}, status=404)
 
-        if project.team_leader == user:
-            return Response({"message": "You are already the leader"}, status=200)
-
         uid = str(user.id)
 
+        # Team leader cannot accept invitations (they're already in the project)
+        if project.team_leader == user:
+            return Response({
+                "error": "You are not authorized to accept this invitation. This invitation was not sent to your account."
+            }, status=403)
+
+        # Check if user is in the team_members list
+        invited_member = None
         for member in project.team_members:
-            if member["user"] == uid:
-                if member.get("accepted"):
-                    return Response({"message": "Already accepted"}, status=200)
+            if member.get("user") == uid:
+                invited_member = member
+                break
 
-                member["accepted"] = True
-                project.save()
+        if not invited_member:
+            # User is not in the invitation list
+            return Response({
+                "error": "You are not authorized to accept this invitation. This invitation was not sent to your account."
+            }, status=403)
 
-                mark_project_invitations_as_read(user, project_id, project.name)
-                return Response({"message": "Invitation accepted"}, status=200)
+        # User is invited - check if already accepted
+        if invited_member.get("accepted"):
+            return Response({"message": "You have already accepted this invitation"}, status=200)
 
-        return Response({"error": "You are not invited"}, status=403)
+        # Accept the invitation
+        invited_member["accepted"] = True
+        project.save()
 
-# -------------------------------------------------------
-# SEARCH USER
-# -------------------------------------------------------
+        mark_project_invitations_as_read(user, project_id, project.name)
+        return Response({"message": "Invitation accepted successfully"}, status=200)
+
 class searchuser(APIView):
     def post(self, request):
         try:

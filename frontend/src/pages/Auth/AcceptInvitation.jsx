@@ -12,6 +12,7 @@ const AcceptInvitation = () => {
   const [accepted, setAccepted] = useState(false);
   const [projectInfo, setProjectInfo] = useState(null);
   const [loadingProject, setLoadingProject] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     const token = localStorage.getItem('authToken');
@@ -54,7 +55,45 @@ const AcceptInvitation = () => {
       }
       setTimeout(() => navigate('/dashboard'), 2000);
     } catch (error) {
-      toast.error(error.response?.data?.error || 'Failed to accept invitation');
+      console.error('Error accepting invitation:', error);
+      
+      let errorMessage = 'Failed to accept invitation';
+      let shouldRedirect = false;
+      let redirectPath = '/dashboard';
+      
+      if (error.response) {
+        errorMessage = error.response.data?.error || error.response.data?.message || 'Failed to accept invitation';
+        
+        if (error.response.status === 401) {
+          toast.error(errorMessage);
+          shouldRedirect = true;
+          redirectPath = '/login';
+        } else if (error.response.status === 403) {
+          toast.error(errorMessage, { autoClose: 5000 });
+          setError(errorMessage);
+          shouldRedirect = true;
+        } else if (error.response.status === 404) {
+          errorMessage = 'Project not found or has been deleted';
+          toast.error(errorMessage);
+          setError(errorMessage);
+          shouldRedirect = true;
+        } else {
+          toast.error(errorMessage);
+          setError(errorMessage);
+        }
+      } else if (error.request) {
+        errorMessage = 'Unable to connect to server. Please check your internet connection.';
+        toast.error(errorMessage);
+        setError(errorMessage);
+      } else {
+        errorMessage = 'An unexpected error occurred. Please try again.';
+        toast.error(errorMessage);
+        setError(errorMessage);
+      }
+      
+      if (shouldRedirect) {
+        setTimeout(() => navigate(redirectPath), 2000);
+      }
     } finally {
       setLoading(false);
     }
@@ -101,6 +140,23 @@ const AcceptInvitation = () => {
             <h1>Project Invitation</h1>
           </div>
 
+          {error && (
+            <div className="error-message" style={{
+              backgroundColor: '#fee',
+              border: '1px solid #fcc',
+              borderRadius: '8px',
+              padding: '12px 16px',
+              margin: '16px 0',
+              color: '#c33',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px'
+            }}>
+              <FaTimes style={{ flexShrink: 0 }} />
+              <span>{error}</span>
+            </div>
+          )}
+
           {loadingProject ? (
             <div className="loading-project">
               <p>Loading project information...</p>
@@ -123,7 +179,7 @@ const AcceptInvitation = () => {
             <button
               className="accept-btn"
               onClick={handleAccept}
-              disabled={loading}
+              disabled={loading || error}
             >
               <FaCheck /> {loading ? 'Accepting...' : 'Accept Invitation'}
             </button>

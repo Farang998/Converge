@@ -5,112 +5,199 @@
 
 .modal-overlay {
     position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.6); 
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
     display: flex;
     justify-content: center;
     align-items: center;
     z-index: 1000;
     opacity: 0;
     visibility: hidden;
-    transition: opacity 0.3s ease;
+    transition: opacity 0.25s ease;
+    padding: 24px;
+    box-sizing: border-box;
+    overflow: auto;
 }
 .modal-overlay.open {
     opacity: 1;
     visibility: visible;
 }
+
 .modal-content {
-    background: var(--surface);
-    border-radius: var(--radius);
-    padding: 30px;
-    width: 90%;
-    max-width: 650px; /* Wider modal content */
-    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
-    transform: translateY(-20px);
-    transition: transform 0.3s ease;
-    position: relative; /* Context for close button */
+    background: var(--surface, #ffffff);
+    border-radius: var(--radius, 12px);
+    padding: 28px 30px 36px;
+    width: 96%;
+    max-width: 900px;
+    max-height: calc(100vh - 64px);
+    overflow-y: auto;
+    box-shadow: 0 18px 40px rgba(0, 0, 0, 0.25);
+    position: relative;
+    box-sizing: border-box;
 }
-.modal-overlay.open .modal-content {
-    transform: translateY(0);
-}
+
 .modal-header {
     display: flex;
-    justify-content: flex-start;
     align-items: center;
-    margin-bottom: 20px;
-    padding-right: 40px; /* Space for the close button */
+    justify-content: space-between;
+    margin-bottom: 18px;
+    gap: 12px;
 }
 .modal-header h2 {
     margin: 0;
     font-weight: 700;
-    color: var(--primary-700);
-    white-space: nowrap; /* Ensures heading appears on one line */
+    color: var(--primary-700, #1f6feb);
+    font-size: 20px;
+    line-height: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
-/* Close Button (Top Right Corner) */
 .modal-close-btn {
-    position: absolute; 
-    top: 15px; 
-    right: 15px;
-    background: #dc2626; 
+    background: #dc2626;
     color: white;
     border: none;
-    width: 30px;
-    height: 30px;
-    border-radius: 4px;
-    font-size: 20px;
-    line-height: 1; 
-    display: flex; 
+    min-width: 34px;
+    height: 34px;
+    border-radius: 8px;
+    font-size: 18px;
+    line-height: 1;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    transition: background 0.15s ease;
-    z-index: 1;
+    transition: background 0.12s ease;
+    padding: 0 8px;
 }
-.modal-close-btn:hover {
- background: #b91c1c;
-}
+.modal-close-btn:hover { background: #b91c1c; }
 
-/* Form Sections */
-.form-group {
-    margin-bottom: 15px;
-}
+.form-group { margin-bottom: 14px; }
 .form-group label {
     display: block;
     font-weight: 600;
     color: #333;
-    margin-bottom: 5px; 
-}
-/* Invite Section Layout */
-.invite-section {
-    border-top: 1px solid var(--border);
-    padding-top: 20px;
-    margin-top: 20px;
-}
-.invite-section .invite-controls {
-      display: grid;
-    /*2 columns: input + button*/
-      grid-template-columns: 1fr auto;
-      gap: 10px;
-      margin-top: 2px;
-}
-.invite-controls .input {
-      flex-grow: 1; /* Makes the input take up most of the space */
-}
-.invite-controls .btn {
- padding: 8px 18px; /* Smaller padding for Invite button */
- font-size: 14px;
- flex-shrink: 0; /* Prevents button from shrinking */
+    margin-bottom: 6px;
 }
 
-/* Members List */
+.input {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--border, #e6e9ee);
+    border-radius: 10px;
+    font-size: 14px;
+    background: var(--surface-2, #fff);
+    box-sizing: border-box;
+}
+textarea.input { min-height: 84px; resize: vertical; }
+
+.invite-section {
+    border-top: 1px solid var(--border, #edf0f3);
+    padding-top: 18px;
+    margin-top: 18px;
+}
+.invite-section .invite-controls {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 12px;
+    margin-top: 6px;
+    align-items: center;
+    box-sizing: border-box;
+}
+.invite-controls .input { width: 100%; box-sizing: border-box; }
+
+.invite-controls .btn {
+    padding: 10px 18px;
+    font-size: 14px;
+    border-radius: 10px;
+    border: none;
+    cursor: pointer;
+    background: var(--primary-700, #2b82f6);
+    color: #fff;
+    font-weight: 700;
+    height: 44px;
+    min-width: 130px;
+    box-sizing: border-box;
+    align-self: center;
+    white-space: nowrap;
+}
+
 .invite-list {
     list-style: none;
     padding: 0;
-    margin-top: 10px;
-    max-height: 150px;
+    margin-top: 12px;
+    max-height: 220px;
     overflow-y: auto;
+}
+
+/* avatar circle & member row */
+.circle-avatar {
+    width: 40px;
+    height: 40px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    color: white;
+    font-weight: 600;
+    font-size: 15px;
+    flex: 0 0 40px;
+    background: var(--primary-700, #2b82f6);
+    box-shadow: 0 1px 0 rgba(0,0,0,0.05) inset;
+}
+
+.member-row {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    margin-bottom: 12px;
+    padding-right: 8px;
+}
+.member-name {
+    flex: 1 1 auto;
+    font-size: 15px;
+    color: #222;
+}
+.member-role {
+    font-size: 13px;
+    color: var(--muted, #9aa0a6);
+    margin-left: auto;
+}
+
+.invite-error {
+    font-size: 13px;
+    color: #d63447;
+    margin-top: 8px;
+    margin-left: 2px;
+}
+
+.btn {
+    border: none;
+    background: var(--btn-bg, #2b82f6);
+    color: white;
+    padding: 10px 16px;
+    border-radius: 10px;
+    cursor: pointer;
+    font-weight: 700;
+}
+.btn.primary { background: var(--primary-700, #2b82f6); }
+
+.error {
+    background: rgba(214, 52, 71, 0.06);
+    border: 1px solid rgba(214, 52, 71, 0.12);
+    padding: 8px 10px;
+    border-radius: 6px;
+    margin-bottom: 12px;
+    color: #b91c1c;
+    font-size: 13px;
+}
+
+.modal-content > form {
+    padding-bottom: 12px;
+}
+
+@media (max-width: 480px) {
+    .modal-content { padding: 20px; max-width: 100%; }
+    .invite-controls { grid-template-columns: 1fr 110px; gap: 8px; }
+    .circle-avatar { width: 36px; height: 36px; font-size: 13px; }
 }

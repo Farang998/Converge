@@ -8,21 +8,25 @@ export default function OverviewView({ project, tasks, files, activity, onCreate
       <div className="view-content"></div>
     <div className="view-card">
       <section className="card">
-        <h2>Project Summary</h2>
-        <p className="muted">{project.description}</p>
-
-        <div className="kpi-row">
-          <div className="kpi">
-            <div className="kpi-title">Tasks</div>
-            <div className="kpi-value">{tasks.length}</div>
+        <h2>Summary</h2>
+        <div className="summary-body"> 
+          <div className="summary-desc"> 
+            <h3 style={{ marginBottom: '4px' }}>Description</h3>
+            <p className="description-text">{project.description}</p>
           </div>
-          <div className="kpi">
-            <div className="kpi-title">Files</div>
-            <div className="kpi-value">{files.length}</div>
-          </div>
-          <div className="kpi">
-            <div className="kpi-title">Members</div>
-            <div className="kpi-value">{project.members.length}</div>
+          <div className="kpi-row">
+            <div className="kpi">
+              <div className="kpi-title">Tasks</div>
+              <div className="kpi-value">{tasks.length}</div>
+            </div>
+            <div className="kpi">
+              <div className="kpi-title">Files</div>
+              <div className="kpi-value">{files.length}</div>
+            </div>
+            <div className="kpi">
+              <div className="kpi-title">Members</div>
+              <div className="kpi-value">{project.members.length}</div>
+            </div>
           </div>
         </div>
       </section>
