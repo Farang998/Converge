@@ -1,5 +1,4 @@
 .card {
-  /* Updated card style */
   background: var(--surface);
   border-radius: var(--radius);
   padding: 18px;
@@ -12,17 +11,17 @@
 
 .muted { color: var(--muted); }
 
-/* Input Base */
+
 .input {
  width:100%;
  padding:10px 12px;
  border-radius: 8px;
  border: 1px solid var(--border);
  background: #fff;
- box-sizing: border-box; /* Crucial for inputs to fit width:100% */
+ box-sizing: border-box; 
 }
 .input:focus { outline: none; box-shadow: 0 0 0 4px var(--focus-ring); border-color: var(--primary-700); }
-/* Ensure input style is applied to textarea */
+
 .input.textarea {
  min-height: 80px;
  resize: vertical;
@@ -68,8 +67,8 @@
   overflow-x: hidden; 
   height: 100%;
   margin: 0;
-  background: var(--bg); /* Use new background */
-  color: #0f172a; /* Use new dark text color */
+  background: var(--bg); 
+  color: #0f172a; 
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
   -webkit-font-smoothing:antialiased;
   -moz-osx-font-smoothing:grayscale;
@@ -447,6 +446,27 @@
 }
 .kpi-title { font-size: 13px; color:var(--muted); }
 .kpi-value { font-size:22px; font-weight:800; color:var(--primary); }
+
+/* Layout for summary section to push KPIs below description */
+.summary-body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px; /* Space between description/kpis */
+  margin-top: 10px;
+}
+
+.summary-desc h3 {
+  font-size: 16px;
+  font-weight: 700;
+  color: #334155; /* Darker heading color */
+  margin: 0;
+}
+
+.description-text {
+  font-size: 16px; /* Increased font size for description */
+  line-height: 1.5;
+  color: #1a1e26; /* Slightly darker text color for better readability */
+}
 
 /* -------------------------
    Files grid
