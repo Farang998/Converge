@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FaUserCog, FaLock, FaBell, FaPalette } from 'react-icons/fa';
+import { FaUserCog, FaLock, FaPalette } from 'react-icons/fa';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import api from '../../services/api';
@@ -21,9 +21,6 @@ export default function Settings() {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [changingPassword, setChangingPassword] = useState(false);
-  const [notificationsEnabled, setNotificationsEnabled] = useState(
-    localStorage.getItem('notifications') !== 'off'
-  );
   const [darkMode, setDarkMode] = useState(localStorage.getItem('theme') === 'dark');
 
   useEffect(() => {
@@ -74,9 +71,7 @@ export default function Settings() {
     }
   }, [darkMode]);
 
-  useEffect(() => {
-    localStorage.setItem('notifications', notificationsEnabled ? 'on' : 'off');
-  }, [notificationsEnabled]);
+  // notifications removed — keep future hooks here if needed
 
   const handleChange = (event) => {
     const { name, value } = event.target;
@@ -292,25 +287,7 @@ export default function Settings() {
           )}
         </div>
 
-        <div className="settings-section">
-          <h3>
-            <FaBell /> Notifications
-          </h3>
-          <div className="setting-row toggle-row">
-            <span>Enable Email Notifications</span>
-            <label className="switch">
-              <input
-                type="checkbox"
-                checked={notificationsEnabled}
-                onChange={() => setNotificationsEnabled((prev) => !prev)}
-              />
-              <span className="slider" />
-            </label>
-          </div>
-          <p className="settings-hint">
-            Notifications preferences sync with this browser only.
-          </p>
-        </div>
+        {/* Notifications section removed */}
 
         <div className="settings-section">
           <h3>

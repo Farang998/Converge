@@ -83,7 +83,7 @@ export default function Register() {
         {
           theme: 'outline',
           size: 'large',
-          width: 300,
+          width: 'auto',
           text: 'continue_with'
         }
       );
