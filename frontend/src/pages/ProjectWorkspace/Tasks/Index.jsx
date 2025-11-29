@@ -9,7 +9,7 @@ import StatusLegend from './components/StatusLegend';
 import ValidationNotification from './components/ValidationNotification';
 import './tasks.css';
 
-const Index = ({ projectId }) => {
+const Index = ({ projectId, onTasksUpdated = () => {} }) => {
   const { user: currentUser } = useAuth();
   const [nodes, setNodes] = useState([]);
   const [edges, setEdges] = useState([]);
@@ -59,6 +59,8 @@ const Index = ({ projectId }) => {
       const tasksRes = await api.get(`/tasks/?project_id=${projectId}`);
       const tasks = tasksRes.data;
 
+      const fetchedTasks = tasks || [];
+
       setNodes(
         tasks.map(t => ({
           id: t.id,
@@ -83,6 +85,8 @@ const Index = ({ projectId }) => {
           }))
         )
       );
+      // Notify parent of updated tasks
+      try { onTasksUpdated(fetchedTasks); } catch (e) { console.debug('onTasksUpdated callback failed', e); }
     } catch (err) {
       console.error("Failed to load tasks:", err);
     }

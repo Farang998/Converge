@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import "./dashboard.css";
 import { FaBell, FaCog, FaUser, FaPlus } from "react-icons/fa";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import api from "../../services/api";
 import { useAuth } from "../../contexts/AuthContext";
 
@@ -21,6 +21,7 @@ export default function Dashboard() {
   const [unreadNotificationsCount, setUnreadNotificationsCount] = useState(0);
 
   const navigate = useNavigate();
+  const location = useLocation();
   const { logout } = useAuth();
 
   useEffect(() => {
@@ -331,9 +332,11 @@ export default function Dashboard() {
         </div>
 
         <div className="navbar-right">
-          <div className="icon" title="Settings" onClick={() => navigate('/settings')}>
-            <FaCog />
-          </div>
+          {location.pathname !== '/profile' && (
+            <div className="icon" title="Settings" onClick={() => navigate('/settings')}>
+              <FaCog />
+            </div>
+          )}
           <div className="icon notification-icon-container" title="Notifications" onClick={() => navigate('/notifications')}>
             <FaBell />
             {unreadNotificationsCount > 0 && (
