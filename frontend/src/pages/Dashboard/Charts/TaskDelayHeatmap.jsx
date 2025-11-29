@@ -3,8 +3,10 @@ import React, { useMemo } from "react";
 import "./heatmap.css";
 
 /**
- * data: [{ date: "YYYY-MM-DD", count: N }, ...]  (range expected: ~90 days)
- * This component renders a simple calendar-style grid of squares for the provided days.
+ * data: [{ date: "YYYY-MM-DD", count: N }, ...]
+ * Horizontal GitHub-style heatmap:
+ * - 7 rows = Sun → Sat
+ * - Columns = weeks (scroll horizontally)
  */
 
 export default function TaskDelayHeatmap({ data = [] }) {
@@ -15,41 +17,44 @@ export default function TaskDelayHeatmap({ data = [] }) {
     return m;
   }, [data]);
 
-  // render order is as provided; simple grid of weeks
   const days = Object.keys(map);
   if (!days.length) return <div>No data for heatmap</div>;
 
-  // Build display rows of 7 days per row (most recent at end)
+  // sort dates chronologically
   const sorted = days.slice().sort();
-  const cells = sorted.map((d) => ({ date: d, count: map[d] || 0 }));
 
-  // chunk into weeks (7)
-  const rows = [];
-  for (let i = 0; i < cells.length; i += 7) rows.push(cells.slice(i, i + 7));
+  // --- Build 7 weekday rows (Sun to Sat) ---
+  const weekdayRows = [...Array(7)].map(() => []);
+
+  sorted.forEach((d) => {
+    const dayIndex = new Date(d).getDay(); // 0 = Sunday
+    weekdayRows[dayIndex].push({ date: d, count: map[d] || 0 });
+  });
 
   // color scaling helper
-  const max = Math.max(...cells.map((c) => c.count), 1);
-  const colorFor = (n) => {
-    // soft blue scale (lighter -> darker)
-    const intensity = Math.round((n / max) * 220); // 0..220
-    return `rgba(59,130,246,${0.18 + (n / max) * 0.72})`;
-  };
+  const max = Math.max(...sorted.map((d) => map[d] || 0), 1);
+  const colorFor = (n) =>
+    `rgba(59,130,246,${0.18 + (n / max) * 0.72})`; // blue scale
 
   return (
-    <div style={{ width: "100%", overflowX: "auto" }}>
+    <div style={{ width: "100%", overflowX: "auto", paddingBottom: 8 }}>
       <div className="heatmap-grid">
-        {rows.map((row, i) => (
-          <div key={i} className="heatmap-row">
+        {weekdayRows.map((row, i) => (
+          <div key={i} className="heatmap-row" style={{ display: "flex" }}>
             {row.map((cell) => (
               <div
                 key={cell.date}
                 className="heatmap-cell"
                 title={`${cell.date} — ${cell.count} overdue`}
                 style={{
-                  background: cell.count ? colorFor(cell.count) : "rgba(0,0,0,0.03)",
+                  background: cell.count
+                    ? colorFor(cell.count)
+                    : "rgba(0,0,0,0.03)",
                   borderRadius: 6,
-                  width: 28,
-                  height: 28,
+                  width: 26,
+                  height: 26,
+                  marginRight: 4,
+                  marginBottom: 4,
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
@@ -57,7 +62,7 @@ export default function TaskDelayHeatmap({ data = [] }) {
                   color: cell.count ? "#fff" : "#6b7280",
                 }}
               >
-                {cell.count ? cell.count : ""}
+                {cell.count || ""}
               </div>
             ))}
           </div>

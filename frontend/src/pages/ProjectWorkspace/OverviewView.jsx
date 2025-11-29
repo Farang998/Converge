@@ -16,15 +16,15 @@ export default function OverviewView({ project, tasks, files, activity, onCreate
           <div className="kpi-row">
             <div className="kpi">
               <div className="kpi-title">Tasks</div>
-              <div className="kpi-value">{tasks.length}</div>
+              <div className="kpi-value">{(tasks && tasks.length) || 0}</div>
             </div>
             <div className="kpi">
               <div className="kpi-title">Files</div>
-              <div className="kpi-value">{files.length}</div>
+              <div className="kpi-value">{(files && files.length) || 0}</div>
             </div>
             <div className="kpi">
               <div className="kpi-title">Members</div>
-              <div className="kpi-value">{project.members.length}</div>
+              <div className="kpi-value">{(project && project.members && project.members.length) || 0}</div>
             </div>
           </div>
         </div>

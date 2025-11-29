@@ -1,0 +1,21 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`MessageBubble > should match snapshot 1`] = `
+<div>
+  <div
+    class="message-wrapper message-other"
+  >
+    <div
+      class="message-bubble"
+    >
+      <div
+        class="message-content"
+      >
+        <div
+          class="message-meta"
+        />
+      </div>
+    </div>
+  </div>
+</div>
+`;

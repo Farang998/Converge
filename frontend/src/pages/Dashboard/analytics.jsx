@@ -40,6 +40,22 @@ export default function ProjectAnalytics() {
     load();
   }, [projectId]);
 
+  // reveal on scroll for elements with data-reveal
+  useEffect(() => {
+    const items = document.querySelectorAll('[data-reveal]');
+    if (!items.length) return;
+    const io = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((e) => {
+          if (e.isIntersecting) e.target.classList.add('is-visible');
+        });
+      },
+      { threshold: 0.12 }
+    );
+    items.forEach((it) => io.observe(it));
+    return () => io.disconnect();
+  }, [loading]);
+
   // Project Overview content extracted to a function to keep JSX tidy
   const ProjectOverviewContent = () => {
     if (loading) return <p>Loading analytics...</p>;
@@ -57,12 +73,12 @@ export default function ProjectAnalytics() {
             width: "100%",
           }}
         >
-          <div className="chart-card">
+          <div className="chart-card" data-reveal>
             <div className="chart-title">Task Status</div>
             <TaskStatusChart data={overview.task_status_counts} />
           </div>
 
-          <div className="chart-card">
+          <div className="chart-card" data-reveal>
             <div className="chart-title">Workload</div>
             {/* WorkloadChart expects data as [{name, value}] per your backend */}
             <WorkloadChart data={overview.tasks_per_member} />
@@ -80,12 +96,12 @@ export default function ProjectAnalytics() {
             width: "100%",
           }}
         >
-          <div className="chart-card">
+          <div className="chart-card" data-reveal>
             <div className="chart-title">Task Priority By Dependencies</div>
             <PriorityByDependenciesChart data={overview.priority_by_dependencies} />
           </div>
 
-          <div className="chart-card">
+          <div className="chart-card" data-reveal>
             <div className="chart-title">Task Priority By Due Date</div>
             <PriorityByDueDateChart data={overview.priority_by_due_date} />
           </div>
@@ -94,6 +110,7 @@ export default function ProjectAnalytics() {
         {/* ROW 3 - upcoming deadlines full width */}
         <div
           className="chart-card"
+          data-reveal
           style={{
             width: "100%",
             marginTop: 24,
@@ -132,11 +149,15 @@ export default function ProjectAnalytics() {
     <div className="analytics-page">
       {/* HEADER */}
       <div className="analytics-header">
-        <h2 className="analytics-title">📊 Project Analytics</h2>
+        <div className="analytics-left">
+          <div style={{display:'flex',gap:12,alignItems:'center'}}>
+            <h2 className="analytics-title">📊 Project Analytics</h2>
+          </div>
+        </div>
 
         <div className="analytics-actions">
-          <button onClick={() => navigate(-1)}>← Back</button>
-          <button onClick={() => window.location.reload()}>Refresh</button>
+           <button className="btn btn-primary" onClick={() => navigate(-1)}>Back</button>
+           <button className="btn btn-primary" onClick={() => window.location.reload()}>Refresh</button>
         </div>
       </div>
 

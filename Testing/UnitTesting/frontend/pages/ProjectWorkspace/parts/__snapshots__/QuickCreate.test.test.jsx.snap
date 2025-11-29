@@ -1,0 +1,22 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`QuickCreate > should match snapshot 1`] = `
+<div>
+  <div>
+    <input
+      class="input"
+      placeholder="Task title"
+      value=""
+    />
+    <div
+      class="mt-sm"
+    >
+      <button
+        class="btn primary"
+      >
+        Create
+      </button>
+    </div>
+  </div>
+</div>
+`;

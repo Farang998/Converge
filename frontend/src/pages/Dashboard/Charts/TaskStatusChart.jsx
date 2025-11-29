@@ -20,7 +20,6 @@ export default function TaskStatusChart({ data = {} }) {
 
   return (
     <div className="chart-card">
-      <div className="chart-title">Task Status</div>
       <ResponsiveContainer width="100%" height={160}>
         <PieChart>
           <Pie

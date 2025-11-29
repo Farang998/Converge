@@ -1,0 +1,167 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`Login > should match snapshot 1`] = `
+<div>
+  <div
+    class="loginpage"
+  >
+    <div
+      class="auth-card"
+    >
+      <div
+        class="left"
+      >
+        <div
+          class="logo"
+        >
+          <img
+            alt="logo"
+            src="logo.png"
+          />
+          <span
+            class="brand"
+          >
+            <span
+              class="green"
+            >
+              C
+            </span>
+            <span
+              class="blue"
+            >
+              o
+            </span>
+            <span
+              class="green"
+            >
+              n
+            </span>
+            <span
+              class="blue"
+            >
+              v
+            </span>
+            <span
+              class="green"
+            >
+              e
+            </span>
+            <span
+              class="blue"
+            >
+              r
+            </span>
+            <span
+              class="green"
+            >
+              g
+            </span>
+            <span
+              class="blue"
+            >
+              e
+            </span>
+          </span>
+        </div>
+        <p
+          class="subtitle"
+        >
+          The all-in-one remote work collaboration platform
+        </p>
+        <form
+          class="login-form"
+          id="loginForm"
+        >
+          <div
+            class="form-title"
+          >
+            Login to your account
+          </div>
+          <label
+            for="loginIdentifier"
+          >
+            Email or Username
+          </label>
+          <input
+            id="loginIdentifier"
+            name="loginIdentifier"
+            placeholder="you@example.com or Username"
+            required=""
+            type="text"
+            value=""
+          />
+          <label
+            for="loginPassword"
+          >
+            Password
+          </label>
+          <input
+            id="loginPassword"
+            name="loginPassword"
+            required=""
+            type="password"
+            value=""
+          />
+          <div
+            style="display: flex; justify-content: flex-end;"
+          >
+            <button
+              class="forgot-inline"
+              type="button"
+            >
+              Forgot password?
+            </button>
+          </div>
+          <button
+            class="primary-btn"
+            type="submit"
+          >
+            Log In
+          </button>
+          <div
+            class="divider"
+          >
+            <span>
+              or
+            </span>
+          </div>
+          <div
+            class="google-container"
+            id="googleSignInButton"
+          />
+          <div
+            class="register-line"
+          >
+            <span
+              class="register-text"
+            >
+              Don't have an account?
+            </span>
+            <button
+              class="tab cta"
+              type="button"
+            >
+              CREATE ONE NOW
+            </button>
+          </div>
+        </form>
+        <section
+          aria-atomic="false"
+          aria-label="Notifications Alt+T"
+          aria-live="polite"
+          aria-relevant="additions text"
+          class="Toastify"
+        />
+      </div>
+      <div
+        aria-hidden="true"
+        class="right"
+      >
+        <div
+          class="art"
+        />
+      </div>
+    </div>
+  </div>
+</div>
+`;

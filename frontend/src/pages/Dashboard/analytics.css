@@ -1,75 +1,152 @@
-/* ============================
-   PAGE WRAPPER
-============================ */
-.analytics-page {
-  padding: 20px;
-  color: #000000; /* Black text */
-  min-height: 100vh;
+/* Enhanced analytics page styles
+   - Soft blue-green gradient background
+   - Modern typography (Inter) and subtle shadows
+   - Lively cards with hover lift and accent bar
+   - No theme switching/persistence here (keeps dashboard theme intact)
+*/
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+
+:root {
+  --bg-1: #f6fbff; /* very light blue */
+  --bg-2: #eef9f6; /* pale mint */
+  --accent: #36b2b0; /* teal */
+  --accent-2: #5aa8f2; /* soft blue */
+  --muted-ink: #0f2133;
+  --card-bg: #ffffff;
+  --glass: rgba(255, 255, 255, 0.7);
+  --radius: 14px;
+  --shadow-1: 0 6px 22px rgba(16, 40, 60, 0.08);
+  --shadow-2: 0 10px 40px rgba(16, 40, 60, 0.06);
 }
 
-/* ============================
-   HEADER
-============================ */
+.analytics-page {
+  min-height: 100vh;
+  padding: 28px 28px 48px;
+  font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
+  color: var(--muted-ink);
+  background: linear-gradient(180deg, var(--bg-1) 0%, var(--bg-2) 100%);
+  background-attachment: fixed;
+}
+
+/* Header */
 .analytics-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 22px;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.analytics-left {
+  display: flex;
+  flex-direction: column;
 }
 
 .analytics-title {
-  font-size: 24px;
-  font-weight: 600;
+  font-size: 22px;
+  font-weight: 700;
+  margin: 0;
+  color: var(--muted-ink);
 }
 
-.analytics-actions button {
-  background-color: #3f51b5; /*  theme blue */
-  border: none;
-  color: white;
+.analytics-subtitle {
+  font-size: 13px;
+  color: rgba(15, 33, 51, 0.65);
+  margin-top: 6px;
+}
+
+.analytics-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.btn {
+  border: 0;
   padding: 8px 14px;
-  margin-left: 10px;
+  min-width: 140px;
+  border-radius: 10px;
   cursor: pointer;
-  border-radius: 6px;
-  font-size: 14px;
+  font-weight: 600;
+  font-size: 13px;
+  transition: transform 0.18s ease, box-shadow 0.18s;
 }
 
-.analytics-actions button:hover {
-  background-color: #5f6ed4;
+.btn-primary {
+  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+  color: white;
+  box-shadow: var(--shadow-1);
 }
 
-/* ============================
-   GRID LAYOUT
-============================ */
+.btn-ghost {
+  background: transparent;
+  border: 1px solid rgba(15, 33, 51, 0.06);
+  color: var(--muted-ink);
+}
+
+.btn:active {
+  transform: translateY(1px);
+}
+
+
+/* Decorative header accent */
+.analytics-decor {
+  width: 56px;
+  height: 36px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, var(--accent-2), var(--accent));
+  box-shadow: var(--shadow-1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: 700;
+}
+
+/* Grid */
 .analytics-grid {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 22px;
   width: 100%;
 }
 
-/* ============================
-   CHART CARD
-============================ */
+/* Chart cards */
 .chart-card {
-  background: rgba(255, 255, 255, 0.07); /* Glassy white overlay */
-  border-radius: 12px;
+  background: var(--card-bg);
+  border-radius: var(--radius);
   padding: 18px;
   width: 100%;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.25);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
+  box-shadow: var(--shadow-2);
+  border: 1px solid rgba(15, 33, 51, 0.04);
+  transition: transform 0.22s cubic-bezier(0.2, 0.9, 0.2, 1), box-shadow 0.22s;
+}
+
+.chart-card:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 22px 60px rgba(16, 40, 60, 0.08);
 }
 
 .chart-title {
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 600;
   margin-bottom: 12px;
-  color: #ffffff;
+  color: var(--muted-ink);
 }
 
-/* ============================
-   UPCOMING DEADLINES TABLE
-============================ */
+/* Card accent bar */
+.chart-card:before {
+  content: "";
+  height: 4px;
+  width: 64px;
+  border-radius: 4px;
+  display: block;
+  margin-bottom: 8px;
+  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+}
+
+/* Tables */
 .upcoming-table {
   width: 100%;
   border-collapse: collapse;
@@ -80,23 +157,47 @@
 .upcoming-table td {
   padding: 10px 12px;
   text-align: left;
-  border-bottom: 1px solid rgba(255,255,255,0.15);
+  border-bottom: 1px solid rgba(15, 33, 51, 0.04);
 }
 
 .upcoming-table th {
   font-weight: 600;
-  color: #ffffff;
+  color: rgba(15, 33, 51, 0.75);
+  font-size: 13px;
 }
 
 .upcoming-table tr:hover td {
-  background-color: rgba(255,255,255,0.08);
+  background: linear-gradient(90deg, rgba(85, 170, 200, 0.03), transparent);
 }
 
-/* ============================
-   MOBILE RESPONSIVE
-============================ */
+/* Responsive */
 @media (max-width: 900px) {
+  .analytics-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
   .charts-grid {
     grid-template-columns: 1fr !important;
   }
+}
+
+/* Reveal animations */
+[data-reveal] {
+  opacity: 0;
+  transform: translateY(14px);
+  transition: opacity 0.5s ease, transform 0.5s cubic-bezier(0.2, 0.9, 0.2, 1);
+}
+
+[data-reveal].is-visible {
+  opacity: 1;
+  transform: none;
+}
+
+/* Accordion open state */
+.accordion-content.open [data-reveal] {
+  opacity: 1;
+  transform: none;
+  transition: opacity 0.45s ease, transform 0.45s cubic-bezier(0.2, 0.9, 0.2, 1);
 }

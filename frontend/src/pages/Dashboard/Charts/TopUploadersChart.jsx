@@ -17,6 +17,13 @@ export default function TopUploadersChart({ data = [] }) {
 
   const themeBlue = "#3b82f6";
 
+  const maxValue = chartData.reduce(
+    (max, item) => Math.max(max, item.uploads || 0),
+    0
+  );
+  const yAxisDomain = [0, maxValue === 0 ? 4 : maxValue * 1.1];
+
+
   const CustomTooltip = ({ active, payload }) => {
     if (active && payload && payload.length) {
       return (
@@ -29,15 +36,19 @@ export default function TopUploadersChart({ data = [] }) {
     return null;
   };
 
+  if (!chartData || chartData.length === 0) {
+    return <div style={{ padding: 10 }}>No top uploaders data available.</div>;
+  }
+
   return (
     <div style={{ width: "100%", height: 260 }}>
       <ResponsiveContainer>
         <BarChart data={chartData} margin={{ top: 10, right: 10, left: -10, bottom: 10 }}>
           <CartesianGrid strokeDasharray="3 3" opacity={0.12} />
           <XAxis dataKey="name" tick={{ fontSize: 12 }} />
-          <YAxis allowDecimals={false} />
+          <YAxis allowDecimals={false} domain={yAxisDomain} />
           <Tooltip content={<CustomTooltip />} />
-          <Bar dataKey="uploads" fill={themeBlue} radius={[6,6,0,0]}>
+          <Bar dataKey="uploads" fill={themeBlue} radius={[6, 6, 0, 0]}>
             <LabelList dataKey="uploads" position="top" />
           </Bar>
         </BarChart>

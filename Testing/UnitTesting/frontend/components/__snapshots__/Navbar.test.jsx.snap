@@ -1,0 +1,9 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`Navbar Component > should match snapshot 1`] = `
+<div>
+  <header
+    style="background: rgb(17, 24, 39); color: rgb(255, 255, 255); padding: 1rem;"
+  />
+</div>
+`;

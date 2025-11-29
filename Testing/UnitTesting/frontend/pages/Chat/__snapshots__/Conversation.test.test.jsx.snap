@@ -1,0 +1,20 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`Conversation > should match snapshot 1`] = `
+<div>
+  <div
+    class="chat-container"
+  >
+    <div
+      class="chat-loading"
+    >
+      <div
+        class="loading-spinner"
+      />
+      <p>
+        Loading chat...
+      </p>
+    </div>
+  </div>
+</div>
+`;
