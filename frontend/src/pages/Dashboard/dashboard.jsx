@@ -147,7 +147,82 @@ export default function Dashboard() {
           };
         });
 
-        setProjects(formatted);
+        // If no projects were returned, try to fetch invitations from notifications
+        if ((formatted || []).length === 0) {
+          try {
+            const { data: notifications } = await api.get('notifications/');
+            const inviteNotifs = (notifications || []).filter(n => n.link_url && n.link_url.includes('/accept-invitation/'));
+            const inviteProjectIds = inviteNotifs.map(n => {
+              const parts = n.link_url.split('/');
+              return parts[parts.length - 1] || null;
+            }).filter(Boolean);
+
+            // Fetch project details for each invited project
+            const invitedProjects = [];
+            for (const pid of inviteProjectIds) {
+              try {
+                const { data: proj } = await api.get(`projects/${pid}/`);
+                // Map to the same format used above
+                const members = Array.isArray(proj?.team_members)
+                  ? proj.team_members.map((member) => ({
+                      user_id: member.user_id,
+                      username: member.username || 'Unknown',
+                      accepted: Boolean(member.accepted),
+                    }))
+                  : [];
+
+                const acceptedMembersCount = members.filter((m) => m.accepted).length + 1;
+                const totalMembers = members.length + 1;
+                const membershipEntry = members.find((m) => m.user_id === currentUser.id);
+
+                let membershipKey = 'collaborator';
+                let membershipLabel = 'Collaborator';
+                let membershipDescription = 'You have access to this project.';
+                if (membershipEntry) {
+                  membershipKey = membershipEntry.accepted ? 'member' : 'pending';
+                  membershipLabel = membershipEntry.accepted ? 'Member' : 'Invitation Pending';
+                  membershipDescription = membershipEntry.accepted
+                    ? 'You are an accepted member of this project.'
+                    : 'Please accept your invitation to start collaborating.';
+                }
+
+                invitedProjects.push({
+                  id: proj.id,
+                  name: proj.name,
+                  description: proj.description || 'No description provided.',
+                  createdAt: proj.created_at ? new Date(proj.created_at).toLocaleDateString() : 'Not available',
+                  acceptedMembers: acceptedMembersCount,
+                  totalMembers,
+                  membershipLabel,
+                  membershipDescription,
+                  membershipKey,
+                  teamMembers: [
+                    {
+                      user_id: proj.team_leader.user_id || 'leader',
+                      username: proj.team_leader.username || 'Leader',
+                      accepted: true,
+                      role: 'Team Leader',
+                    },
+                    ...members.map((member) => ({
+                      ...member,
+                      role: member.accepted ? 'Member' : 'Invited',
+                    })),
+                  ],
+                  showDetails: false,
+                });
+              } catch (nn) {
+                // ignore
+              }
+            }
+
+            const combinedInvites = [...formatted, ...invitedProjects];
+            setProjects(combinedInvites);
+          } catch (nerr) {
+            setProjects(formatted);
+          }
+        } else {
+          setProjects(formatted);
+        }
         setSelectedProjectId(null);
       } catch (err) {
         console.error("[dashboard] Failed to load projects", err);
@@ -471,13 +546,16 @@ export default function Dashboard() {
                     <div className="project-actions">
 
                       <button
-                        className="analytics-btn"
+                        className={`analytics-btn ${proj.membershipKey === 'pending' ? 'disabled' : ''}`}
                         type="button"
                         onClick={(event) => {
                           event.stopPropagation();
+                          if (proj.membershipKey === 'pending') return;
                           navigate(`/projects/${proj.id}/analytics`);
                         }}
-                        title="Open project analytics"
+                        title={proj.membershipKey === 'pending' ? 'Accept invitation to access analytics' : 'Open project analytics'}
+                        aria-disabled={proj.membershipKey === 'pending'}
+                        disabled={proj.membershipKey === 'pending'}
                       >
                         Analytics
                       </button>
@@ -493,13 +571,16 @@ export default function Dashboard() {
                         {proj.showDetails ? "Hide Details" : "View Details"}
                       </button>
                       <button
-                        className="chat-btn"
+                        className={`chat-btn ${proj.membershipKey === 'pending' ? 'disabled' : ''}`}
                         type="button"
                         onClick={(event) => {
                           event.stopPropagation();
+                          if (proj.membershipKey === 'pending') return;
                           navigate(`/chat/${proj.id}`);
                         }}
-                        title="Open project chat"
+                        title={proj.membershipKey === 'pending' ? 'Accept invitation to access project chat' : 'Open project chat'}
+                        aria-disabled={proj.membershipKey === 'pending'}
+                        disabled={proj.membershipKey === 'pending'}
                       >
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ marginRight: '6px', verticalAlign: 'middle' }}>
                           <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>

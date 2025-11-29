@@ -24,6 +24,7 @@ export default function ProjectAnalytics() {
   const { id: projectId } = useParams();
   const navigate = useNavigate();
   const [overview, setOverview] = useState(null);
+  const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -31,8 +32,14 @@ export default function ProjectAnalytics() {
       try {
         const { data } = await api.get(`projects/dashboard/${projectId}/overview/`);
         setOverview(data);
+        setError("");
       } catch (err) {
         console.error("Failed to load analytics overview:", err);
+        if (err?.response?.status === 403) {
+          setError("You do not have permission to view analytics for this project. Please accept the invitation to access this page.");
+        } else {
+          setError(err?.response?.data?.error || "Failed to load analytics overview.");
+        }
       } finally {
         setLoading(false);
       }
@@ -59,6 +66,7 @@ export default function ProjectAnalytics() {
   // Project Overview content extracted to a function to keep JSX tidy
   const ProjectOverviewContent = () => {
     if (loading) return <p>Loading analytics...</p>;
+    if (error) return <p className="muted">{error}</p>;
     if (!overview) return <p>No analytics available.</p>;
 
     return (

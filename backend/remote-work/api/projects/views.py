@@ -63,13 +63,16 @@ class ProjectViewSet(viewsets.ViewSet):
                     Q(team_leader=user)
                     & (Q(name__icontains=search) | Q(description__icontains=search))
                 )
+                # Match team_members entries where 'user' may be stored as the string ID or as a reference
                 member_projects_qs = Project.objects(
-                    Q(team_members__match={"user": user_id})
+                    (Q(team_members__match={"user": user_id}) | Q(team_members__match={"user": user}))
                     & (Q(name__icontains=search) | Q(description__icontains=search))
                 )
             else:
                 leader_projects_qs = Project.objects(team_leader=user)
-                member_projects_qs = Project.objects(team_members__match={"user": user_id})
+                member_projects_qs = Project.objects(
+                    (Q(team_members__match={"user": user_id}) | Q(team_members__match={"user": user}))
+                )
 
             leader_projects = list(leader_projects_qs)
             member_projects = list(member_projects_qs)
