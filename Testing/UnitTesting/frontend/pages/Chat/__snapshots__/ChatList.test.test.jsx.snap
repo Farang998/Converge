@@ -1,0 +1,76 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`ChatList > should match snapshot 1`] = `
+<div>
+  <aside
+    class="chat-sidebar"
+  >
+    <div
+      class="chat-header"
+    >
+      <h3>
+        Discussion
+      </h3>
+      <p>
+        Connect with your team
+      </p>
+    </div>
+    <div
+      class="user-selector"
+    >
+      <select>
+        <option
+          value=""
+        >
+          Select a user to chat
+        </option>
+        <option
+          value="1"
+        >
+          Alice
+        </option>
+        <option
+          value="2"
+        >
+          Bob
+        </option>
+        <option
+          value="3"
+        >
+          Charlie
+        </option>
+        <option
+          value="4"
+        >
+          Soham
+        </option>
+      </select>
+      <button>
+        Start Chat
+      </button>
+    </div>
+    <button
+      class="group-btn"
+    >
+      + Create Group
+    </button>
+    <div
+      class="conversation-list"
+    >
+      <h4>
+        Active Conversations
+      </h4>
+      <div
+        class="conversation-item"
+      >
+        Chat: Alice
+      </div>
+      <div
+        class="conversation-item"
+      >
+        Group: Project Team
+      </div>
+    </div>
+  </aside>
+</div>
+`;
