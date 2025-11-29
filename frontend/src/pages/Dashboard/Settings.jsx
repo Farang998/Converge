@@ -21,7 +21,7 @@ export default function Settings() {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [changingPassword, setChangingPassword] = useState(false);
-  const [darkMode, setDarkMode] = useState(localStorage.getItem('theme') === 'dark');
+  // Dark mode removed
 
   useEffect(() => {
     let active = true;
@@ -61,15 +61,7 @@ export default function Settings() {
     };
   }, [navigate]);
 
-  useEffect(() => {
-    if (darkMode) {
-      document.body.classList.add('dark-theme');
-      localStorage.setItem('theme', 'dark');
-    } else {
-      document.body.classList.remove('dark-theme');
-      localStorage.setItem('theme', 'light');
-    }
-  }, [darkMode]);
+  // Dark mode effect removed
 
   // notifications removed — keep future hooks here if needed
 
@@ -289,22 +281,7 @@ export default function Settings() {
 
         {/* Notifications section removed */}
 
-        <div className="settings-section">
-          <h3>
-            <FaPalette /> Appearance
-          </h3>
-          <div className="setting-row toggle-row">
-            <span>Dark Mode</span>
-            <label className="switch">
-              <input
-                type="checkbox"
-                checked={darkMode}
-                onChange={() => setDarkMode((prev) => !prev)}
-              />
-              <span className="slider" />
-            </label>
-          </div>
-        </div>
+        {/* Appearance section removed */}
 
         <div className="settings-footer">
           <button type="button" className="back-btn" onClick={() => navigate('/dashboard')}>

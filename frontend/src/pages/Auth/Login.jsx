@@ -40,6 +40,12 @@ export default function Login() {
     setError('');
     setSuccess('');
 
+    // Password length validation: 8 to 16 characters
+    if (form.loginPassword.length < 8 || form.loginPassword.length > 16) {
+      setError('Password must be 8-16 characters long.');
+      return;
+    }
+
     const payload = {
       username: form.loginIdentifier,
       password: form.loginPassword
@@ -166,6 +172,8 @@ export default function Login() {
               name="loginPassword"
               value={form.loginPassword}
               onChange={handleChange}
+              minLength={8}
+              maxLength={16}
               required
             />
 

@@ -25,6 +25,7 @@ export default function Register() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [googleLoaded, setGoogleLoaded] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState({ firstName: '', lastName: '', password: '', confirmPassword: '' });
 
   useEffect(() => {
     const script = document.createElement('script');
@@ -91,7 +92,75 @@ export default function Register() {
   }, [googleLoaded]);
 
   function handleChange(e) {
-    setForm({ ...form, [e.target.id]: e.target.value });
+    const { id, value } = e.target;
+    setForm({ ...form, [id]: value });
+
+    if (id === 'firstName' || id === 'lastName') {
+      const nameRegex = /^[A-Za-z]+$/;
+      let msg = '';
+      if (value.trim().length === 0) {
+        msg = 'This field is required.';
+      } else if (!nameRegex.test(value.trim())) {
+        msg = '*only alphabet characters are allowed';
+      }
+      setFieldErrors(prev => ({ ...prev, [id]: msg }));
+    }
+
+    if (id === 'password') {
+      let msg = '';
+      const len = value.length;
+      if (len === 0) {
+        msg = 'This field is required.';
+      } else if (len < 8 || len > 16) {
+        msg = 'Password must be 8-16 characters long.';
+      }
+      setFieldErrors(prev => ({ ...prev, password: msg }));
+    }
+
+    if (id === 'confirmPassword') {
+      let msg = '';
+      if (value.length === 0) {
+        msg = 'This field is required.';
+      } else if (value !== form.password) {
+        msg = 'Passwords do not match.';
+      }
+      setFieldErrors(prev => ({ ...prev, confirmPassword: msg }));
+    }
+  }
+
+  function handleBlur(e) {
+    const { id, value } = e.target;
+    if (id === 'firstName' || id === 'lastName') {
+      const nameRegex = /^[A-Za-z]+$/;
+      let msg = '';
+      if (value.trim().length === 0) {
+        msg = 'This field is required.';
+      } else if (!nameRegex.test(value.trim())) {
+        msg = '*only alphabet characters are allowed';
+      }
+      setFieldErrors(prev => ({ ...prev, [id]: msg }));
+    }
+
+    if (id === 'password') {
+      let msg = '';
+      const len = value.length;
+      if (len === 0) {
+        msg = 'This field is required.';
+      } else if (len < 8 || len > 16) {
+        msg = 'Password must be 8-16 characters long.';
+      }
+      setFieldErrors(prev => ({ ...prev, password: msg }));
+    }
+
+    if (id === 'confirmPassword') {
+      let msg = '';
+      if (value.length === 0) {
+        msg = 'This field is required.';
+      } else if (value !== form.password) {
+        msg = 'Passwords do not match.';
+      }
+      setFieldErrors(prev => ({ ...prev, confirmPassword: msg }));
+    }
   }
 
   async function handleSubmit(e) {
@@ -100,18 +169,24 @@ export default function Register() {
     setSuccess('');
 
     if (!otpSent) {
-      if (!form.password || form.password.trim() === '') {
-        setError('Password is required.');
+      // Block if inline name errors exist
+      if (fieldErrors.firstName || fieldErrors.lastName) {
         return;
       }
-      if (form.password.length < 8) {
-        setError('Password must be at least 8 characters long.');
+      // Block if inline password errors exist
+      if (fieldErrors.password || fieldErrors.confirmPassword) {
         return;
       }
-      if (form.password !== form.confirmPassword) {
-        setError('Passwords do not match.');
+      // Enforce First/Last name letters only (A–Z, a–z)
+      const nameRegex = /^[A-Za-z]+$/;
+      if (!nameRegex.test(form.firstName) || !nameRegex.test(form.lastName)) {
+        // Inline errors already handled; avoid toast here
         return;
       }
+
+      if (!form.password || form.password.trim() === '') return;
+      if (form.password.length < 8 || form.password.length > 16) return;
+      if (form.password !== form.confirmPassword) return;
       try {
         const validationResponse = await api.post('auth/validate-user/', {
           username: form.username,
@@ -209,10 +284,12 @@ export default function Register() {
             <div className="form-title">Create your account</div>
 
             <label htmlFor="firstName">First Name</label>
-            <input type="text" id="firstName" value={form.firstName} onChange={handleChange} required disabled={otpSent} />
+            <input type="text" id="firstName" value={form.firstName} onChange={handleChange} onBlur={handleBlur} required disabled={otpSent} />
+            {fieldErrors.firstName && <div className="field-error">{fieldErrors.firstName}</div>}
 
             <label htmlFor="lastName">Last Name</label>
-            <input type="text" id="lastName" value={form.lastName} onChange={handleChange} required disabled={otpSent} />
+            <input type="text" id="lastName" value={form.lastName} onChange={handleChange} onBlur={handleBlur} required disabled={otpSent} />
+            {fieldErrors.lastName && <div className="field-error">{fieldErrors.lastName}</div>}
 
             <label htmlFor="username">Username</label>
             <input type="text" id="username" value={form.username} onChange={handleChange} required disabled={otpSent} />
@@ -221,10 +298,12 @@ export default function Register() {
             <input type="email" id="email" value={form.email} onChange={handleChange} required disabled={otpSent} />
 
             <label htmlFor="password">Password</label>
-            <input type="password" id="password" value={form.password} onChange={handleChange} required disabled={otpSent} />
+            <input type="password" id="password" value={form.password} onChange={handleChange} onBlur={handleBlur} required disabled={otpSent} minLength={8} maxLength={16} />
+            {fieldErrors.password && <div className="field-error">{fieldErrors.password}</div>}
 
             <label htmlFor="confirmPassword">Confirm Password</label>
-            <input type="password" id="confirmPassword" value={form.confirmPassword} onChange={handleChange} required disabled={otpSent} />
+            <input type="password" id="confirmPassword" value={form.confirmPassword} onChange={handleChange} onBlur={handleBlur} required disabled={otpSent} minLength={8} maxLength={16} />
+            {fieldErrors.confirmPassword && <div className="field-error">{fieldErrors.confirmPassword}</div>}
 
             {otpSent && (
               <>
