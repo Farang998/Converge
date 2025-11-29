@@ -731,9 +731,10 @@ export default function Conversation() {
                 {teamMembers.map((member) => (
                   <button
                     key={member.user_id}
-                    className="team-member-item"
-                    onClick={() => handleStartIndividualChat(member)}
-                    title={`Chat with ${member.username}`}
+                    className={`team-member-item ${member.accepted === false ? 'disabled' : ''}`}
+                    onClick={() => member.accepted === false ? null : handleStartIndividualChat(member)}
+                    title={member.accepted === false ? `Invitation pending` : `Chat with ${member.username}`}
+                    disabled={member.accepted === false}
                   >
                     <div className="member-avatar">
                       {getInitials(member.username)}

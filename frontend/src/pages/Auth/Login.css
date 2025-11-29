@@ -305,3 +305,10 @@ input[type="email"] {
 .Toastify__toast {
   z-index: 99999;
 }
+
+/* Inline field error styling for Register page */
+.field-error {
+  color: #d32f2f;
+  font-size: 0.85rem;
+  margin-top: 4px;
+}

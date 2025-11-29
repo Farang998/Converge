@@ -13,15 +13,32 @@ from asgiref.sync import async_to_sync
 import os
 import uuid
 from pathlib import Path
-import google.generativeai as genai
 from api.auth.models import User  # your MongoEngine User with validate_token
 from api.projects.models import Project
 from .models import GroupChat, GroupMessage, IndividualChat, IndividualMessage, Thread, ThreadMessage
 from .serializers import group_chat_public, group_message_public, individual_message_public, thread_public, thread_message_public
 
-# Configure Gemini API
-genai.configure(api_key=os.getenv('GEMINI_API_KEY'))
-model = genai.GenerativeModel('gemini-2.0-flash')
+try:
+    import google.generativeai as genai
+    GENAI_AVAILABLE = True
+except Exception as e:
+    genai = None
+    GENAI_AVAILABLE = False
+    print(f"[Chat] google.generativeai not available: {e}")
+
+# Configure Gemini API if package available and API key present
+model = None
+if GENAI_AVAILABLE:
+    try:
+        gemini_key = os.getenv('GEMINI_API_KEY')
+        if gemini_key:
+            genai.configure(api_key=gemini_key)
+            model = genai.GenerativeModel('gemini-2.0-flash')
+        else:
+            print('[Chat] GEMINI_API_KEY not found in environment; Gemini summarizer disabled')
+    except Exception as e:
+        print(f"[Chat] Failed to configure Gemini API: {e}")
+        model = None
 
 def convert_to_utc_z(dt):
     if not dt:
@@ -205,7 +222,8 @@ class ProjectTeamMembers(APIView):
         # Check if user is part of the project
         is_leader = str(project.team_leader.id) == uid
         is_member = any(
-            str(member.get('user')) == uid for member in (project.team_members or [])
+            str(member.get('user')) == uid and bool(member.get('accepted', False))
+            for member in (project.team_members or [])
         )
         
         if not is_leader and not is_member:
@@ -272,12 +290,18 @@ class GetOrCreateIndividualChat(APIView):
             return Response({"error": "Project not found"}, status=404)
         
         is_leader = str(project.team_leader.id) == uid
-        is_member = any(str(member.get('user')) == uid for member in (project.team_members or []))
+        is_member = any(
+            str(member.get('user')) == uid and bool(member.get('accepted', False))
+            for member in (project.team_members or [])
+        )
         if not is_leader and not is_member:
             return Response({"error": "Not a project member"}, status=403)
         
         other_is_leader = str(project.team_leader.id) == oid
-        other_is_member = any(str(member.get('user')) == oid for member in (project.team_members or []))
+        other_is_member = any(
+            str(member.get('user')) == oid and bool(member.get('accepted', False))
+            for member in (project.team_members or [])
+        )
         if not other_is_leader and not other_is_member:
             return Response({"error": "Other user not in project"}, status=403)
         
@@ -437,12 +461,13 @@ class ProjectChatMessages(APIView):
         except DoesNotExist:
             return Response({"error": "Project not found"}, status=404)
         
-        # Check if user is part of the project (leader or member)
+        # Check if user is part of the project (leader or accepted member)
         uid = str(user.id)
         is_leader = str(project.team_leader.id) == uid
         # Team members are stored as {'user': user_id, 'accepted': bool}
         is_member = any(
-            str(member.get('user')) == uid for member in (project.team_members or [])
+            str(member.get('user')) == uid and bool(member.get('accepted', False))
+            for member in (project.team_members or [])
         )
         
         print(f"[DEBUG] User check - uid: {uid}, is_leader: {is_leader}, is_member: {is_member}")
@@ -500,12 +525,13 @@ class SendProjectMessage(APIView):
         except DoesNotExist:
             return Response({"error": "Project not found"}, status=404)
         
-        # Check if user is part of the project
+        # Check if user is part of the project (accepted member or leader)
         uid = str(user.id)
         is_leader = str(project.team_leader.id) == uid
         # Team members are stored as {'user': user_id, 'accepted': bool}
         is_member = any(
-            str(member.get('user')) == uid for member in (project.team_members or [])
+            str(member.get('user')) == uid and bool(member.get('accepted', False))
+            for member in (project.team_members or [])
         )
         
         if not is_leader and not is_member:
@@ -518,7 +544,11 @@ class SendProjectMessage(APIView):
             # Create chat with all project members
             participants = [str(project.team_leader.id)]
             if project.team_members:
-                participants.extend([str(member.get('user')) for member in project.team_members if member.get('user')])
+                # only add accepted members to the chat participants
+                participants.extend([
+                    str(member.get('user')) for member in project.team_members
+                    if member.get('user') and member.get('accepted')
+                ])
             chat = GroupChat(
                 name=project.name,
                 admin=str(project.team_leader.id),
@@ -680,7 +710,8 @@ class SearchGroupChatMessages(APIView):
         uid = str(user.id)
         is_leader = str(project.team_leader.id) == uid
         is_member = any(
-            str(member.get('user')) == uid for member in (project.team_members or [])
+            str(member.get('user')) == uid and bool(member.get('accepted', False))
+            for member in (project.team_members or [])
         )
         
         if not is_leader and not is_member:
@@ -866,7 +897,10 @@ class ListProjectThreads(APIView):
         
         uid = str(user.id)
         is_leader = str(project.team_leader.id) == uid
-        is_member = any(str(member.get('user')) == uid for member in (project.team_members or []))
+        is_member = any(
+            str(member.get('user')) == uid and bool(member.get('accepted', False))
+            for member in (project.team_members or [])
+        )
         if not is_leader and not is_member:
             print(f"[DEBUG] User {uid} not a member of project")
             return Response({"error": "You are not a member of this project"}, status=403)
@@ -911,7 +945,10 @@ class GetThreadMessages(APIView):
         
         uid = str(user.id)
         is_leader = str(project.team_leader.id) == uid
-        is_member = any(str(m.get('user')) == uid for m in (project.team_members or []))
+        is_member = any(
+            str(m.get('user')) == uid and bool(m.get('accepted', False))
+            for m in (project.team_members or [])
+        )
         if not is_leader and not is_member:
             print(f"[DEBUG] User {uid} not a member of project")
             return Response({"error": "You are not a member of this project"}, status=403)
@@ -978,7 +1015,10 @@ class ChatSummarizer(APIView):
                 
                 # Check if user is part of the project
                 is_leader = str(project.team_leader.id) == uid
-                is_member = any(str(member.get('user')) == uid for member in (project.team_members or []))
+                is_member = any(
+                    str(member.get('user')) == uid and bool(member.get('accepted', False))
+                    for member in (project.team_members or [])
+                )
                 if not is_leader and not is_member:
                     return Response({"error": "You are not a member of this project"}, status=403)
                 
@@ -1157,6 +1197,16 @@ class ChatSummarizer(APIView):
         {chat_content}
         """
         
+        # If model isn't configured we gracefully fall back to a simple summary
+        if model is None:
+            # Provide a lightweight fallback summary (first N chars) so the endpoint remains useful
+            try:
+                brief = chat_content.strip().split('\n')[:5]
+                fallback_summary = ' '.join(brief)
+                return (f"AI summarizer unavailable. Basic extracted preview: {fallback_summary[:800]}")
+            except Exception:
+                return "AI summarizer is not configured or unavailable."
+
         try:
             response = model.generate_content(prompt)
             return response.text.strip()
@@ -1182,7 +1232,10 @@ class ReplyToThread(APIView):
         
         uid = str(user.id)
         is_leader = str(project.team_leader.id) == uid
-        is_member = any(str(m.get('user')) == uid for m in (project.team_members or []))
+        is_member = any(
+            str(m.get('user')) == uid and bool(m.get('accepted', False))
+            for m in (project.team_members or [])
+        )
         if not is_leader and not is_member:
             return Response({"error": "You are not a member of this project"}, status=403)
 

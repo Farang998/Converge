@@ -315,7 +315,8 @@ class ProjectChatConsumer(AsyncWebsocketConsumer):
         uid = str(self.user.id)
         is_leader = str(project.team_leader.id) == uid
         is_member = any(
-            str(member.get('user')) == uid for member in (project.team_members or [])
+            str(member.get('user')) == uid and bool(member.get('accepted', False))
+            for member in (project.team_members or [])
         )
         return is_leader or is_member
     
@@ -326,10 +327,11 @@ class ProjectChatConsumer(AsyncWebsocketConsumer):
             # Create chat with all project members
             participants = [str(project.team_leader.id)]
             if project.team_members:
+                # add only accepted members
                 participants.extend([
                     str(member.get('user')) 
                     for member in project.team_members 
-                    if member.get('user')
+                    if member.get('user') and member.get('accepted')
                 ])
             chat = GroupChat(
                 name=project.name,
