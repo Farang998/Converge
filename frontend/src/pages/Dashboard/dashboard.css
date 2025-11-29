@@ -758,3 +758,15 @@
 .analytics-btn:active {
   transform: scale(0.97);
 }
+
+/* Disabled state for buttons when user permission not allowed */
+.disabled,
+.analytics-btn.disabled,
+.chat-btn.disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none !important;
+  background: #f3f4f6 !important;
+  color: #9ca3af !important;
+  border-color: #e5e7eb !important;
+}
