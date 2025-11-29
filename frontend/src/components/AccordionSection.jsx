@@ -35,7 +35,14 @@ export default function AccordionSection({ title, children, defaultOpen = false 
       <button
         className="accordion-header"
         aria-expanded={open}
-        onClick={() => setOpen((s) => !s)}
+        onClick={() => {
+          setOpen((s) => {
+            const next = !s;
+            // when opening, force a window 'resize' event after the animation completes so charts like Recharts recompute dimensions
+            if (next) setTimeout(() => window.dispatchEvent(new Event('resize')), 260);
+            return next;
+          });
+        }}
       >
         <span className="accordion-title">{title}</span>
       </button>

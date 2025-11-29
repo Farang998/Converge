@@ -6,6 +6,12 @@ export default function ActiveContributorsChart({ data = [] }) {
   const themeBlue = "#3b82f6";
   const chartData = (data || []).map(d => ({ name: d.name, value: d.value }));
 
+  const maxValue = chartData.reduce(
+    (max, item) => Math.max(max, item.value || 0),
+    0
+  );
+  const yAxisDomain = [0, maxValue === 0 ? 4 : maxValue * 1.05];
+
   // Custom Tooltip (only show name)
   const CustomTooltip = ({ active, label }) => {
     if (active) {
@@ -44,7 +50,7 @@ export default function ActiveContributorsChart({ data = [] }) {
             textAnchor="end"
             height={60}
           />
-          <YAxis allowDecimals={false} />
+          <YAxis allowDecimals={false} domain={yAxisDomain} />
 
           {/* Tooltip with only name */}
           <Tooltip content={<CustomTooltip />} />

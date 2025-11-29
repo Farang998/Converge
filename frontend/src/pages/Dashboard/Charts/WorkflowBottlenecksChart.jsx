@@ -21,6 +21,12 @@ export default function WorkflowBottlenecksChart({ data = [] }) {
 
   const themeBlue = "#3b82f6";
 
+  const maxStuckDays = chartData.reduce(
+    (max, item) => Math.max(max, item.stuck_days || 0),
+    0
+  );
+  const yAxisDomain = [0, maxStuckDays === 0 ? 4 : maxStuckDays * 1.1];
+
   // --- Custom Tooltip ---
   const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
@@ -37,7 +43,9 @@ export default function WorkflowBottlenecksChart({ data = [] }) {
             border: "1px solid rgba(255,255,255,0.2)",
           }}
         >
-          <div><strong>{label}</strong></div>
+          <div>
+            <strong>{label}</strong>
+          </div>
           <div>Stuck Days: {item.stuck_days}</div>
           <div>Bottleneck: {item.status}</div>
         </div>
@@ -60,7 +68,7 @@ export default function WorkflowBottlenecksChart({ data = [] }) {
             angle={-20}
             textAnchor="end"
           />
-          <YAxis allowDecimals={false} />
+          <YAxis allowDecimals={false} domain={yAxisDomain} />
 
           <Tooltip content={<CustomTooltip />} />
 
