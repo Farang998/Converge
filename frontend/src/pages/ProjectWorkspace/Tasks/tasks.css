@@ -269,6 +269,11 @@
   z-index: 31;
 }
 
+.task-node {
+  /* keep some space on the right for header actions */
+  padding-right: 28px;
+}
+
 .task-node:hover {
   border-color: var(--bg);
   box-shadow: 0 0 4px var(--primary-darker, 0.7),
@@ -327,6 +332,40 @@
   background-color: #dc2626;
 }
 
+.task-node-header .task-status {
+  margin-left: 8px;
+}
+
+/* Top-right column: stack status badge and details button */
+.task-node-header-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+/* Details button (stacked under badge in header) */
+.task-details-button {
+  padding: 6px 10px;
+  font-size: 13px;
+  border-radius: 8px;
+  border: 1px solid rgba(0,0,0,0.08);
+  background: #ffffff;
+  color: #111;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+  transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease;
+}
+
+.task-details-button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 12px rgba(0,0,0,0.12);
+  background: #fbfbff;
+}
+.task-details-button:active {
+  transform: translateY(0);
+}
+
 .task-node-content {
   display: flex;
   flex-direction: column;
@@ -338,6 +377,10 @@
   align-items: center;
   justify-content: space-between;
   gap: 8px;
+}
+
+.task-node-header .task-status {
+  margin-left: 8px;
 }
 
 .task-node-header h3 {

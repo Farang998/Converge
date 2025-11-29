@@ -1,17 +1,10 @@
-import { memo, useState, useEffect } from 'react';
+import { memo, useState } from 'react';
 import { Handle, Position } from 'reactflow';
 import TaskDetailsModal from './TaskDetailsModal';
 
 const TaskNode = memo(({ data, selected }) => {
-  // Track manual close so user can dismiss modal while node remains selected
-  const [closed, setClosed] = useState(false);
-
-  // Reset closed state whenever selection changes to true again
-  useEffect(() => {
-    if (selected) {
-      setClosed(false);
-    }
-  }, [selected]);
+  // Modal open state — only open when user clicks "Details"
+  const [open, setOpen] = useState(false);
   const statusLabels = {
     pending: 'Pending',
     in_progress: 'In Progress',
@@ -40,7 +33,10 @@ const TaskNode = memo(({ data, selected }) => {
         <div className="task-node-content">
           <div className="task-node-header">
             <h3>{data.name}</h3>
-            <span className={`task-status task-status--${data.status}`}>{statusLabels[data.status]}</span>
+            <div className="task-node-header-right">
+              <span className={`task-status task-status--${data.status}`}>{statusLabels[data.status]}</span>
+              <button className="task-details-button" onClick={(e) => { e.stopPropagation(); setOpen(true); }} aria-label="Open details">Details</button>
+            </div>
           </div>
           <div className="task-node-body">
             <div className="task-node-detail">
@@ -57,8 +53,8 @@ const TaskNode = memo(({ data, selected }) => {
         </div>
         <Handle type="source" position={Position.Bottom} className="task-handle" />
       </div>
-      {selected && !closed && (
-        <TaskDetailsModal task={data} tasksList={data.tasksList} onClose={() => setClosed(true)} />
+      {open && (
+        <TaskDetailsModal task={data} tasksList={data.tasksList} onClose={() => setOpen(false)} />
       )}
     </>
   );

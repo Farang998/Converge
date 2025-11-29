@@ -7,7 +7,6 @@ import StatusStrip from './StatusStrip';
 import ProjectNav from './ProjectNav';
 import OverviewView from './OverviewView';
 import FilesView from './FilesView';
-import ActivityView from './ActivityView';
 import './ProjectWorkspace.css';
 import ProjectDetailsModal from './parts/ProjectDetailsModal';
 import Index from './Tasks/Index';
@@ -38,16 +37,7 @@ const seedFiles = [
   { id: 'f2', name: 'wireframe.png', uploader: 'user_2', uploadedAt: nowIso(), size: '480KB' }
 ];
 
-const seedMilestones = [
-  { id: 'm0', title: 'Discovery', dueDate: '2025-11-05', state: 'complete', progress: 100 },
-  { id: 'm1', title: 'MVP', dueDate: '2025-11-25', state: 'in_progress', progress: 42 },
-  { id: 'm2', title: 'Beta release', dueDate: '2025-12-20', state: 'upcoming', progress: 0 }
-];
 
-const seedActivity = [
-  { id: 'a1', text: 'User_1 marked "Write API endpoints" as done', time: nowIso() },
-  { id: 'a2', text: 'Rohit uploaded wireframe.png', time: nowIso() }
-];
 
 // --- Main component ---
 export default function ProjectWorkspace() {
@@ -65,8 +55,6 @@ export default function ProjectWorkspace() {
   const [project, setProject] = useState(initialProject);
   const [tasks, setTasks] = useState(seedTasks);
   const [files, setFiles] = useState(seedFiles);
-  const [milestones] = useState(seedMilestones);
-  const [activity, setActivity] = useState(seedActivity);
   const [activeView, setActiveView] = useState('overview'); // overview|tasks|files|calendar
   const [, setSelectedTask] = useState(null);
 
@@ -129,13 +117,7 @@ const handleSaveProjectDetails = async (updatedProject, invitations = []) => {
 
     // Update local UI state
     setProject(mapped);
-    // also update members state if you keep separate members variable
-    // setMembers(mapped.members ?? []);
-
-    // Add activity entry
-    addActivity('Updated project details');
-
-    // resolve so modal can close (your modal awaits this as a promise)
+    
     return mapped;
   } catch (err) {
     console.error('Failed to save project details:', err);
@@ -144,13 +126,6 @@ const handleSaveProjectDetails = async (updatedProject, invitations = []) => {
   }
 };
 
-
-  // Helpers
-  function addActivity(text) {
-    setActivity(prev => [{ id: 'a' + Date.now(), text, time: nowIso() }, ...prev].slice(0, 200));
-  }
-
-  // If a projectId is present in the route, try to load the project from backend.
   // We only fetch when projectId exists and it doesn't match the current project.id.
   useEffect(() => {
     if (!projectId) return;
@@ -194,7 +169,7 @@ const handleSaveProjectDetails = async (updatedProject, invitations = []) => {
   }, [projectId, project]);
 
 
-  // NEW: Load tasks from the backend when the project loads
+
   useEffect(() => {
     if (!projectId) return;
 
@@ -205,9 +180,6 @@ const handleSaveProjectDetails = async (updatedProject, invitations = []) => {
         const resp = await api.get(`projects/${projectId}/tasks/`);
         const data = resp?.data;
         if (Array.isArray(data) && !cancelled) {
-          // Normalize task data from backend if necessary, or just use it.
-          // For simplicity, we assume the backend returns objects compatible with the UI.
-          // If you need normalization (like converting status from 'COMPLETED' to 'done'), add it here.
           setTasks(data); // Update the tasks state with real data
         }
       } catch (err) {
@@ -221,7 +193,6 @@ const handleSaveProjectDetails = async (updatedProject, invitations = []) => {
   function createTask(title) {
     const t = { id: 't' + Date.now(), title, status: 'todo', assignee: null, milestone: null, updatedAt: nowIso(), priority: 'Low' };
     setTasks(prev => [t, ...prev]);
-    addActivity(`Created task "${title}"`);
     setActiveView('tasks');
   }
 
@@ -229,7 +200,6 @@ const handleSaveProjectDetails = async (updatedProject, invitations = []) => {
     setTasks(prev => prev.map(t => {
       if (t.id !== id) return t;
       const next = t.status === 'done' ? 'todo' : 'done';
-      addActivity(`Changed status of "${t.title}" to ${next}`);
       return { ...t, status: next, updatedAt: nowIso() };
     }));
   }
@@ -237,7 +207,6 @@ const handleSaveProjectDetails = async (updatedProject, invitations = []) => {
   function uploadFile(file) {
     const f = { id: 'f' + Date.now(), name: file.name, uploader: project?.owner?.id ?? 'unknown', uploadedAt: nowIso(), size: `${Math.round(file.size / 1024)}KB` };
     setFiles(prev => [f, ...prev]);
-    addActivity(`Uploaded file ${file.name}`);
     setActiveView('files');
   }
 
@@ -252,8 +221,6 @@ const handleSaveProjectDetails = async (updatedProject, invitations = []) => {
       </ProjectHeader>
 
       <div className="pw-inner">
-        {/* StatusStrip and content remains inside pw-inner */}
-        {/* <StatusStrip progress={progressPct} nextMilestone={milestones.find(m => m.state === 'in_progress')} lastActivity={activity[0]} /> */}
 
         <div className="pw-content">
           <aside className="pw-left">
@@ -266,13 +233,12 @@ const handleSaveProjectDetails = async (updatedProject, invitations = []) => {
                 { id: 'tasks', label: 'Tasks', icon: 'CheckSquare' },
                 { id: 'files', label: 'Files', icon: 'Folder' },
                 { id: 'calendar', label: 'Calendar', icon: 'Calendar' },
-                { id: 'activity', label: 'Activity', icon: 'Activity' }
               ]}
             />
           </aside>
 
           <main className="pw-main">
-            {activeView === 'overview' && <OverviewView project={project} tasks={tasks} files={files} activity={activity} onCreateTask={createTask} />}
+            {activeView === 'overview' && <OverviewView project={project} tasks={tasks} files={files} onCreateTask={createTask} />}
             {activeView === 'tasks' && <Index projectId={projectId} />}
             {activeView === 'files' && <FilesView projectId={projectId} />}
             {activeView === 'calendar' && <CalendarView />}

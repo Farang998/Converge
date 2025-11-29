@@ -8,12 +8,13 @@ export default function ProjectHeader({ project, progressPct, onOpenDetails}) {
     <header className="pw-header">
       <div className="pw-header-wrapper">
       <div className="pw-header-left">
-        <h1 className="pw-title">{project.name}</h1>
-        <div className="pw-owner">Managed by {project.owner.name}</div>
+        <img src="/logo.png" alt="Converge Logo" className="nav-logo" />
+        <div className="pw-header-info">
+        <h2 className="pw-title">{project.name}</h2>
+        <div className="pw-owner">Managed by {project.owner?.name}</div>
       </div>
-      <div className="pw-header-center">
-        {/* optional: search / breadcrumb */}
       </div>
+      
 
       <div className="pw-header-right">
         <div className="pw-header-actions">

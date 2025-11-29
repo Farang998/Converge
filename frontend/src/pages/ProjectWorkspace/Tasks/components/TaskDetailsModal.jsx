@@ -38,6 +38,7 @@ const TaskDetailsModal = ({ task, tasksList = [], onClose }) => {
               <span className={`task-status task-status--${task.status}`}>{statusLabels[task.status]}</span>
             </div>
           </div>
+          <button className="task-modal-close" onClick={onClose} aria-label="Close">×</button>
         </div>
         <div className="task-modal-body">
           <div className="task-modal-grid">

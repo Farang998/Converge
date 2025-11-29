@@ -135,10 +135,22 @@
 
 /* Title area */
 .pw-header-left {
-  display:flex;
-  flex-direction: column;
-  min-width: 0;   
+  display: flex;
+  align-items: center;
+  gap: 10px; /* spacing between logo and text */
 }
+
+.nav-logo {
+  width: 40px;
+  height: 40px;
+}
+
+.pw-header-info {
+  display: flex;
+  flex-direction: column; /* name above owner */
+  line-height: 1.2;
+}
+
 .pw-title {
   margin: 0;
   font-size: 20px;
@@ -216,7 +228,7 @@
   padding: 8px 10px; /* Adjusted padding to be cleaner */
   border-radius: 8px; /* Consistent radius */
   background: var(--surface);
-  color: var(--muted);
+  color: var(--primary-700);
   border: 1px solid var(--border);
   font-weight: 600;
   font-size: 13px;
@@ -233,50 +245,7 @@
 }
 .pw-back-btn:focus { outline: none; box-shadow: 0 0 0 3px var(--focus-ring); }
 
-/* -------------------------
-   Status strip below header - UPDATED to look like a card
-   ------------------------- */
-.pw-status-strip {
-  display:flex;
-  gap: 24px;
-  justify-content: space-between; /* Spread items out */
-  align-items:center;
-  padding:12px 18px; /* Added horizontal padding */
-  background: var(--surface); /* White background */
-  border: 1px solid var(--border); /* Subtle border */
-  border-radius: var(--radius); /* Rounded corners */
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05); /* Subtle strip shadow */
-  color: #2f3b45;
-  width: 100%;
-  box-sizing: border-box;
-}
-.pw-status-strip strong { font-weight: 600; }
 
-.progress-container {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-.progress-bar-wrap {
-  flex: 1; 
-  width: 160px; /* fixed width for progress bar for visual stability */
-  height: 6px;
-  background: #f3f4f6; /* Lighter track */
-  border-radius: 3px;
-  overflow: hidden;
-}
-.progress-bar-fill {
-  height: 100%;
-  background: var(--accent); /* Uses green accent color */
-  transition: width 0.3s ease-out; 
-  border-radius: 3px;
-}
-.progress-label {
-  font-size: 14px;
-  color: var(--primary-700);
-  font-weight: 700;
-  width: 40px;
-}
 
 .pw-content {
   display: grid;
@@ -291,8 +260,6 @@
 /* left, main, right must be able to shrink so their internal overflow works */
 .pw-left, .pw-main, .pw-right {
   min-height: 0;
-  /* Added margin top/bottom to nav/right cards for visual lift */
-  /* margin-right: 14px; */
 }
 
 .pw-left {
@@ -445,7 +412,7 @@
   background: #f9fafb;
 }
 .kpi-title { font-size: 13px; color:var(--muted); }
-.kpi-value { font-size:22px; font-weight:800; color:var(--primary); }
+.kpi-value { font-size:22px; font-weight:800; color:#16a34a; }
 
 /* Layout for summary section to push KPIs below description */
 .summary-body {
@@ -499,58 +466,6 @@
   display: inline-block;
 }
 
-/* -------------------------
-   Timeline styles (creative but light)
-   ------------------------- */
-.timeline-wrap h3 { margin:0 0 8px 0; }
-.timeline-ribbon { display:flex; gap:8px; margin-bottom:16px; align-items:center; }
-.ribbon-seg { flex:1; height:10px; border-radius:6px; background: rgba(59, 130, 246, 0.03); }
-.ribbon-seg.complete { background: var(--accent); opacity: 0.18; }
-.ribbon-seg.in_progress { background: var(--primary); opacity: 0.12; }
-.ribbon-seg.upcoming { background: rgba(59, 130, 246, 0.03); }
-
-.timeline-list { display:flex; position:relative; gap:16px; padding-left: 36px; }
-.timeline-list .spine {
-  position:absolute; left:16px; top:0; bottom:0; width:3px;
-  background: rgba(59, 130, 246, 0.08);
-  border-radius:2px;
-}
-.nodes { display:flex; flex-direction:column; gap:18px; width:100%; }
-
-.milestone {
-  display:flex;
-  align-items:center;
-  gap:16px;
-  padding:14px;
-  border-radius: 10px;
-  border: 1px solid var(--border);
-  background: var(--surface);
-  cursor:pointer;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.02);
-}
-.milestone-dot {
-  width:36px; height:36px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:800;
-  background: #f1f5f9; color: #334155;
-}
-.milestone.complete .milestone-dot { background: var(--accent); color: white; }
-.milestone.in_progress .milestone-dot { background: var(--primary); color: white; }
-.milestone.upcoming .milestone-dot { background: #eef2f6; color: #475569; }
-.milestone-body { flex:1; }
-.milestone-title { font-weight: 600; }
-.milestone .pct-bar {
-  height:6px; border-radius:6px; background: var(--primary); width: 40%;
-}
-.milestone .pct-label { font-size:12px; color:var(--muted); margin-top:6px; }
-
-/* expanded milestone card */
-.milestone-expanded { margin-left: 56px; padding:12px; background:var(--bg); border: 1px solid var(--border); border-radius:10px; }
-
-/* -------------------------
-   Activity list
-   ------------------------- */
-.activity-list { list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:12px; }
-.activity-item { padding:14px; border-radius:10px; border:1px solid var(--border); background:var(--surface); box-shadow: 0 2px 5px rgba(0, 0, 0, 0.02); }
-.act-time { font-size:12px; color:var(--muted); margin-top:6px; }
 
 /* -------------------------
    Skeleton + empty states

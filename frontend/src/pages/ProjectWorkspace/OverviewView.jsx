@@ -1,6 +1,5 @@
 // src/components/ProjectWorkspace/OverviewView.jsx
 import React from 'react';
-import ActivityView from './ActivityView';
 
 export default function OverviewView({ project, tasks, files, activity, onCreateTask }) {
   return (
